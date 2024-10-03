@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, logout, updatePassword, locationList  } from "../controller/api/RiderController.js";
+import { login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, logout, updatePassword, locationList, notificationList  } from "../controller/api/RiderController.js";
 
 const router = Router();
 
@@ -17,5 +17,6 @@ router.post('/get-rider-data', getRiderData);
 router.post('/rider-profile-change', updateProfile);
 router.post('/rider-logout', logout);
 router.post('/rider-change_password', updatePassword);
+router.post('/rider-notification-list', notificationList);
 
 export default router;

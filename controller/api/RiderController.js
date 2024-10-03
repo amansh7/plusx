@@ -399,3 +399,29 @@ export const locationList = async (req, resp) => {
     const list = queryDB(`SELECT location_id, location_name, latitude, longitude FROM locations ORDER BY location_name ASC`);
     return resp.json({status: 1, code: 200, message: '', result: list})
 };
+
+export const notificationList = async (req, resp) => {
+    const { rider_id, page_no} = req.body;
+
+    const { isValid, errors } = validateFields(req.body, {
+        rider_id: ["required"], page_no: ["required"],
+    });
+
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const limit = 10;
+    const start = (page_no * limit) - limit;
+
+    const totalRows = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = 'Rider' AND receive_id = ?`, [rider_id]);
+    const total_page = Math.ceil(totalRows.total / limit) || 1; 
+    
+    const [rows] = await db.execute(`SELECT id, heading, description, module_name, panel_to, panel_from, receive_id, status, created_at, href_url
+        FROM notifications WHERE panel_to = 'Rider' AND receive_id = ? ORDER BY id DESC LIMIT ?, ? 
+    `, [rider_id, start, limit]);
+
+    const notifications = rows;
+    
+    return resp.json({status:1, code: 200, data: notifications, total_page: total_page, totalRows: totalRows.total});
+    // await db.execute(`UPDATE notifications SET status = 1 WHERE status=0 AND panel_to=Rider AND receive_id=?`, [rider_id]);
+    
+};
