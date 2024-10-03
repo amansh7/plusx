@@ -7,7 +7,7 @@ import multer from "multer";
 import path from "path";
 import validateFields from "../../validation.js";
 import { generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp } from '../../utils.js';
-import { insertRecord, queryDB } from '../../dbUtils.js';
+import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
 import nodemailer from 'nodemailer';
 dotenv.config();
@@ -248,6 +248,23 @@ export const verifyOTP = async (req, resp) => {
     return resp.json({status: 1, code: 200, message: ['OTP verified succeessfully!'], is_login: 0});
 };
 
+export const logout = async (req, resp) => {
+    const riderId = req.body.rider_id;
+    if (!riderId) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+    
+    const rider = queryDB(`SELECT EXISTS (SELECT 1 FROM riders WHERE rider_id = ?) AS rider_exists`, [riderId]);
+    if(!rider) return resp.json({status:0, code:400, message: 'Rider ID Invalid!'});
+
+    const update = await updateRecord('riders', {status:0, access_token: ""}, 'rider_id', riderId);
+    
+    if(update.affectedRows > 0){
+        return resp.json({status: 0, code: 200, message: 'Logged out sucessfully'});
+    }else{
+        return resp.json({status: 0, code: 405, message: 'Oops! There is something went wrong! Please Try Again'});
+    }
+
+};
+
 /* Rider Info */
 export const home = async (req, resp) => {
     const riderId = req.body.rider_id;
@@ -268,30 +285,27 @@ export const home = async (req, resp) => {
         rider_name: riderData.rider_name,
         notification_count: riderData.notification_count
     };
-
-    const orderQuery = `SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = road_assistance.rsa_id) AS rsaDetails, created_at 
-        FROM road_assistance WHERE rider_id = ? AND order_status NOT IN ('C', 'WC', 'ES') ORDER BY id DESC LIMIT 1
-    `;
-    const orderData = await queryDB(orderQuery, [riderId]);
-    if (orderData) {
-        orderData.eta_time = '12 Min.';
-    }
-    return resp.json({orderData});
-    const pickDropQuery = ` SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = charging_service.rsa_id) AS rsaDetails, created_at 
-        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status NOT IN ('WC', 'C') ORDER BY id DESC LIMIT 1
-    `;
-    const pickDropData = await queryDB(pickDropQuery, [riderId]);
-    if (pickDropData.length) {
-        pickDropData.eta_time = '11 Min.';
-    }
     
-    const podBookingQuery = `SELECT booking_id AS request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = portable_charger_booking.rsa_id) AS rsaDetails, created_at 
+    const orderData = await queryDB(
+        `SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = road_assistance.rsa_id) AS rsaDetails, created_at 
+        FROM road_assistance WHERE rider_id = ? AND order_status NOT IN ('C', 'WC', 'ES') ORDER BY id DESC LIMIT 1
+    `, [riderId]);
+    
+    if (orderData) orderData.eta_time = '12 Min.';
+    
+    const pickDropData = await queryDB(
+        `SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = charging_service.rsa_id) AS rsaDetails, created_at 
+        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status NOT IN ('WC', 'C') ORDER BY id DESC LIMIT 1
+    `, [riderId]);
+    
+    if (pickDropData) pickDropData.eta_time = '11 Min.';
+    
+    const podBookingData = await queryDB(
+        `SELECT booking_id AS request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = portable_charger_booking.rsa_id) AS rsaDetails, created_at 
         FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status NOT IN ('WC', 'C') ORDER BY id DESC LIMIT 1
-    `;
-    const podBookingData = await queryDB(podBookingQuery, [riderId]);
-    if (podBookingData.length) {
-        podBookingData.eta_time = '11 Min.';
-    }
+    `, [riderId]);
+
+    if (podBookingData) podBookingData.eta_time = '11 Min.';
     
     return resp.json({
         message: ["Rider Home Data fetched successfully!"],
@@ -305,4 +319,83 @@ export const home = async (req, resp) => {
         status: 1,
         code: 200
     });
+};
+
+export const getRiderData = async(req, resp) => {
+    const riderId = req.body.rider_id;
+    if (!riderId) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+
+    const rider = await queryDB(`SELECT * FROM riders WHERE rider_id=?`, [riderId]);
+    rider.image_url = `${req.protocol}://${req.get('host')}/uploads/rider_profile/`;
+
+    return resp.json({status: 1, code: 200, message: 'Rider Data fetch successfully!', data: rider, roadside_assitance_price: 15, portable_price: 15, pick_drop_price: 15});
+};
+
+//image upload pending
+export const updateProfile = async (req, resp) => {
+    console.log(req.body);
+    const { rider_id, rider_name ,rider_email , country, date_of_birth, emirates, profile_image='', leased_from=''} = req.body;
+    const riderId = rider_id;
+
+    const { isValid, errors } = validateFields(req.body, {
+        rider_id: ["required"], rider_name: ["required"], rider_email: ["required"], country: ["required"], date_of_birth: ["required"], emirates: ["required"], 
+        profile_image: ["file", ['jpeg', 'jpg']]
+    });
+    
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    
+    try{
+        const rider = await queryDB(`SELECT profile_img, leased_from FROM riders WHERE rider_id=?`, [riderId]);
+        const profileImg = req.file ? req.file.filename : rider.profile_img;
+        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth};
+        const update = await updateRecord('riders', updates, 'rider_id', riderId);
+        
+        return resp.json(update);
+    }catch(err){
+        return resp.json({ status: 0, code: 200, message: 'Oops! There is something went wrong! Please Try Again' });
+    }
+
+};
+
+//image deletion pending
+export const deleteImg = async (req, resp) => {
+    const riderId = req.body.rider_id;
+    if (!riderId) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+    
+    const rider = queryDB(`SELECT profile_img FROM riders WHERE rider_id = ?`, [riderId]);
+    if(!rider) return resp.json({status:0, code:400, message: 'Rider ID Invalid!'});
+    
+    const update = await updateRecord('riders', {profile_img: ''}, 'rider_id', riderId);
+    if(update.affectedRows > 0){
+        return resp.json({ status: 1, code: 200, message: "Rider profile image deleted successfuly" });
+    }else{
+        return resp.json({ status: 0, code: 200, message: "Oops! There is something went wrong! Please Try Again" });
+    }
+};
+
+export const updatePassword = async (req, resp) => {
+    const { rider_id, old_password, new_password, confirm_password} = req.body;
+
+    const { isValid, errors } = validateFields(req.body, {
+        rider_id: ["required"], old_password: ["required"], new_password: ["required"], confirm_password: ["required"]
+    });
+
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    if(new_password != confirm_password) return resp.json({ status: 0, code: 422, message: 'New password and confirm password not matched!' });
+    
+    const rider = queryDB(`SELECT password FROM riders WHERE rider_id=?`, [rider_id]);
+    
+    const isMatch = await bcrypt.compare(old_password, rider.password);  
+    if (!isMatch) return resp.status(401).json({ message: "Please enter currect password." });
+
+    const hashedPswd = await bcrypt.hash(new_password, 10);
+    const update = updateRecord('riders', {password: hashedPswd}, 'rider_id', rider_id);
+
+    if(update.affectedRows > 0 ) return resp.json({status: 1, code: 200, message: 'Password changed successfully'});
+};
+
+export const locationList = async (req, resp) => {
+    const list = queryDB(`SELECT location_id, location_name, latitude, longitude FROM locations ORDER BY location_name ASC`);
+    return resp.json({status: 1, code: 200, message: '', result: list})
 };
