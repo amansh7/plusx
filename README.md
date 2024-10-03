@@ -1,5 +1,3 @@
-# README #
-
 # Plus X
 
 A nice project with a nice description
