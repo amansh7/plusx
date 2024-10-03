@@ -24,7 +24,16 @@ const validateFields = (data, rules) => {
                     break;
                 case 'password':
                     if (value && value.length < 6) {
-                        errors[field] = 'Password must be at least 6 digits.';
+                        errors[field] = 'Password must be at least 6 characters.';
+                    }
+                    break;
+                case 'file':
+                    if (value) {
+                        const allowedTypes = validations[1];
+                        const fileExtension = value.split('.').pop().toLowerCase();
+                        if (!allowedTypes.includes(fileExtension)) {
+                            errors[field] = `File type must be of: ${allowedTypes.join(', ')}.`;
+                        }
                     }
                     break;
                 default:
@@ -37,6 +46,6 @@ const validateFields = (data, rules) => {
         isValid: Object.keys(errors).length === 0,
         errors,
     };
-}
+};
 
 export default validateFields;

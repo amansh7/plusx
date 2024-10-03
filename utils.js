@@ -1,5 +1,7 @@
 import NodeCache from "node-cache";
 import axios from "axios";
+import multer from 'multer';
+import path from 'path';
 
 export const generateRandomPassword = (length = 8) => {
   const chars =
@@ -82,3 +84,5 @@ export const sendOtp = async (mobile, otpMsg) => {
     return { status: 0, msg: err.message, code: err.status };
   }
 };
+
+/* Handle file upload */

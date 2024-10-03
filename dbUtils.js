@@ -38,19 +38,20 @@ export const insertRecord = async (table, columns, values) => {
  * @returns {Promise<Object>} - The result of the update operation.
  */
 export const updateRecord = async (table, updates, whereColumn, whereValue) => {
-  const setClause = Object.keys(updates)
-    .map((col) => `${col} = ?`)
-    .join(", ");
-  const sql = `UPDATE ?? SET ${setClause} WHERE ?? = ?`;
-
+  const setClause = Object.keys(updates).map((col) => `${col} = ?`).join(", ");
+  
+  const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereColumn} = ?`;
   try {
     const [result] = await db.execute(sql, [
-      table,
       ...Object.values(updates),
-      whereColumn,
       whereValue,
     ]);
-    return result;
+    return {
+      affectedRows: result.affectedRows,
+      info: result.info,
+      changedRows: result.changedRows,
+      data: Object.fromEntries(Object.entries(updates)),
+    };
   } catch (error) {
     throw new Error(`Update operation failed: ${error.message}`);
   }
@@ -64,6 +65,5 @@ export const updateRecord = async (table, updates, whereColumn, whereValue) => {
  */
 export const queryDB = async (query, params) => {
   const [[results]] = await db.execute(query, params);
-  await db.end();
   return results;
 };
