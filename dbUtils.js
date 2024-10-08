@@ -32,22 +32,23 @@ export const insertRecord = async (table, columns, values) => {
  *
  * @param {string} table - The name of the table to update.
  * @param {Object} updates - An object where keys are column names and values are the new values.
- * @param {string} whereColumn - The column to filter the rows to update.
- * @param {any} whereValue - The value of the column to filter the rows to update.
+ * @param {string} whereColumns - The column to filter the rows to update.
+ * @param {any} whereValues - The value of the column to filter the rows to update.
  * @returns {Promise<Object>} - The result of the update operation.
  */
-export const updateRecord = async (table, updates, whereColumn, whereValue) => {
+export const updateRecord = async (table, updates, whereColumns, whereValues) => {
   const setClause = Object.keys(updates).map((col) => `${col} = ?`).join(", ");
   
   const whereClause = whereColumns.map(col => `${col} = ?`).join(" AND ");
   
-  const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereColumn} = ?`;
+  const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereClause}`;
   
   try {
     const [result] = await db.execute(sql, [
       ...Object.values(updates),
-      whereValue,
+      ...whereValues,
     ]);
+    
     return {
       affectedRows: result.affectedRows,
       info: result.info,
@@ -91,35 +92,50 @@ export const queryDB = async (query, params) => {
 export const getPaginatedData = async ({
   tableName,
   columns = '*',
-  searchField = '',
-  searchText = '',
+  searchFields = [],
+  searchTexts = [],
   sortColumn = 'id',
   sortOrder = 'ASC',
   page_no = 1,
   limit = 10,
   whereField = '',
-  whereValue = ''
+  whereValue = '',
+  whereOperator = '=',
+  whereField1 = '',
+  whereValue1 = '',
 }) => {
   const start = (page_no * limit) - limit;
 
-  const searchCondition = searchText ? ` AND ${searchField} LIKE ?` : '';
-  const searchValue = searchText ? `%${searchText.trim()}%` : null;
-
-  let whereCondition = '';
+  let searchCondition = '';
   const queryParams = [];
-  
+
+  // Build the where condition based on whereField and whereValue
+  let whereCondition = '';
   if (whereField && whereValue) {
-    whereCondition = ` WHERE ${whereField} = ?`;
+    whereCondition = ` WHERE ${whereField} ${whereOperator} ?`;
     queryParams.push(whereValue);
   }
 
-  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition} ${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ?, ?`;
-
-  if (searchValue) {
-    queryParams.push(searchValue);
+  if (whereField1 && whereValue1 !== undefined) {
+    whereCondition += whereCondition ? ` AND ` : ` WHERE `;
+    whereCondition += `${whereField1} = ?`;
+    queryParams.push(whereValue1);
   }
 
+  // Build the search conditions dynamically
+  searchFields.forEach((field, index) => {
+    if (searchTexts[index]) {
+      searchCondition += ` AND ${field} LIKE ?`;
+      queryParams.push(`%${searchTexts[index].trim()}%`);
+    }
+  });
+
+
+  // Final query
+  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ?, ?`;
   queryParams.push(start, limit);
+
+  console.log("Executing Query:", query, "With Params:", queryParams);
 
   const [rows] = await db.execute(query, queryParams);
 
@@ -132,3 +148,4 @@ export const getPaginatedData = async ({
     totalPage
   };
 };
+
