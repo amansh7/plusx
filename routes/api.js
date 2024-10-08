@@ -12,6 +12,7 @@ import {clubList, clubDetail } from '../controller/api/ClubController.js';
 import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList, sellVehicleDetail, 
     updateSellVehicle, deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
 } from '../controller/api/VehicleController.js';
+import {offerList, offerDetail} from '../controller/api/OfferController.js';
 
 const router = Router();
 
@@ -82,5 +83,9 @@ router.get('/sell-vehicle-detail', sellVehicleDetail);
 router.post('/edit-sell-vehicle', updateSellVehicle);
 router.get('/delete-sell-vehicle', deleteSellVehicle);
 router.get('/sold-sell-vehicle', soldSellVehicle);
+
+/* Offer Routes */
+router.get('/offer-list', offerList);
+router.get('/offer-detail', offerDetail);
 
 export default router;
