@@ -86,3 +86,56 @@ export const sendOtp = async (mobile, otpMsg) => {
 };
 
 /* Handle file upload */
+
+
+/* Format Timings */
+export const getOpenAndCloseTimings = (data) => {
+  const dayTime = [];
+
+  if (data.always_open === 0) {
+    const openDays = data.open_days.split(',').map(day => day.trim());
+    const openTimings = data.open_timing.split(',').map(time => time.trim());
+    const uniqueTimings = [...new Set(openTimings)];
+
+    if (uniqueTimings.length !== openTimings.length) {
+      uniqueTimings.forEach((timing) => {
+        const keys = openTimings.reduce((acc, curr, index) => {
+          if (curr === timing) acc.push(index);
+          return acc;
+        }, []);
+        let start = '';
+        let end = '';
+        let formattedTiming = 'Closed';
+
+        if (timing !== 'Closed') {
+          const times = timing.split('-');
+          const startTime = new Date(`1970-01-01T${times[0]}:00`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const endTime = new Date(`1970-01-01T${times[1]}:00`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          formattedTiming = `${startTime}-${endTime}`;
+        }
+
+        for (let i = 0; i < keys.length; i++) {
+          start = (start === '') ? openDays[keys[i]] : start;
+
+          if (keys[i + 1] && (keys[i + 1] - keys[i] !== 1 && i + 1 !== keys.length)) {
+            end = openDays[keys[i]];
+            dayTime.push({ days: `${start}-${end}`, time: formattedTiming, position: keys[i] });
+            start = '';
+          }
+
+          if (i + 1 === keys.length) {
+            end = openDays[keys[i]];
+            const days = (start === end) ? end : `${start}-${end}`;
+            dayTime.push({ days, time: formattedTiming, position: keys[i] });
+          }
+        }
+      });
+    }
+
+    dayTime.sort((a, b) => a.position - b.position);
+
+    return dayTime;
+  } else {
+    return [{ days: 'Always Open', time: '' }];
+  }
+};

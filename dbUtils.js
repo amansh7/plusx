@@ -13,7 +13,6 @@ export const insertRecord = async (table, columns, values) => {
   const sql = `INSERT INTO ${table} (${columns.join(
     ", "
   )}) VALUES (${placeholders})`;
-
   try {
     const [result] = await db.execute(sql, values);
     return {
@@ -40,7 +39,10 @@ export const insertRecord = async (table, columns, values) => {
 export const updateRecord = async (table, updates, whereColumn, whereValue) => {
   const setClause = Object.keys(updates).map((col) => `${col} = ?`).join(", ");
   
+  const whereClause = whereColumns.map(col => `${col} = ?`).join(" AND ");
+  
   const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereColumn} = ?`;
+  
   try {
     const [result] = await db.execute(sql, [
       ...Object.values(updates),
@@ -58,12 +60,75 @@ export const updateRecord = async (table, updates, whereColumn, whereValue) => {
 };
 
 /**
- * Updates an existing record in the specified table.
- * @param {string} query - An query to get result.
- * @param {Array<any>} values - An array of values corresponding to the columns.
- * @returns {Promise<Object>} - The result of the update operation.
+ * Executes a SQL query on the specified database and returns the result.
+ * 
+ * @param {string} query - The SQL query to be executed. This should be a valid SQL statement.
+ * @param {Array<any>} params - An array of values corresponding to placeholders in the query.
+ * @returns {Promise<Object>} - The result of the operation.
  */
 export const queryDB = async (query, params) => {
   const [[results]] = await db.execute(query, params);
   return results;
+};
+
+/**
+ * Fetches paginated data from the specified table with optional search and sorting.
+ *
+ * @param {Object} params - Parameters for the query.
+ * @param {string} params.tableName - The name of the table from which to fetch data.
+ * @param {string} [params.columns='*'] - The columns to be selected, defaults to '*'.
+ * @param {string} [params.searchField=''] - The column to apply the search filter on, if any.
+ * @param {string} [params.searchText=''] - The search text to filter the records by, defaults to an empty string.
+ * @param {string} [params.sortColumn='id'] - The column to sort the data by, defaults to 'id'.
+ * @param {string} [params.sortOrder='ASC'] - The sort order ('ASC' or 'DESC'), defaults to 'ASC'.
+ * @param {number} [params.page_no=1] - The page number for pagination, defaults to 1.
+ * @param {number} [params.limit=10] - The number of records to fetch per page, defaults to 10.
+ * @param {string} [params.whereField='status'] - The column to filter records by status, defaults to 'status'.
+ * @param {any} [params.whereValue=1] - The value to filter the status column by, defaults to 1.
+ * @returns {Promise<Object>} - An object containing paginated data, total records, and total pages.
+ * 
+ **/
+export const getPaginatedData = async ({
+  tableName,
+  columns = '*',
+  searchField = '',
+  searchText = '',
+  sortColumn = 'id',
+  sortOrder = 'ASC',
+  page_no = 1,
+  limit = 10,
+  whereField = '',
+  whereValue = ''
+}) => {
+  const start = (page_no * limit) - limit;
+
+  const searchCondition = searchText ? ` AND ${searchField} LIKE ?` : '';
+  const searchValue = searchText ? `%${searchText.trim()}%` : null;
+
+  let whereCondition = '';
+  const queryParams = [];
+  
+  if (whereField && whereValue) {
+    whereCondition = ` WHERE ${whereField} = ?`;
+    queryParams.push(whereValue);
+  }
+
+  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition} ${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ?, ?`;
+
+  if (searchValue) {
+    queryParams.push(searchValue);
+  }
+
+  queryParams.push(start, limit);
+
+  const [rows] = await db.execute(query, queryParams);
+
+  const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
+  const totalPage = Math.max(Math.ceil(total / limit), 1);
+
+  return {
+    data: rows,
+    total,
+    totalPage
+  };
 };
