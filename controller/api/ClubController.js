@@ -1,9 +1,9 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
-import { queryDB, getPaginatedData } from '../../dbUtils.js';
+import { queryDB } from '../../dbUtils.js';
 
 export const clubList = async (req, resp) => {
-    const {rider_id, page_no, preference, search_text, age_group, location, category, sort_by } = req.body;
+    const {rider_id, page_no, preference, search_text, age_group, location, category } = req.body;
         
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
     

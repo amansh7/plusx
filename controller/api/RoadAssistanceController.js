@@ -40,8 +40,6 @@ export const addRoadAssistance = async (req, resp) => {
         const now = new Date();
         const formattedDateTime = now.toISOString().replace('T', ' ').substring(0, 19);
 
-        const html = ``;
-
         await transporter.sendMail({
             from: `"Easylease Admin" <admin@easylease.com>`,
             to: rider.rider_email,
@@ -85,7 +83,7 @@ export const addRoadAssistance = async (req, resp) => {
             rsa_id: ''
         });       
     }else{
-        return resp.json({status:0, code:200, message: ['Oops! There is something went wrong! Please Try Again']});
+        return resp.json({status:0, code:200, message: ['Oops! There is something went wrong! Please Try Again.']});
     }
 
 };

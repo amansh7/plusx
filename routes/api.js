@@ -9,6 +9,9 @@ import {bikeList, bikeDetail} from '../controller/api/ElectricBikeRentalControll
 import {addRoadAssistance, roadAssistanceList, roadAssistanceDetail} from '../controller/api/RoadAssistanceController.js';
 import {serviceRequest, requestList, requestDetails} from '../controller/api/ChargingInstallationServiceController.js';
 import {clubList, clubDetail } from '../controller/api/ClubController.js';
+import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList, sellVehicleDetail, 
+    updateSellVehicle, deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
+} from '../controller/api/VehicleController.js';
 
 const router = Router();
 
@@ -18,7 +21,15 @@ router.post('/registration', register);
 router.post('/rider-forgot_password', forgotPassword);
 router.post('/create-otp', createOTP);
 router.post('/verify-otp', verifyOTP);
+
+/* Dynamic List */
 router.post('/location-list', locationList);
+
+/* Vehicle Routes */
+router.get('/location-area-list', areaList);
+router.get('/reminder-sell-vehicle-list', reminder_sell_vehicle_list);
+router.post('/vehicle-brand-list', vehicleBrandList);
+router.post('/vehicle-model-list', vehicleModelList);
 
 /* -- Api Auth & Api Authz middleware -- */
 router.post('/rider-home', home);
@@ -59,5 +70,17 @@ router.get('/charging-installation-detail', requestDetails);
 /* Club Routes */
 router.get('/club-list', clubList);
 router.get('/club-detail', clubDetail);
+
+/* Vehicle Routes */
+router.get('/vehicle-list', vehicleList);
+router.get('/vehicle-detail', vehicleDetail);
+router.post('/interest-register', interestedPeople);
+router.post('/sell-vehicle', sellVehicle);
+router.get('/all-sell-vehicle-list', allSellVehicleList);
+router.get('/sell-vehicle-list', sellVehicleList);
+router.get('/sell-vehicle-detail', sellVehicleDetail);
+router.post('/edit-sell-vehicle', updateSellVehicle);
+router.get('/delete-sell-vehicle', deleteSellVehicle);
+router.get('/sold-sell-vehicle', soldSellVehicle);
 
 export default router;
