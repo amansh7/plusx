@@ -36,7 +36,6 @@ export const serviceRequest = async (req, resp) => {
         const href = 'charging_installation_service/' + requestId;
         const heading = 'Order Created!';
         const desc = `Your request for charging installation service at home order no. ${requestId} has been placed.`;
-
         // createNotification(heading, desc, 'Charging Installation Service', 'Rider', 'Admin','', rider_id, href);
         // pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
 
@@ -50,12 +49,11 @@ export const serviceRequest = async (req, resp) => {
             html: `<html>
                 <body>
                     <h4>Dear ${name},</h4>
-                    <p>Thank you for using the PlusX Electric App for Charging Installation service. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p> 
+                    <p>Thank you for using the PlusX Electric App for Charging Installation service. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p> <br/>
                     <p>Booking Reference: ${requestId}</p>
                     <p>Date & Time of Request: ${formattedDateTime}</p> 
                     <p>Address: ${address}</p>                         
-                    <p>Service Type: ${service_type}</p> 
-                
+                    <p>Service Type: ${service_type}</p> <br/>
                     <p> Regards,<br/> PlusX Electric App </p>
                 </body>
             </html>`,
@@ -68,10 +66,10 @@ export const serviceRequest = async (req, resp) => {
             html: `<html>
                 <body>
                     <h4>Dear Admin,</h4>
-                    <p>We have received a new booking for our Charging Installation service. Below are the details:</p> 
+                    <p>We have received a new booking for our Charging Installation service. Below are the details:</p> <br/>
                     <p>Customer Name  : ${name}</p>
                     <p>Address : ${address}</p>
-                    <p>Booking Time   : ${formattedDateTime}</p>                         
+                    <p>Booking Time   : ${formattedDateTime}</p> <br/>                        
                     <p> Best regards,<br/> PlusX Electric App </p>
                 </body>
             </html>`,

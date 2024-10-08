@@ -13,6 +13,7 @@ import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, all
     updateSellVehicle, deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
 } from '../controller/api/VehicleController.js';
 import {offerList, offerDetail} from '../controller/api/OfferController.js';
+import {chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList } from '../controller/api/PortableChargerController.js';
 
 const router = Router();
 
@@ -87,5 +88,12 @@ router.get('/sold-sell-vehicle', soldSellVehicle);
 /* Offer Routes */
 router.get('/offer-list', offerList);
 router.get('/offer-detail', offerDetail);
+
+/* Portable charger */
+router.get('/portable-charger-list', chargerList);
+router.get('/portable-charger-booking', chargerBooking);
+router.get('/portable-charger-booking-list', chargerBookingList);
+router.get('/portable-charger-booking-detail', chargerBookingDetail);
+router.get('/portable-charger-booking-detail', invoiceList);
 
 export default router;
