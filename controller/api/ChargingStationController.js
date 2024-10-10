@@ -73,13 +73,14 @@ export const stationDetail = async (req, resp) => {
     station.schedule = getOpenAndCloseTimings(station);
 
     const gallery = await queryDB(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC LIMIT 5`, [station_id]);
+    const imgName = gallery.map(row => row.image_name);
 
     return resp.json({
         status: 1,
         code: 200,
         message: ["Charging Station Details fetched successfully!"],
         data: station,
-        gallery_data: gallery,
+        gallery_data: imgName,
         base_url: new URL('/uploads/charging-station-images/', req.protocol + '://' + req.get('host')).href
     });
 };

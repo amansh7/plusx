@@ -13,7 +13,9 @@ import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, all
     updateSellVehicle, deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
 } from '../controller/api/VehicleController.js';
 import {offerList, offerDetail} from '../controller/api/OfferController.js';
-import {chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList } from '../controller/api/PortableChargerController.js';
+import {shopList, shopDetail} from '../controller/api/ShopController.js';
+import {chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking} from '../controller/api/PortableChargerController.js';
+import { getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking } from '../controller/api/ChargingServiceController.js';
 
 const router = Router();
 
@@ -65,7 +67,7 @@ router.get('/road-assistance-list', roadAssistanceList);
 router.get('/road-assistance-details', roadAssistanceDetail);
 
 /* Installation Service Routes */
-router.post('/charging-installation-service', serviceRequest);
+router.post('/charging-installation-service', serviceRequest); 
 router.get('/charging-installation-list', requestList);
 router.get('/charging-installation-detail', requestDetails);
 
@@ -85,9 +87,14 @@ router.post('/edit-sell-vehicle', updateSellVehicle);
 router.get('/delete-sell-vehicle', deleteSellVehicle);
 router.get('/sold-sell-vehicle', soldSellVehicle);
 
-/* Offer Routes */
-router.get('/offer-list', offerList);
-router.get('/offer-detail', offerDetail);
+/* Charging Service */
+router.post('/charging-service-slot-list', getChargingServiceSlotList);
+router.post('/charging-service', requestService);
+router.get('/charging-service-list', listServices);
+router.get('/charging-service-details', getServiceOrderDetail);
+router.get('/pick-and-drop-invoice-list', getInvoiceList);
+router.get('/pick-and-drop-invoice-detail', getInvoiceDetail);
+
 
 /* Portable charger */
 router.get('/portable-charger-list', chargerList);
@@ -95,5 +102,25 @@ router.get('/portable-charger-booking', chargerBooking);
 router.get('/portable-charger-booking-list', chargerBookingList);
 router.get('/portable-charger-booking-detail', chargerBookingDetail);
 router.get('/portable-charger-booking-detail', invoiceList);
+
+/* Offer Routes */
+router.get('/offer-list', offerList);
+router.get('/offer-detail', offerDetail);
+
+/* Service Shop */
+router.get('/service-shop-list', shopList);
+router.get('/service-shop-detail', shopDetail);
+
+
+/* -- Api Auth & Api RSA Authz middleware -- */
+
+/* Charging Service */
+router.post('/charger-service-action', handleBookingAction);
+router.get('/charger-service-stage', getRsaBookingStage);
+router.post('/charger-service-reject', handleRejectBooking);
+/* POD with RSA */
+router.get('/portable-charger-stage', rsaBookingStage);
+router.post('/portable-charger-action', bookingAction);
+router.post('/portable-charger-reject', rejectBooking);
 
 export default router;
