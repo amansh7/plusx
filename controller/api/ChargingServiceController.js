@@ -47,7 +47,7 @@ export const requestService = async (req, resp) => {
 
     const nextId = (!rider.last_index) ? 0 : rider.last_index + 1;
     const requestId = 'CS' + String(nextId).padStart(4, '0');
-    const slotDateTime = moment(slotDateTime).format('YYYY-MM-DD HH:mm:ss');
+    const slotDateTime = moment(slot_date_time).format('YYYY-MM-DD HH:mm:ss');
 
     const insert = await insertRecord('charging_service', [
         'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'vehicle_id', 'slot', 'slot_date_time', 'pickup_address', 'parking_number', 'parking_floor', 
