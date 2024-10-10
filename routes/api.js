@@ -6,7 +6,9 @@ import {
 import {stationList, stationDetail, nearestChargerList} from '../controller/api/ChargingStationController.js';
 import {carList, carDetail} from '../controller/api/ElectricCarRentalController.js';
 import {bikeList, bikeDetail} from '../controller/api/ElectricBikeRentalController.js';
-import {addRoadAssistance, roadAssistanceList, roadAssistanceDetail} from '../controller/api/RoadAssistanceController.js';
+import {
+    addRoadAssistance, roadAssistanceList, roadAssistanceDetail, roadAssistanceInvoiceList, roadAssistanceInvoiceDetail, getRsaOrderStage
+} from '../controller/api/RoadAssistanceController.js';
 import {serviceRequest, requestList, requestDetails} from '../controller/api/ChargingInstallationServiceController.js';
 import {clubList, clubDetail } from '../controller/api/ClubController.js';
 import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList, sellVehicleDetail, 
@@ -66,6 +68,8 @@ router.get('/bike-rental-detail', bikeDetail);
 router.get('/road-assistance', addRoadAssistance);
 router.get('/road-assistance-list', roadAssistanceList);
 router.get('/road-assistance-details', roadAssistanceDetail);
+router.get('/road-assistance-invoice-list', roadAssistanceInvoiceList);
+router.get('/road-assistance-invoice-detail', roadAssistanceInvoiceDetail);
 
 /* Installation Service Routes */
 router.post('/charging-installation-service', serviceRequest); 
@@ -139,5 +143,7 @@ router.post('/charger-service-reject', handleRejectBooking);
 router.get('/portable-charger-stage', rsaBookingStage);
 router.post('/portable-charger-action', bookingAction);
 router.post('/portable-charger-reject', rejectBooking);
+/* Road Assitance with RSA */
+router.get('/rsa-order-stage', getRsaOrderStage)
 
 export default router;
