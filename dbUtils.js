@@ -101,8 +101,6 @@ export const getPaginatedData = async ({
   whereField = '',
   whereValue = '',
   whereOperator = '=',
-  whereField1 = '',
-  whereValue1 = '',
 }) => {
   const start = (page_no * limit) - limit;
 
@@ -111,15 +109,12 @@ export const getPaginatedData = async ({
 
   // Build the where condition based on whereField and whereValue
   let whereCondition = '';
-  if (whereField && whereValue) {
-    whereCondition = ` WHERE ${whereField} ${whereOperator} ?`;
-    queryParams.push(whereValue);
-  }
-
-  if (whereField1 && whereValue1 !== undefined) {
-    whereCondition += whereCondition ? ` AND ` : ` WHERE `;
-    whereCondition += `${whereField1} = ?`;
-    queryParams.push(whereValue1);
+  if (whereField.length > 0 && whereValue.length > 0) {
+    whereField.forEach((field, index) => {
+      const operator = whereOperator[index] || '=';
+      whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} ${operator} ?`;
+      queryParams.push(whereValue[index]);
+    });
   }
 
   // Build the search conditions dynamically
@@ -135,7 +130,7 @@ export const getPaginatedData = async ({
   let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ?, ?`;
   queryParams.push(start, limit);
 
-  // console.log("Executing Query:", query, "With Params:", queryParams);
+  console.log("Executing Query:", query, "With Params:", queryParams);
 
   const [rows] = await db.execute(query, queryParams);
 

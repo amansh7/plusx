@@ -2,6 +2,8 @@ import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import transporter from "../../mailer.js";
+import moment from "moment";
+import 'moment-duration-format';
 
 export const chargerList = async (req, resp) => {
     const {rider_id, page_no } = req.body;
@@ -285,7 +287,7 @@ export const invoiceDetails = async (req, resp) => {
         LEFT JOIN
             portable_charger_booking AS pcb ON pcb.booking_id = pci.request_id
         LEFT JOIN 
-            portable_charger_slot AS cs ON cs.slot_id = pcb.slot  /* Assuming you want to join with the slot table */
+            portable_charger_slot AS cs ON cs.slot_id = pcb.slot
         WHERE 
             pci.invoice_id = ?
     `, [invoice_id]);
@@ -301,3 +303,336 @@ export const invoiceDetails = async (req, resp) => {
 };
 
 /* RSA */
+export const rsaBookingStage = async (req, resp) => {
+    const {rsa_id, booking_id } = req.body;
+    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"]});
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const booking = await queryDB(`SELECT status, created_at, updated_at FROM portable_charger_booking WHERE booking_id=?`, [booking_id]);
+    if(!booking) return resp.json({status:0, code:200, message: "Sorry no data found with given order id: " + booking_id});
+
+    const orderStatus = ['CNF','A','RL','CS','CC','PU','C'];
+    const placeholders = orderStatus.map(() => '?').join(', ');
+
+    const [bookingTracking] = await db.execute(`SELECT order_status, remarks, image, cancel_reason, cancel_by, longitude, latitude FROM portable_charger_history 
+        WHERE booking_id = ? AND rsa_id = ? AND order_status IN (${placeholders})
+    `, [booking_id, rsa_id, ...orderStatus]);
+
+    const seconds = Math.floor((booking.updated_at - booking.created_at) / 1000);
+    const humanReadableDuration = moment.duration(seconds, 'seconds').format('h [hours], m [minutes]');
+    
+    return resp.json({
+        status: 1,
+        code: 200,
+        message: ["Booking stage fetch successfully."],
+        booking_status: booking.status,
+        execution_time: humanReadableDuration,
+        booking_history: bookingTracking,
+        image_path: `${req.protocol}://${req.get('host')}/uploads/portable-charger/`
+    });
+    
+};
+
+export const bookingAction = async (req, resp) => {
+    const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
+    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"], reason: ["required"], latitude: ["required"], longitude: ["required"]});
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    switch (booking_status) {
+        case 'A': return await acceptBooking(req, resp);
+        case 'RL': return await reachedLocation(req, resp);
+        case 'CS': return await chargingStart(req, resp);
+        case 'CC': return await chargingComplete(req, resp);
+        case 'DO': return await vehicleDrop(req, resp);
+        case 'PU': return await chargerPickedUp(req, resp);
+        default: return resp.json({status: 0, code: 200, message: ['Invalid booking status.']});
+    }
+};
+
+export const rejectBooking = async (req, resp) => {
+    const {rsa_id, booking_id, reason } = req.body;
+    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"], reason: ["required"]});
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 0
+        LIMIT 1
+    `,[rsa_id, booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+
+    const insert = await db.execute(
+        'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "C", ?, ?, ?)',
+        [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+    );
+
+    if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+    await db.execute(
+        'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "C", ?, ?, ?)',
+        [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+    );
+    await db.insertRecord('portable_charger_booking_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
+    await db.execute(`DELETE FROM portable_charger_booking_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
+
+    // const href = `portable_charger_booking/${booking_id}`;
+    // const title = 'Booking Rejected';
+    // const message = `Driver has rejected the portable charger booking with booking id: ${booking_id}`;
+    // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+    // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+    await transporter.sendMail({
+        from: `"Easylease Admin" <admin@easylease.com>`,
+        to: 'podbookings@plusxelectric.com',
+        subject: `POD Service Booking rejected - ${booking_id}`,
+        html: `<html>
+            <body>
+                <h4>Dear ${rider.rider_name},</h4>
+                <p>Driver has rejected the portable charger booking. please assign one Driver on this booking</p> <br />
+                <p>Booking ID: ${booking_id}</p>
+                <p> Regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`,
+    });
+
+    return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
+};
+
+
+// booking action helper
+const acceptBooking = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude } = req.body;
+
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
+            (SELECT COUNT(id) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 1) AS pod_count
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 0
+        LIMIT 1
+    `,[rsa_id, booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+
+    if (checkOrder.pod_count > 0) {
+        return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
+    }
+
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "A" AND booking_id = ?',[rsa_id, booking_id]
+    );
+
+    if (ordHistoryCount.count === 0) {
+        await updateRecord('portable_charger_booking', {status: 'A', rsa_id}, 'booking_id', booking_id);
+
+        // const href = `portable_charger_booking/${booking_id}`;
+        // const title = 'POD Booking Accepted';
+        // const message = `Driver has accepted your POD booking service with booking id: ${booking_id} and he is enroute now`;
+        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        const insert = await db.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "A", ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+        );
+
+        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await db.execute('UPDATE rsa SET running_order = running_order + 1 WHERE rsa_id = ?', [rsa_id]);
+        await db.execute('UPDATE portable_charger_booking_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [booking_id, rsa_id]);
+
+        return resp.json({ message: ['POD Booking accepted successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
+
+const reachedLocation = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude } = req.body;
+
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 0
+        LIMIT 1
+    `,[rsa_id, booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "RL" AND booking_id = ?',[rsa_id, booking_id]
+    );
+
+    if (ordHistoryCount.count === 0) {
+        const insert = await db.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "RL", ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+        );
+
+        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await updateRecord('portable_charger_booking', {status: 'RL', rsa_id}, 'booking_id', booking_id);
+
+        // const href = `portable_charger_booking/${booking_id}`;
+        // const title = 'POD Reached at Location';
+        // const message = `Portable Charger Reached at Location Successfully!`;
+        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        return resp.json({ message: ['POD Reached at Location Successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
+
+const chargingStart = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude } = req.body;
+
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 0
+        LIMIT 1
+    `,[rsa_id, booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "CS" AND booking_id = ?',[rsa_id, booking_id]
+    );
+
+    if (ordHistoryCount.count === 0) {
+        const insert = await db.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "CS", ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+        );
+
+        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await updateRecord('portable_charger_booking', {status: 'CS', rsa_id}, 'booking_id', booking_id);
+
+        // const href = `portable_charger_booking/${booking_id}`;
+        // const title = 'Charging Start';
+        // const message = `Your Vehicle Charging Start Successfully!`;
+        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        return resp.json({ message: ['Vehicle Charging Start successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
+
+const chargingComplete = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude } = req.body;
+
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 0
+        LIMIT 1
+    `,[rsa_id, booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "CC" AND booking_id = ?',[rsa_id, booking_id]
+    );
+
+    if (ordHistoryCount.count === 0) {
+        const insert = await db.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "CC", ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+        );
+
+        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await updateRecord('portable_charger_booking', {status: 'CC', rsa_id}, 'booking_id', booking_id);
+
+        // const href = `portable_charger_booking/${booking_id}`;
+        // const title = 'Charging Completed!';
+        // const message = `Your Vehicle Charging Start Completed!`;
+        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        return resp.json({ message: ['Vehicle Charging Completed successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
+
+const chargerPickedUp = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude } = req.body;
+
+    if (!req.file) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
+            (select slot from portable_charger_booking as pb where pb.booking_id = portable_charger_booking_assign.order_id ) as slot_id
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 0
+        LIMIT 1
+    `,[rsa_id, booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "PU" AND booking_id = ?',[rsa_id, booking_id]
+    );
+
+    if (ordHistoryCount.count === 0) {
+        /* handle file upload */
+
+        const insert = await db.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "PU", ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, '']
+        );
+
+        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, 'booking_id', booking_id);
+        await db.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id=?`, [rsa_id]);
+        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
+        // const href = `portable_charger_booking/${booking_id}`;
+        // const title = 'POD Picked Up';
+        // const message = `Portable Charger picked-up successfully! with booking id : ${booking_id}`;
+        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
