@@ -16,6 +16,7 @@ import {offerList, offerDetail} from '../controller/api/OfferController.js';
 import {shopList, shopDetail} from '../controller/api/ShopController.js';
 import {chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking} from '../controller/api/PortableChargerController.js';
 import { getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking } from '../controller/api/ChargingServiceController.js';
+import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList, upload} from '../controller/api/EvInsuranceController.js';
 
 const router = Router();
 
@@ -110,6 +111,22 @@ router.get('/offer-detail', offerDetail);
 /* Service Shop */
 router.get('/service-shop-list', shopList);
 router.get('/service-shop-detail', shopDetail);
+
+/* EV Insurance */
+router.post('/add-insurance', upload.fields([
+    { name: 'vehicle_registration_img', maxCount: 10 },
+    { name: 'driving_licence', maxCount: 10 },
+    { name: 'car_images', maxCount: 10 },
+    { name: 'car_type_image', maxCount: 10 },
+    { name: 'scretch_image', maxCount: 10 },
+    { name: 'emirates_id', maxCount: 10 }
+]),addInsurance);
+router.post('/insurance-list', insuranceList);
+router.post('/insurance-details', insuranceDetails);
+router.post('/ev-pre-sale-testing', evPreSaleBooking);
+router.get('/ev-pre-sale-list', evPreSaleList);
+router.get('/ev-pre-sale-detail', evPreSaleDetails);
+router.post('/ev-pre-sale-slot-list', preSaleSlotList);
 
 
 /* -- Api Auth & Api RSA Authz middleware -- */
