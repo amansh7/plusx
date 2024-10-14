@@ -22,4 +22,20 @@ const testConnection = async () => {
 
 testConnection();
 
+export const startTransaction = async () => {
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+  return connection;
+};
+
+export const commitTransaction = async (connection) => {
+  await connection.commit();
+  connection.release();
+};
+
+export const rollbackTransaction = async (connection) => {
+  await connection.rollback();
+  connection.release();
+};
+
 export default pool;
