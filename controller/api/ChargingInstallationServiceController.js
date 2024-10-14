@@ -33,9 +33,9 @@ export const serviceRequest = async (req, resp) => {
     if(insert.affectedRows > 0){
         insertRecord('charging_installation_service_history', ['service_id', 'rider_id', 'vehicle_model', 'order_status'], [requestId, rider_id, vehicle_model, 'P']);
         
-        const href = 'charging_installation_service/' + requestId;
-        const heading = 'Order Created!';
-        const desc = `Your request for charging installation service at home order no. ${requestId} has been placed.`;
+        // const href = 'charging_installation_service/' + requestId;
+        // const heading = 'Order Created!';
+        // const desc = `Your request for charging installation service at home order no. ${requestId} has been placed.`;
         // createNotification(heading, desc, 'Charging Installation Service', 'Rider', 'Admin','', rider_id, href);
         // pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
 

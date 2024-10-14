@@ -7,7 +7,7 @@ import {stationList, stationDetail, nearestChargerList} from '../controller/api/
 import {carList, carDetail} from '../controller/api/ElectricCarRentalController.js';
 import {bikeList, bikeDetail} from '../controller/api/ElectricBikeRentalController.js';
 import {
-    addRoadAssistance, roadAssistanceList, roadAssistanceDetail, roadAssistanceInvoiceList, roadAssistanceInvoiceDetail, getRsaOrderStage
+    addRoadAssistance, roadAssistanceList, roadAssistanceDetail, roadAssistanceInvoiceList, roadAssistanceInvoiceDetail, getRsaOrderStage, orderAction
 } from '../controller/api/RoadAssistanceController.js';
 import {serviceRequest, requestList, requestDetails} from '../controller/api/ChargingInstallationServiceController.js';
 import {clubList, clubDetail } from '../controller/api/ClubController.js';
@@ -19,6 +19,10 @@ import {shopList, shopDetail} from '../controller/api/ShopController.js';
 import {chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking} from '../controller/api/PortableChargerController.js';
 import { getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking } from '../controller/api/ChargingServiceController.js';
 import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList, upload} from '../controller/api/EvInsuranceController.js';
+import { 
+    addDiscussionBoard, getDiscussionBoardList, getDiscussionBoardDetail, addComment, replyComment, boardLike, boardView, boardShare, votePoll, 
+    reportOnBoard, boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
+} from '../controller/api/DiscussionBoardController.js';
 
 const router = Router();
 
@@ -92,6 +96,26 @@ router.post('/edit-sell-vehicle', updateSellVehicle);
 router.get('/delete-sell-vehicle', deleteSellVehicle);
 router.get('/sold-sell-vehicle', soldSellVehicle);
 
+/* Discussion Board */
+router.post('/add-discussion-board', addDiscussionBoard);
+router.get('/discussion-board-list', getDiscussionBoardList);
+router.get('/discussion-board-detail', getDiscussionBoardDetail);
+router.post('/add-comment', addComment);
+router.post('/reply-comment', replyComment);
+router.get('/board-like', boardLike);
+router.get('/board-view', boardView);
+router.get('/board-share', boardShare);
+router.get('/board-vote-poll', votePoll);
+router.get('/discussion-board-report', reportOnBoard);
+router.get('/discussion-board-not-interested', boardNotInterested);
+router.get('/discussion-board-delete', boardDelete);
+router.post('/discussion-board-edit', editBoard);
+router.post('/board-vote-edit', editPoll);
+router.post('/delete-comment', deleteComment);
+router.post('/delete-reply-comment', deleteReplyComment);
+router.get('/comment-like', commentLike);
+router.get('/reply-comment-like', replyCommentLike);
+
 /* Charging Service */
 router.post('/charging-service-slot-list', getChargingServiceSlotList);
 router.post('/charging-service', requestService);
@@ -135,6 +159,9 @@ router.post('/ev-pre-sale-slot-list', preSaleSlotList);
 
 /* -- Api Auth & Api RSA Authz middleware -- */
 
+/* Road Assitance with RSA */
+router.get('/rsa-order-stage', getRsaOrderStage);
+router.get('/order-action', orderAction);
 /* Charging Service */
 router.post('/charger-service-action', handleBookingAction);
 router.get('/charger-service-stage', getRsaBookingStage);
@@ -143,7 +170,6 @@ router.post('/charger-service-reject', handleRejectBooking);
 router.get('/portable-charger-stage', rsaBookingStage);
 router.post('/portable-charger-action', bookingAction);
 router.post('/portable-charger-reject', rejectBooking);
-/* Road Assitance with RSA */
-router.get('/rsa-order-stage', getRsaOrderStage)
+
 
 export default router;

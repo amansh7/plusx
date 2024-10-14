@@ -112,8 +112,14 @@ export const getPaginatedData = async ({
   if (whereField.length > 0 && whereValue.length > 0) {
     whereField.forEach((field, index) => {
       const operator = whereOperator[index] || '=';
-      whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} ${operator} ?`;
-      queryParams.push(whereValue[index]);
+      if (operator.toUpperCase() === 'NOT IN') {
+        const placeholders = whereValue[index].map(() => '?').join(', ');
+        whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} NOT IN (${placeholders})`;
+        queryParams.push(...whereValue[index]);
+      } else {
+        whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} ${operator} ?`;
+        queryParams.push(whereValue[index]);
+      }
     });
   }
 
