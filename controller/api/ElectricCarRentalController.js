@@ -1,11 +1,11 @@
-import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
+import { mergeParam } from '../../utils.js';
 
 export const carList = async (req, resp) => {
-    const {rider_id, page_no, search_text, sort_by } = req.body;
+    const {rider_id, page_no, search_text, sort_by } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -36,9 +36,9 @@ export const carList = async (req, resp) => {
 };
 
 export const carDetail = async (req, resp) => {
-    const {rider_id, rental_id } = req.body;
+    const {rider_id, rental_id } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], rental_id: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], rental_id: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 

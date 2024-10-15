@@ -3,6 +3,10 @@ import axios from "axios";
 import multer from 'multer';
 import path from 'path';
 
+export function mergeParam(req) {
+  return { ...req.query, ...req.body };
+};
+
 export const generateRandomPassword = (length = 8) => {
   const chars =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

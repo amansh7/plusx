@@ -57,7 +57,7 @@ export const addInsurance = async (req, resp) => {
     const insuranceId = 'EVI' + generateUniqueId({length:12});
     const formattedInsuranceExpiry = insurance_expiry ? moment(insurance_expiry).format('YYYY-MM-DD') : null;
 
-    const insert = insertRecord('ev_insurance', [
+    const insert = await insertRecord('ev_insurance', [
         'insurance_id', 'rider_id', 'owner_name', 'date_of_birth', 'country', 'country_code', 'mobile_no', 'email', 'vehicle', 'registration_place', 'car_brand', 
         'bank_loan', 'bank_name', 'type_of_insurance', 'insurance_expiry', 'insurance_expired', 'vehicle_registration_img', 'driving_licence', 'car_images', 
         'car_type_image', 'scretch_image', 'emirates_id', 
@@ -183,7 +183,7 @@ export const evPreSaleBooking = async (req, resp) => {
 
     const bookingId = 'EPTS' + generateUniqueId({length:11});
 
-    const insert = insertRecord('ev_pre_sale_testing', [
+    const insert = await insertRecord('ev_pre_sale_testing', [
         "booking_id", "rider_id", "owner_name", "country", "country_code", "mobile_no", "email", "vehicle", "pickup_address", "reason_of_testing", "pickup_latitude", 
         "pickup_longitude", "slot_date", "slot_time_id" 
     ],[
@@ -247,8 +247,8 @@ export const evPreSaleBooking = async (req, resp) => {
 };
 
 export const evPreSaleList = async (req, resp) => {
-    const {rider_id, page_no, mobile_no, vehicle } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, mobile_no, vehicle } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     let whereField = ['rider_id'];
@@ -289,8 +289,8 @@ export const evPreSaleList = async (req, resp) => {
 };
 
 export const evPreSaleDetails = async (req, resp) => {
-    const {rider_id, booking_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], booking_id: ["required"]});
+    const {rider_id, booking_id } = mergeparam(req);
+    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const sale = await queryDB(`

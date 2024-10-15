@@ -31,7 +31,7 @@ export const serviceRequest = async (req, resp) => {
     ]);
     
     if(insert.affectedRows > 0){
-        insertRecord('charging_installation_service_history', ['service_id', 'rider_id', 'vehicle_model', 'order_status'], [requestId, rider_id, vehicle_model, 'P']);
+        await insertRecord('charging_installation_service_history', ['service_id', 'rider_id', 'vehicle_model', 'order_status'], [requestId, rider_id, vehicle_model, 'P']);
         
         // const href = 'charging_installation_service/' + requestId;
         // const heading = 'Order Created!';

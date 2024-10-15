@@ -39,9 +39,9 @@ export const chargerBooking = async (req, resp) => {
     const { 
         rider_id, charger_id, vehicle_id, service_name, service_type, service_feature, user_name, country_code, contact_no, address, latitude, longitude, 
         slot_date, slot_time, slot_id, service_price='', coupan_code, user_id
-    } = req.body;
+    } = mergeparam(req);
 
-    const { isValid, errors } = validateFields(req.body, {
+    const { isValid, errors } = validateFields(mergeparam(req), {
         rider_id: ["required"],
         charger_id: ["required"],
         vehicle_id: ["required"],
@@ -182,8 +182,8 @@ export const chargerBooking = async (req, resp) => {
 };
 
 export const chargerBookingList = async (req, resp) => {
-    const {rider_id, page_no, history } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, history } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
@@ -213,8 +213,8 @@ export const chargerBookingList = async (req, resp) => {
 };
 
 export const chargerBookingDetail = async (req, resp) => {
-    const {rider_id, booking_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], booking_id: ["required"]});
+    const {rider_id, booking_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const booking = await queryDB(`SELECT * FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
@@ -238,8 +238,8 @@ export const chargerBookingDetail = async (req, resp) => {
 
 /* Invoice */
 export const invoiceList = async (req, resp) => {
-    const {rider_id, page_no, orderStatus } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, orderStatus } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     let whereField = ['rider_id'];
@@ -304,8 +304,8 @@ export const invoiceDetails = async (req, resp) => {
 
 /* RSA */
 export const rsaBookingStage = async (req, resp) => {
-    const {rsa_id, booking_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"]});
+    const {rsa_id, booking_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const booking = await queryDB(`SELECT status, created_at, updated_at FROM portable_charger_booking WHERE booking_id=?`, [booking_id]);
@@ -379,7 +379,7 @@ export const rejectBooking = async (req, resp) => {
         'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "C", ?, ?, ?)',
         [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
     );
-    await db.insertRecord('portable_charger_booking_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
+    await insertRecord('portable_charger_booking_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
     await db.execute(`DELETE FROM portable_charger_booking_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
 
     // const href = `portable_charger_booking/${booking_id}`;

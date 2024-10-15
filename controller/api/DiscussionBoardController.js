@@ -43,8 +43,8 @@ export const addDiscussionBoard = async (req, resp) => {
 };
 
 export const getDiscussionBoardList = async (req, resp) => {
-    const {rider_id, page_no, search_text, by_rider } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, search_text, by_rider } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -116,8 +116,8 @@ export const getDiscussionBoardList = async (req, resp) => {
 };
 
 export const getDiscussionBoardDetail = async (req, resp) => {
-    const {rider_id, board_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"]});
+    const {rider_id, board_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -219,7 +219,7 @@ export const addComment = async (req, resp) => {
         if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
         
         const commentId = `DBC${generateUniqueId({length:12})}`
-        const insert = insertRecord('board_comment', ['comment_id', 'board_id', 'rider_id', 'comment'], [commentId, board_id, rider_id, comment]);
+        const insert = await insertRecord('board_comment', ['comment_id', 'board_id', 'rider_id', 'comment'], [commentId, board_id, rider_id, comment]);
     
         if(insert.affectedRows === 0) return resp.json({status:0, code:422, error: true, message:["Failed to add comment. Please Try Again."]});
     
@@ -260,7 +260,7 @@ export const replyComment = async (req, resp) => {
     
         if(!commentData) return resp.json({status:0, code:422, error: true, message:["Comment Id is invalid!"]});
         
-        const insert = insertRecord('board_comment_reply', ['comment_id', 'rider_id', 'comment'], [comment_id, rider_id, comment]);
+        const insert = await insertRecord('board_comment_reply', ['comment_id', 'rider_id', 'comment'], [comment_id, rider_id, comment]);
         if(insert.affectedRows === 0) return resp.json({status:0, code:422, error: true, message:["Failed to replay on comment. Please Try Again."]});
     
         if(commentData.riderDetails){
@@ -284,8 +284,8 @@ export const replyComment = async (req, resp) => {
 };
 
 export const boardLike = async (req, resp) => {
-    const {rider_id, board_id, status } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"], status: ["required"]});
+    const {rider_id, board_id, status } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"], status: ["required"]});
     if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -338,8 +338,8 @@ export const boardLike = async (req, resp) => {
 };
 
 export const boardView = async (req, resp) => {
-    const {rider_id, board_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"]});
+    const {rider_id, board_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -361,8 +361,8 @@ export const boardView = async (req, resp) => {
 };
 
 export const boardShare = async (req, resp) => {
-    const {rider_id, board_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"]});
+    const {rider_id, board_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -395,8 +395,8 @@ export const boardShare = async (req, resp) => {
 };
 
 export const votePoll = async (req, resp) => {
-    const {rider_id, poll_id, option } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], poll_id: ["required"], option: ["required"]});
+    const {rider_id, poll_id, option } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], poll_id: ["required"], option: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -433,8 +433,8 @@ export const votePoll = async (req, resp) => {
 };
 
 export const reportOnBoard = async (req, resp) => {
-    const {rider_id, board_id, reason } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"], reason: ["required"]});
+    const {rider_id, board_id, reason } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"], reason: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -479,8 +479,8 @@ export const reportOnBoard = async (req, resp) => {
 };
 
 export const boardNotInterested = async (req, resp) => {
-    const {rider_id, board_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"]});
+    const {rider_id, board_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -504,7 +504,7 @@ export const boardNotInterested = async (req, resp) => {
 };
 
 export const boardDelete = async (req, resp) => {
-    const {rider_id, board_id } = req.body;
+    const {rider_id, board_id } = mergeparam(req);
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -556,7 +556,7 @@ export const editBoard = async (req, resp) => {
         const board = await queryDB(`SELECT rider_id, image FROM discussion_board WHERE board_id = ? AND rider_id = ?`, [board_id, rider_id]);
         if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
         
-        if (newImages && board.image) {
+        if (newImages) {
             const imageArray = board.image.split("*");
             for (const img of imageArray) {
                 const filePath = path.join('uploads', 'discussion-board-images', img);
@@ -712,8 +712,8 @@ export const deleteReplyComment = async (req, resp) => {
 };
 
 export const commentLike = async (req, resp) => {
-    const {rider_id, comment_id, status} = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
+    const {rider_id, comment_id, status} = mergeparam(req);
+    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
     if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -767,8 +767,8 @@ export const commentLike = async (req, resp) => {
 };
 
 export const replyCommentLike = async (req, resp) => {
-    const {rider_id, comment_id, status} = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
+    const {rider_id, comment_id, status} = mergeparam(req);
+    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
     if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 

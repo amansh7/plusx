@@ -4,6 +4,8 @@ import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbU
 import generateUniqueId from 'generate-unique-id';
 import transporter from "../../mailer.js";
 import moment from "moment";
+import { mergeParam} from '../../utils.js';
+
 
 export const vehicleList = async (req, resp) => {
     const {vehicle_type, page_no, vehicle_name, vehicle_model } = req.body;
@@ -402,8 +404,8 @@ export const reminder_sell_vehicle_list = async (req, resp) => {
 };
 
 export const vehicleModelList = async (req, resp) => {
-    const {vehicle_type, make_name} = req.body;
-    const { isValid, errors } = validateFields(req.body, {vehicle_type: ["required"], make_name: ["required"]});
+    const {vehicle_type, make_name} = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {vehicle_type: ["required"], make_name: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
     let modelData = [];
@@ -427,18 +429,18 @@ export const vehicleModelList = async (req, resp) => {
 };
 
 export const vehicleBrandList = async (req, resp) => {
-    const {vehicle_type} = req.body;
-    const { isValid, errors } = validateFields(req.body, {vehicle_type: ["required"]});
+    const {vehicle_type} = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {vehicle_type: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
     let modelData = [];
 
     if(vehicle_type === 'Car'){
-        const [rows] = await db.execute('SELECT model FROM vehicle_brand_list WHERE status = ? GROUP BY make',[1]);
-        modelData = rows.map(row => row.model);
+        const [rows] = await db.execute('SELECT make FROM vehicle_brand_list WHERE status = ? GROUP BY make',[1]);
+        modelData = rows.map(row => row.make);
     }else{
-        const [rows] = await db.execute('SELECT model FROM vehicle_bike_brand_list WHERE status = ? GROUP BY make',[1]);
-        modelData = rows.map(row => row.model);
+        const [rows] = await db.execute('SELECT make FROM vehicle_bike_brand_list WHERE status = ? GROUP BY make',[1]);
+        modelData = rows.map(row => row.make);
     }
 
     return resp.json({

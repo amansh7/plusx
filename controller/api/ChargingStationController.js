@@ -1,12 +1,12 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
-import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-import {getOpenAndCloseTimings} from '../../utils.js';
+import { queryDB } from '../../dbUtils.js';
+import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
 
 export const stationList = async (req, resp) => {
-    const {rider_id, latitude, longitude, page_no, search_text, sort_by } = req.body;
+    const {rider_id, latitude, longitude, page_no, search_text, sort_by } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {
+    const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], latitude: ["required"], longitude: ["required"], page_no: ["required"]
     });
     
@@ -54,9 +54,9 @@ export const stationList = async (req, resp) => {
 };
 
 export const stationDetail = async (req, resp) => {
-    const {rider_id, station_id, latitude, longitude } = req.body;
-        
-    const { isValid, errors } = validateFields(req.body, {
+    const {rider_id, station_id, latitude, longitude } = mergeParam(req);
+    let gallery = [];
+    const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], station_id: ["required"], latitude: ["required"], longitude: ["required"]
     });
 
@@ -72,7 +72,7 @@ export const stationDetail = async (req, resp) => {
     
     station.schedule = getOpenAndCloseTimings(station);
 
-    const gallery = await queryDB(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC LIMIT 5`, [station_id]);
+    [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC LIMIT 5`, [station_id]);
     const imgName = gallery.map(row => row.image_name);
 
     return resp.json({
@@ -86,9 +86,9 @@ export const stationDetail = async (req, resp) => {
 };
 
 export const nearestChargerList = async (req, resp) => {
-    const {rider_id, latitude, longitude } = req.body;
+    const {rider_id, latitude, longitude } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {
+    const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], latitude: ["required"], longitude: ["required"]
     });
 

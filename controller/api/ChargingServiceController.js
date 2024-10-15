@@ -6,7 +6,7 @@ import moment from "moment";
 import 'moment-duration-format';
 
 export const getChargingServiceSlotList = async (req, resp) => {
-    const [slot] = db.execute(`SELECT * FROM pick_drop_slot WHERE status = ?`, [1]);
+    const [slot] = await db.execute(`SELECT * FROM pick_drop_slot WHERE status = ?`, [1]);
     return resp.json({
         message: [ "Slot List fetch successfully!" ], 
         data: slot,
@@ -140,8 +140,8 @@ export const requestService = async (req, resp) => {
 };
 
 export const listServices = async (req, resp) => {
-    const {rider_id, page_no, history } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, history } = mergeparam(req);
+    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
@@ -171,8 +171,8 @@ export const listServices = async (req, resp) => {
 };
 
 export const getServiceOrderDetail = async (req, resp) => {
-    const {rider_id, service_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], service_id: ["required"]});
+    const {rider_id, service_id } = mergeparam(req);
+    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], service_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const order = await queryDB(`SELECT * FROM charging_service WHERE request_id = ? LIMIT 1`, [service_id]);
@@ -196,8 +196,8 @@ export const getServiceOrderDetail = async (req, resp) => {
 
 /* Invoice */
 export const getInvoiceList = async (req, resp) => {
-    const {rider_id, page_no, orderStatus } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, orderStatus } = mergeparam(req);
+    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     let whereField = ['rider_id'];
@@ -233,8 +233,8 @@ export const getInvoiceList = async (req, resp) => {
 };
 
 export const getInvoiceDetail = async (req, resp) => {
-    const {rider_id, invoice_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], invoice_id: ["required"]});
+    const {rider_id, invoice_id } = mergeparam(req);
+    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoice = await queryDB(`SELECT 
@@ -260,8 +260,8 @@ export const getInvoiceDetail = async (req, resp) => {
 
 /* RSA */
 export const getRsaBookingStage = async (req, resp) => {
-    const {rsa_id, booking_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"]});
+    const {rsa_id, booking_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const booking = await queryDB(`SELECT order_status, created_at, updated_at FROM charging_service WHERE request_id=?`, [booking_id]);
@@ -330,7 +330,7 @@ export const handleRejectBooking = async (req, resp) => {
 
     if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-    await db.insertRecord('charging_service_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
+    await insertRecord('charging_service_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
     await db.execute(`DELETE FROM charging_service_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
 
     // const href = `charging_service/${booking_id}`;
