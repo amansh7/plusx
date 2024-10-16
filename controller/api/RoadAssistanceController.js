@@ -4,6 +4,7 @@ import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import transporter from "../../mailer.js";
 import moment from "moment";
 import multer from 'multer';
+import { mergeParam } from '../../utils.js';
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -44,7 +45,7 @@ export const addRoadAssistance = async (req, resp) => {
     ]);
 
     if(insert.affectedRows > 0){
-        insertRecord('order_history', ['order_id', 'order_status', 'rider_id'], [requestId, 'BD', rider_id]);
+        await insertRecord('order_history', ['order_id', 'order_status', 'rider_id'], [requestId, 'BD', rider_id]);
         
         const href = 'road_assistance/' + requestId;
         const heading = 'Roadside Assistance Created';
@@ -105,9 +106,9 @@ export const addRoadAssistance = async (req, resp) => {
 };
 
 export const roadAssistanceList = async (req, resp) => {
-    const {rider_id, page_no, sort_by } = req.body;
+    const {rider_id, page_no, sort_by } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -134,9 +135,9 @@ export const roadAssistanceList = async (req, resp) => {
 };
 
 export const roadAssistanceDetail = async (req, resp) => {
-    const {rider_id, order_id } = req.body;
+    const {rider_id, order_id } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], order_id: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], order_id: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -167,8 +168,8 @@ export const roadAssistanceDetail = async (req, resp) => {
 
 /* Invoice */
 export const roadAssistanceInvoiceList = async (req, resp) => {
-    const {rider_id, page_no, orderStatus } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, orderStatus } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     let whereField = ['rider_id'];
@@ -206,8 +207,8 @@ export const roadAssistanceInvoiceList = async (req, resp) => {
 };
 
 export const roadAssistanceInvoiceDetail = async (req, resp) => {
-    const {rider_id, invoice_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], invoice_id: ["required"]});
+    const {rider_id, invoice_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoice = await queryDB(`SELECT 
@@ -233,8 +234,8 @@ export const roadAssistanceInvoiceDetail = async (req, resp) => {
 
 /* RSA */
 export const getRsaOrderStage = async (req, resp) => {
-    const {rsa_id, order_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], order_id: ["required"]});
+    const {rsa_id, order_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], order_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -297,8 +298,8 @@ export const getRsaOrderStage = async (req, resp) => {
 };
 
 export const orderAction = async (req, resp) => {
-    const {order_status, order_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {order_status: ["required"], order_id: ["required"]});
+    const {order_status, order_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {order_status: ["required"], order_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     switch (order_status) {

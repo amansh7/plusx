@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { 
     login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, 
-    notificationList, addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount  
+    notificationList, addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount, addRiderVehicle ,editRiderVehicle, riderVehicleList, deleteRiderVehicle
 } from "../controller/api/RiderController.js";
 import {stationList, stationDetail, nearestChargerList} from '../controller/api/ChargingStationController.js';
 import {carList, carDetail} from '../controller/api/ElectricCarRentalController.js';
@@ -23,8 +23,15 @@ import {
     addDiscussionBoard, getDiscussionBoardList, getDiscussionBoardDetail, addComment, replyComment, boardLike, boardView, boardShare, votePoll, 
     reportOnBoard, boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
 } from '../controller/api/DiscussionBoardController.js';
+import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
+import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
 
 const router = Router();
+
+// router.use(apiAuthentication);
+// router.get('/test2', (req, resp) => { return resp.json('API Authentication Middleware'); });
+// router.use(apiAuthorization);
+// router.get('/test1', (req, resp) => { return resp.json('API Authorization Middleware'); });
 
 /* API Routes */
 router.post('/rider-login', login);
@@ -34,7 +41,7 @@ router.post('/create-otp', createOTP);
 router.post('/verify-otp', verifyOTP);
 
 /* Dynamic List */
-router.post('/location-list', locationList);
+router.get('/location-list', locationList);
 
 /* Vehicle Routes */
 router.get('/location-area-list', areaList);
@@ -43,17 +50,21 @@ router.post('/vehicle-brand-list', vehicleBrandList);
 router.post('/vehicle-model-list', vehicleModelList);
 
 /* -- Api Auth & Api Authz middleware -- */
-router.post('/rider-home', home);
-router.post('/get-rider-data', getRiderData);
+router.get('/rider-home', home);
+router.get('/get-rider-data', getRiderData);
 router.post('/rider-profile-change', updateProfile);
-router.post('/rider-profile-image-delete', deleteImg);
-router.post('/rider-account-delete', deleteAccount);
+router.get('/rider-profile-image-delete', deleteImg);
+router.get('/rider-account-delete', deleteAccount);
 router.post('/rider-logout', logout);
 router.post('/rider-change_password', updatePassword);
-router.post('/rider-notification-list', notificationList);
+router.get('/rider-notification-list', notificationList);
 router.post('/rider-address-add', addRiderAddress);
 router.get('/rider-address-list', riderAddressList);
 router.get('/rider-address-delete', deleteRiderAddress);
+router.post('/rider-vehicle-add', addRiderVehicle);
+router.post('/rider-vehicle-edit', editRiderVehicle);
+router.get('/rider-vehicle-list', riderVehicleList);
+router.get('/rider-vehicle-delete', deleteRiderVehicle);
 
 /* Charging Station  */
 router.get('/charging-station-list', stationList);

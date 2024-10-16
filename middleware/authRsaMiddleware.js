@@ -3,23 +3,23 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const authenticateUser = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader.split(' ')[1];
+export const authenticateRsaUser = (req, resp, next) => {
+  const riderId = req.body.userId;
+  const token = req.headers["access_token"];
 
-  if (!token) return res.status(401).json({ message: "Invalid Authorization key" });
-
-  if (token !== process.env.CUSTOM_TOKEN) {
-    return res.status(401).json({ message: "Unauthorized. Invalid token." });
+  if (!token) {
+    return resp.status(401).json({ message: 'Access token is missing', code: 400, data: [{}], status:0 });
   }
-  next();
-
-  // jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-  //   if (err) {
-  //     console.error("Token verification error:", err.message);
-  //     return res.status(403).json({ message: 'Invalid token', error: err.message });
-  //   }
-  //   req.user = user;
-  //   next();
-  // });
+  
+  db.execute("SELECT * from rsa where rsa_id=? AND access_token=?", [riderId, token])
+    .then(([rows]) => {
+      if (rows.length === 0) {
+        return resp.status(401).json({ message: 'Access Denied. Invalid Access Token key', code: 400, data: [{}], status:0 });
+      }
+      next();
+    })
+    .catch((err) => {
+      console.error(err);
+      resp.status(500).json({ message: "Database error" });
+    });
 };

@@ -3,9 +3,9 @@ import validateFields from "../../validation.js";
 import { queryDB } from '../../dbUtils.js';
 
 export const clubList = async (req, resp) => {
-    const {rider_id, page_no, preference, search_text, age_group, location, category } = req.body;
+    const {rider_id, page_no, preference, search_text, age_group, location, category } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -60,14 +60,15 @@ export const clubList = async (req, resp) => {
 };
 
 export const clubDetail = async (req, resp) => {
-    const {rider_id, club_id } = req.body;
+    const {rider_id, club_id } = mergeParam(req);
+    let galleryData = [];
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], club_id: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], club_id: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const clubData = await queryDB(`SELECT * FROM clubs WHERE club_id= ? LIMIT 1`, [1, club_id]);
-    const galleryData = await queryDB(`SELECT * FROM club_gallery WHERE club_id = ? ORDER BY id DESC LIMIT 5`, [club_id]);
+    [galleryData] = await queryDB(`SELECT * FROM club_gallery WHERE club_id = ? ORDER BY id DESC LIMIT 5`, [club_id]);
     const imgName = galleryData.map(row => row.image_name);
     
     return resp.json({
