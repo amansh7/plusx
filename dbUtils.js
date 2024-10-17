@@ -102,7 +102,7 @@ export const getPaginatedData = async ({
   whereValue = '',
   whereOperator = '=',
 }) => {
-  const start = (page_no * limit) - limit;
+  const start = parseInt((page_no * limit) - limit, 10);
 
   let searchCondition = '';
   const queryParams = [];
@@ -133,8 +133,8 @@ export const getPaginatedData = async ({
 
 
   // Final query
-  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ?, ?`;
-  queryParams.push(start, limit);
+  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
+  // queryParams.push(start, parseInt(limit, 10));
 
   console.log("Executing Query:", query, "With Params:", queryParams);
 

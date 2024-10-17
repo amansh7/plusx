@@ -1,8 +1,7 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
-import { queryDB, getPaginatedData } from '../../dbUtils.js';
+import { queryDB } from '../../dbUtils.js';
 import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
-import moment from "moment";
 
 export const shopList = async (req, resp) => {
     const {rider_id, page_no, location, latitude, longitude, search_text, service, brand } = mergeParam(req);
@@ -10,7 +9,7 @@ export const shopList = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
-    const start = (page_no * limit) - limit;
+    const start = parseInt((page_no * limit) - limit);
 
     let query = `
         SELECT s.shop_id, s.shop_name, s.contact_no, s.store_email, store_address.address, store_address.area_name, s.cover_image AS shop_image, s.store_website,
@@ -60,8 +59,7 @@ export const shopList = async (req, resp) => {
     const total = totalRows[0].total;
     const totalPage = Math.ceil(total / limit);
 
-    query += ` ORDER BY distance ASC LIMIT ?, ?`;
-    queryParams.push(start, limit);
+    query += ` ORDER BY distance ASC LIMIT ${start}, ${parseInt(limit, 10)}`;
 
     const [shopsData] = await db.execute(query, queryParams);
 

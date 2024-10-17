@@ -43,7 +43,6 @@ export const vehicleDetail = async (req, resp) => {
 
     const vehicleData = await queryDB(`SELECT * FROM vehicle WHERE vehicle_id= ? LIMIT 1`, [vehicle_id]);
     [gallery] = await db.execute(`SELECT image_name FROM vehicle_gallery WHERE vehicle_id = ? ORDER BY id DESC LIMIT 5`, [vehicle_id]);
-    console.log(vehicleData);
     const imgName = gallery.map(row => row.image_name);
     
     return resp.json({
@@ -87,7 +86,6 @@ export const interestedPeople = async (req, resp) => {
     });
 };
 
-// multiple image upload pending
 export const sellVehicle = async (req, resp) => {
     try{     
         const uploadedFiles = req.files;
@@ -262,75 +260,95 @@ export const sellVehicleDetail = async (req, resp) => {
 
 };
 
-// multiple image upload & old img deletion pending
 export const updateSellVehicle = async (req, resp) => {
-    const { sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
-        warrenty, description, horse_power, car_images='', car_tyre_image='', other_images=''
-    } = req.body;
+    try{
+        const uploadedFiles = req.files;
+        const car_images = uploadedFiles['car_images']?.map(file => file.filename).join('*') || '';
+        const car_tyre_image = uploadedFiles['car_tyre_image']?.map(file => file.filename).join('*') || '';
+        const other_images = uploadedFiles['other_images']?.map(file => file.filename).join('*') || '';
         
-    const { isValid, errors } = validateFields(req.body, {
-        sell_id: ["required"],
-        rider_id: ["required"],
-        vehicle_id: ["required"],
-        region: ["required"],
-        milage: ["required"],
-        price: ["required"],
-        interior_color: ["required"],
-        doors: ["required"],
-        body_type: ["required"],
-        owner_type: ["required"],
-        seat_capacity: ["required"],
-        engine_capacity: ["required"],
-        warrenty: ["required"],
-        description: ["required"],
-        horse_power: ["required"],
-    });
+        const { sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
+            warrenty, description, horse_power
+        } = req.body;
+            
+        const { isValid, errors } = validateFields(req.body, {
+            sell_id: ["required"],
+            rider_id: ["required"],
+            vehicle_id: ["required"],
+            region: ["required"],
+            milage: ["required"],
+            price: ["required"],
+            interior_color: ["required"],
+            doors: ["required"],
+            body_type: ["required"],
+            owner_type: ["required"],
+            seat_capacity: ["required"],
+            engine_capacity: ["required"],
+            warrenty: ["required"],
+            description: ["required"],
+            horse_power: ["required"],
+        });
+        
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+        const data = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
+        const oldImages = [data.car_images,data.car_tyre_image,data.other_images];
+        for (const img of oldImages) {
+            if(img){
+                const path = path.join('uploads', 'vehicle-image', img);
+                fs.unlink(path, (err) => {
+                    if (err) {
+                        console.error(`Failed to delete vehicle old image: ${path}`, err);
+                    }
+                });
+            }
+        }
+        const updates = { vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
+            warrenty, description, horse_power, car_images, car_tyre_image, other_images 
+        };
+        const update = updateRecord('vehicle_sell', updates, ['sell_id', 'rider_id'], [sell_id, rider_id]);
+    
+        return resp.json({
+            status: update.affectedRows > 0 ? 1 : 0,
+            code: 200,
+            error: update.affectedRows > 0 ? false: true,
+            message: update.affectedRows > 0 ? ["Your Car for  Sale  Successful Updated!"] : ["Oops! Something went wrong. Please try again."]
+        });
+    }catch(err){
 
-    const data = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
-    car_images = data.car_images; car_tyre_image = data.car_tyre_image; other_images = data.other_images;    
-    
-    /* multiple image upload (keep old img value) -  car_images | car_tyre_image | other_images */
-    
-    const updates = { vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
-        warrenty, description, horse_power, car_images, car_tyre_image, other_images 
-    };
-    const update = updateRecord('vehicle_sell', updates, ['sell_id', 'rider_id'], [sell_id, rider_id]);
-
-    return resp.json({
-        status: update.affectedRows > 0 ? 1 : 0,
-        code: 200,
-        error: update.affectedRows > 0 ? false: true,
-        message: update.affectedRows > 0 ? ["Your Car for  Sale  Successful Updated!"] : ["Oops! Something went wrong. Please try again."]
-    });
+    }
 };
 
-// image deletion pending
 export const deleteSellVehicle = async (req, resp) => {
     const {rider_id, sell_id} = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], sell_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
-    const connection = await db.getConnection();
 
     try{
-        await connection.beginTransaction();
-
+        const vechile = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE rider_id=?, vehicle_id=?`,[rider_id, sell_id]);
         const [del] = await db.execute(`DELETE FROM vehicle_sell WHERE rider_id=?, vehicle_id=?`,[rider_id, sell_id]);
 
-        /* delete images */
+        const oldImages = [vechile.car_images, vechile.car_tyre_image, vechile.other_images];
+        for (const img of oldImages) {
+            if(img){
+                const path = path.join('uploads', 'vehicle-image', img);
+                fs.unlink(path, (err) => {
+                    if (err) {
+                        console.error(`Failed to delete vehicle old image: ${path}`, err);
+                    }
+                });
+            }
+        }
         
         return resp.json({
-            message: del.affectedRows > 0 ? 'Your Car for Sale deleted successfully!' : 'Oops! Something went wrong. Please try again.',
-            status: del.affectedRows > 0 ? 1 : 0
+            message: del.affectedRows > 0 ? ['Your Car for Sale deleted successfully!'] : ['Failed to delete. Please try again.'],
+            status: del.affectedRows > 0 ? 1 : 0,
+            code:200
         });
 
     }catch(err){
-        await connection.rollback();
         console.error('Error deleting sell vehicle account:', err.message);
         return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
-    }finally{
-        connection.release();
     }
 
 };
