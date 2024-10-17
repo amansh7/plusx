@@ -169,13 +169,10 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
     if(path === '/rider-profile-change'){
         middlewares.push(handleFileUpload('rider_profile', ['profile_image'], 1));
     }
-    if(path === '/sell-vehicle'){
+    if(path === '/sell-vehicle' || path === '/edit-sell-vehicle'){
         middlewares.push(handleFileUpload('vehicle-image', ['car_images', 'car_tyre_image', 'other_images'], ['car_images', 'car_tyre_image'], 5));
     }
-    if(path === '/add-discussion-board'){
-        middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
-    }
-    if(path === '/discussion-board-edit'){
+    if(path === '/add-discussion-board' || path === '/discussion-board-edit'){
         middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
     }
     if(path === '/add-insurance'){
