@@ -32,8 +32,8 @@ export const insertRecord = async (table, columns, values) => {
  *
  * @param {string} table - The name of the table to update.
  * @param {Object} updates - An object where keys are column names and values are the new values.
- * @param {string} whereColumns - The column to filter the rows to update.
- * @param {any} whereValues - The value of the column to filter the rows to update.
+ * @param {Array<any>} whereColumns - The column to filter the rows to update.
+ * @param {Array<any>} whereValues - The value of the column to filter the rows to update.
  * @returns {Promise<Object>} - The result of the update operation.
  */
 export const updateRecord = async (table, updates, whereColumns, whereValues) => {

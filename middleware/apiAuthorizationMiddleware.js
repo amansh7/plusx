@@ -2,7 +2,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const apiAuthorization = (req, resp, next) => {
-  const apiKey = req.headers["authorization"];
+  const apiKey = req.headers['authorization'] || req.query.Authorization || req.body.Authorization;
+
   const token = process.env.API_AUTH_KEY;
 
   if (!token){

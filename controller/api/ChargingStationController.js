@@ -94,7 +94,7 @@ export const nearestChargerList = async (req, resp) => {
 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const chargers = await queryDB(`SELECT station_id, station_name, address, status, station_image, latitude, longitude, description, charging_for, charger_type, charging_point, price, status, always_open, 
+    const [chargers] = await db.execute(`SELECT station_id, station_name, address, status, station_image, latitude, longitude, description, charging_for, charger_type, charging_point, price, status, always_open, 
         REPLACE(open_days, "_", ", ") AS open_days, 
         REPLACE(open_timing, "_", ", ") AS open_timing, 
         (6367 * ACOS(COS(RADIANS(?)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(latitude))) ) AS distance 
@@ -105,7 +105,7 @@ export const nearestChargerList = async (req, resp) => {
     return resp.json({
         status:1 ,
         code: 200, 
-        message: 'Nearest Portable Charger List fetch successfully!',
+        message: ['Nearest Portable Charger List fetch successfully!'],
         data: chargers
     });
 

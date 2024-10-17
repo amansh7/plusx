@@ -1,6 +1,8 @@
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
 import { mergeParam } from '../../utils.js';
+import db from "../../config/db.js";
+
 
 export const carList = async (req, resp) => {
     const {rider_id, page_no, search_text, sort_by } = mergeParam(req);
@@ -37,14 +39,15 @@ export const carList = async (req, resp) => {
 
 export const carDetail = async (req, resp) => {
     const {rider_id, rental_id } = mergeParam(req);
+    let gallery = [];
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], rental_id: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const rentalData = await queryDB(`SELECT * FROM electric_car_rental WHERE status = ? AND rental_id= ? LIMIT 1`, [1, rental_id]);
-    const galleryData = await queryDB(`SELECT * FROM electric_car_rental_gallery WHERE rental_id = ? ORDER BY id DESC LIMIT 5`, [rental_id]);
-    const imgName = galleryData.map(row => row.image_name);
+    [gallery] = await db.execute(`SELECT * FROM electric_car_rental_gallery WHERE rental_id = ? ORDER BY id DESC LIMIT 5`, [rental_id]);
+    const imgName = gallery.map(row => row.image_name);
     
     return resp.json({
         status: 1,
@@ -54,5 +57,4 @@ export const carDetail = async (req, resp) => {
         gallery_data: imgName,
         base_url: `${req.protocol}://${req.get('host')}/uploads/car-rental-images/`,
     });
-
 };

@@ -1,7 +1,6 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { handleFileUpload } from "../../fileUpload.js";
 import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
 import fs from 'fs';
@@ -9,9 +8,8 @@ import path from "path";
 
 export const addDiscussionBoard = async (req, resp) => {
     try{
-        const files = await handleFileUpload('discussion-board-images', 'image', 10, true)(req, resp);
-        const image = files?.map(file => file.filename).join('*') || '';
-
+        const files = req.files;
+        const image = files.image.map(file => file.filename).join('*') || '';
         const {rider_id, blog_title, description = '', hyper_link = '', board_type = '', poll_options, expiry_days } = req.body;
         const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], blog_title: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -37,8 +35,11 @@ export const addDiscussionBoard = async (req, resp) => {
     
         return resp.json({ status: 1, code: 200, message: ["Post Successfully Added!"] });
     }catch(err){
-        console.error('Error adding board:', err);
-        return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
+        const error = JSON.parse(err.message);
+        if (error.code === 422){
+            return resp.status(422).json({status: 0, code: 422, message: error.message });
+        }
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 };
 
@@ -546,8 +547,8 @@ export const boardDelete = async (req, resp) => {
 
 export const editBoard = async (req, resp) => {
     try{
-        const files = await handleFileUpload('discussion-board-images', 'image', 10, true)(req, resp);
-        const newImages = files.length > 0 ? files.map(file => file.filename).join('*') : '';
+        const files = req.files;
+        const newImages = files.image.map(file => file.filename).join('*') || '';
     
         const { rider_id, board_id, blog_title, description='', hyper_link='' } = req.body;
         const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"], blog_title: ["required"]});
