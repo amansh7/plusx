@@ -489,9 +489,9 @@ export const notificationList = async (req, resp) => {
 
     const notifications = rows;
     
-    return resp.json({status:1, code: 200, data: notifications, total_page: total_page, totalRows: totalRows.total});
-    // await db.execute(`UPDATE notifications SET status = 1 WHERE status=0 AND panel_to=Rider AND receive_id=?`, [rider_id]);
+    await db.execute(`UPDATE notifications SET status = 1 WHERE status=0 AND panel_to=Rider AND receive_id=?`, [rider_id]);
     
+    return resp.json({status:1, code: 200, message: ["Notification list fetch successfully"], data: notifications, total_page: total_page, totalRows: totalRows.total});
 };
 
 /* Rider Address */
