@@ -6,12 +6,9 @@ import transporter from "../../mailer.js";
 import moment from "moment";
 import { mergeParam} from '../../utils.js';
 
-
 export const vehicleList = async (req, resp) => {
     const {vehicle_type, page_no, vehicle_name, vehicle_model } = req.body;
-        
     const { isValid, errors } = validateFields(req.body, {vehicle_type: ["required"], page_no: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const result = await getPaginatedData({
@@ -23,8 +20,8 @@ export const vehicleList = async (req, resp) => {
         sortOrder: 'DESC',
         page_no,
         limit: 10,
-        whereField: 'vehicle_type',
-        whereValue: vehicle_type
+        whereField: ['vehicle_type'],
+        whereValue: [vehicle_type]
     });
 
     return resp.json({
@@ -40,14 +37,14 @@ export const vehicleList = async (req, resp) => {
 
 export const vehicleDetail = async (req, resp) => {
     const { vehicle_id } = req.body;
-        
     const { isValid, errors } = validateFields(req.body, {vehicle_id: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    let gallery = [];
 
-    const vehicleData = await queryDB(`SELECT * FROM vehicle WHERE vehicle_id= ? LIMIT 1`, [1, vehicle_id]);
-    const galleryData = await queryDB(`SELECT * FROM vehicle_gallery WHERE vehicle_id = ? ORDER BY id DESC LIMIT 5`, [vehicle_id]);
-    const imgName = galleryData.map(row => row.image_name);
+    const vehicleData = await queryDB(`SELECT * FROM vehicle WHERE vehicle_id= ? LIMIT 1`, [vehicle_id]);
+    [gallery] = await db.execute(`SELECT image_name FROM vehicle_gallery WHERE vehicle_id = ? ORDER BY id DESC LIMIT 5`, [vehicle_id]);
+    console.log(vehicleData);
+    const imgName = gallery.map(row => row.image_name);
     
     return resp.json({
         status: 1,
@@ -92,69 +89,75 @@ export const interestedPeople = async (req, resp) => {
 
 // multiple image upload pending
 export const sellVehicle = async (req, resp) => {
-    const { rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
-        warrenty, description, horse_power, car_images='', car_tyre_image='', other_images=''
-    } = req.body;
+    try{     
+        const uploadedFiles = req.files;
+        const car_images = uploadedFiles['car_images']?.map(file => file.filename).join('*') || '';
+        const car_tyre_image = uploadedFiles['car_tyre_image']?.map(file => file.filename).join('*') || '';
+        const other_images = uploadedFiles['other_images']?.map(file => file.filename).join('*') || '';
+
+        const { rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
+            warrenty, description, horse_power
+        } = req.body;
+            
+        const { isValid, errors } = validateFields(req.body, {
+            rider_id: ["required"],
+            vehicle_id: ["required"],
+            region: ["required"],
+            milage: ["required"],
+            price: ["required"],
+            interior_color: ["required"],
+            doors: ["required"],
+            body_type: ["required"],
+            owner_type: ["required"],
+            seat_capacity: ["required"],
+            engine_capacity: ["required"],
+            warrenty: ["required"],
+            description: ["required"],
+            horse_power: ["required"],
+        });
         
-    const { isValid, errors } = validateFields(req.body, {
-        rider_id: ["required"],
-        vehicle_id: ["required"],
-        region: ["required"],
-        milage: ["required"],
-        price: ["required"],
-        interior_color: ["required"],
-        doors: ["required"],
-        body_type: ["required"],
-        owner_type: ["required"],
-        seat_capacity: ["required"],
-        engine_capacity: ["required"],
-        warrenty: ["required"],
-        description: ["required"],
-        horse_power: ["required"],
-        car_images: ["required"],
-        car_tyre_image: ["required"],
-    });
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+        if(!req.files['car_images'])  return resp.json({ status: 0, code: 422, message: {car_images: "car_images is required."} });
+        if(!req.files['car_tyre_image'])  return resp.json({ status: 0, code: 422, message: {car_tyre_image: "car_tyre_image is required."} });
     
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
-    /* multiple image upload -  car_images | car_tyre_image | other_images */
-
-    const sellId = 'SL-' + generateUniqueId({length:13});
-
-    const insert = await insertRecord('vehicle_sell', [
-        'sell_id', 'rider_id', 'vehicle_id', 'region', 'milage', 'price', 'interior_color', 'exterior_color', 'doors', 'body_type', 'owner_type', 'seat_capacity', 
-        'engine_capacity', 'warrenty', 'horse_power', 'description', 'car_images', 'car_tyre_image', 'other_images', 'status'
-    ], [
-        sellId, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity,
-        warrenty, horse_power, description, car_images, car_tyre_image, other_images, 0
-    ]);
-
-    if(insert.affectedRows == 0) return resp.json({status: 0, code: 200, error: true, message: 'Oops! There is something went wrong! Please Try Again'});
-
-    const rider = await queryDB(`SELECT rider_name, rider_email FROM riders WHERE rider_id = ?`, [rider_id]);
-
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: rider.rider_email,
-        subject: 'Your EV Car Sale Listing Is Now Live on PlusX Electric App!',
-        html: `<html>
-            <body>
-                <h4>Dear ${rider.rider_name},</h4>
-                <p>Greetings from the PlusX Electric App.</p><br />
-                <p>We are pleased to inform you that your listing for the sale of your EV car on the PlusX Electric App is now live and available for potential buyers to view. </p>
-                <p>Thank you for choosing the PlusX Electric App to list your EV for sale. We wish you the best of luck in finding the perfect buyer for your car!</p> <br /> <br /> 
-                <p> Best regards,<br/> PlusX Electric App </p>
-            </body>
-        </html>`,
-    });
-
-    return resp.json({
-        status: 1, 
-        code: 200, 
-        error: false,
-        message: ["Your Car for Sale Successful Added!"],
-    });    
-
+        const sellId = 'SL-' + generateUniqueId({length:13});
+    
+        const insert = await insertRecord('vehicle_sell', [
+            'sell_id', 'rider_id', 'vehicle_id', 'region', 'milage', 'price', 'interior_color', 'exterior_color', 'doors', 'body_type', 'owner_type', 'seat_capacity', 
+            'engine_capacity', 'warrenty', 'horse_power', 'description', 'car_images', 'car_tyre_image', 'other_images', 'status'
+        ], [
+            sellId, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity,
+            warrenty, horse_power, description, car_images, car_tyre_image, other_images, 0
+        ]);
+    
+        if(insert.affectedRows == 0) return resp.json({status: 0, code: 200, error: true, message: ['Failed to Add car. Please Try Again']});
+    
+        const rider = await queryDB(`SELECT rider_name, rider_email FROM riders WHERE rider_id = ?`, [rider_id]);
+    
+        await transporter.sendMail({
+            from: `"Easylease Admin" <admin@easylease.com>`,
+            to: rider.rider_email,
+            subject: 'Your EV Car Sale Listing Is Now Live on PlusX Electric App!',
+            html: `<html>
+                <body>
+                    <h4>Dear ${rider.rider_name},</h4>
+                    <p>Greetings from the PlusX Electric App.</p><br />
+                    <p>We are pleased to inform you that your listing for the sale of your EV car on the PlusX Electric App is now live and available for potential buyers to view. </p>
+                    <p>Thank you for choosing the PlusX Electric App to list your EV for sale. We wish you the best of luck in finding the perfect buyer for your car!</p> <br /> <br /> 
+                    <p> Best regards,<br/> PlusX Electric App </p>
+                </body>
+            </html>`,
+        });
+    
+        return resp.json({
+            status: 1, 
+            code: 200, 
+            error: false,
+            message: ["Your Car for Sale Successful Added!"],
+        });    
+    }catch(err){
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    }
 };
 
 export const allSellVehicleList = async (req, resp) => {

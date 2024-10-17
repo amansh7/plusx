@@ -18,169 +18,193 @@ import {offerList, offerDetail} from '../controller/api/OfferController.js';
 import {shopList, shopDetail} from '../controller/api/ShopController.js';
 import {chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking} from '../controller/api/PortableChargerController.js';
 import { getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking } from '../controller/api/ChargingServiceController.js';
-import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList, upload} from '../controller/api/EvInsuranceController.js';
+import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList} from '../controller/api/EvInsuranceController.js';
 import { 
     addDiscussionBoard, getDiscussionBoardList, getDiscussionBoardDetail, addComment, replyComment, boardLike, boardView, boardShare, votePoll, 
     reportOnBoard, boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
 } from '../controller/api/DiscussionBoardController.js';
 import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
 import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
+import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
+import { handleFileUpload } from "../fileUpload.js";
 
 const router = Router();
 
-// router.use(apiAuthentication);
-// router.get('/test2', (req, resp) => { return resp.json('API Authentication Middleware'); });
-// router.use(apiAuthorization);
-// router.get('/test1', (req, resp) => { return resp.json('API Authorization Middleware'); });
+const authzRoutes = [
+    /* API Routes */
+    {method: 'post', path: '/rider-login', handler: login},
+    {method: 'post', path: '/registration', handler: register},
+    {method: 'post', path: '/rider-forgot_password', handler: forgotPassword},
+    {method: 'post', path: '/create-otp', handler: createOTP},
+    {method: 'post', path: '/verify-otp', handler: verifyOTP},
+    
+    /* Dynamic List */
+    {method: 'get', path: '/location-list', handler: locationList},
+    
+    /* Vehicle Routes */
+    { method: 'get', path: '/location-area-list', handler: areaList },
+    { method: 'get', path: '/reminder-sell-vehicle-list', handler: reminder_sell_vehicle_list },
+    { method: 'post', path: '/vehicle-brand-list', handler: vehicleBrandList },
+    { method: 'post', path: '/vehicle-model-list', handler: vehicleModelList },
+];
+authzRoutes.forEach(({ method, path, handler }) => {
+    router[method](path, apiAuthorization, handler);
+});
 
-/* API Routes */
-router.post('/rider-login', login);
-router.post('/registration', register);
-router.post('/rider-forgot_password', forgotPassword);
-router.post('/create-otp', createOTP);
-router.post('/verify-otp', verifyOTP);
-
-/* Dynamic List */
-router.get('/location-list', locationList);
-
-/* Vehicle Routes */
-router.get('/location-area-list', areaList);
-router.get('/reminder-sell-vehicle-list', reminder_sell_vehicle_list);
-router.post('/vehicle-brand-list', vehicleBrandList);
-router.post('/vehicle-model-list', vehicleModelList);
 
 /* -- Api Auth & Api Authz middleware -- */
-router.get('/rider-home', home);
-router.get('/get-rider-data', getRiderData);
-router.post('/rider-profile-change', updateProfile);
-router.get('/rider-profile-image-delete', deleteImg);
-router.get('/rider-account-delete', deleteAccount);
-router.post('/rider-logout', logout);
-router.post('/rider-change_password', updatePassword);
-router.get('/rider-notification-list', notificationList);
-router.post('/rider-address-add', addRiderAddress);
-router.get('/rider-address-list', riderAddressList);
-router.get('/rider-address-delete', deleteRiderAddress);
-router.post('/rider-vehicle-add', addRiderVehicle);
-router.post('/rider-vehicle-edit', editRiderVehicle);
-router.get('/rider-vehicle-list', riderVehicleList);
-router.get('/rider-vehicle-delete', deleteRiderVehicle);
+const authzAndAuthRoutes = [
+    { method: 'get', path: '/rider-home', handler: home },
+    { method: 'get', path: '/get-rider-data', handler: getRiderData },
+    { method: 'post', path: '/rider-profile-change', handler: updateProfile },
+    { method: 'get', path: '/rider-profile-image-delete', handler: deleteImg },
+    { method: 'get', path: '/rider-account-delete', handler: deleteAccount },
+    { method: 'post', path: '/rider-logout', handler: logout },
+    { method: 'post', path: '/rider-change_password', handler: updatePassword },
+    { method: 'get', path: '/rider-notification-list', handler: notificationList },
+    { method: 'post', path: '/rider-address-add', handler: addRiderAddress },
+    { method: 'get', path: '/rider-address-list', handler: riderAddressList },
+    { method: 'get', path: '/rider-address-delete', handler: deleteRiderAddress },
+    { method: 'post', path: '/rider-vehicle-add', handler: addRiderVehicle },
+    { method: 'post', path: '/rider-vehicle-edit', handler: editRiderVehicle },
+    { method: 'get', path: '/rider-vehicle-list', handler: riderVehicleList },
+    { method: 'get', path: '/rider-vehicle-delete', handler: deleteRiderVehicle },
 
-/* Charging Station  */
-router.get('/charging-station-list', stationList);
-router.get('/nearest-charging-station-list', nearestChargerList);
-router.get('/charging-station-detail', stationDetail);
+    /* Charging Station */
+    { method: 'get', path: '/charging-station-list', handler: stationList },
+    { method: 'get', path: '/nearest-charging-station-list', handler: nearestChargerList },
+    { method: 'get', path: '/charging-station-detail', handler: stationDetail },
 
-/* Car Rental */
-router.get('/car-rental-list', carList);
-router.get('/car-rental-detail', carDetail);
+    /* Car Rental */
+    { method: 'get', path: '/car-rental-list', handler: carList },
+    { method: 'get', path: '/car-rental-detail', handler: carDetail },
 
-/* Bike Rental Routes */
-router.get('/bike-rental-list', bikeList);
-router.get('/bike-rental-detail', bikeDetail);
+    /* Bike Rental Routes */
+    { method: 'get', path: '/bike-rental-list', handler: bikeList },
+    { method: 'get', path: '/bike-rental-detail', handler: bikeDetail },
 
-/* Road Assistance Routes */
-router.get('/road-assistance', addRoadAssistance);
-router.get('/road-assistance-list', roadAssistanceList);
-router.get('/road-assistance-details', roadAssistanceDetail);
-router.get('/road-assistance-invoice-list', roadAssistanceInvoiceList);
-router.get('/road-assistance-invoice-detail', roadAssistanceInvoiceDetail);
+    /* Road Assistance Routes */
+    { method: 'get', path: '/road-assistance', handler: addRoadAssistance },
+    { method: 'get', path: '/road-assistance-list', handler: roadAssistanceList },
+    { method: 'get', path: '/road-assistance-details', handler: roadAssistanceDetail },
+    { method: 'get', path: '/road-assistance-invoice-list', handler: roadAssistanceInvoiceList },
+    { method: 'get', path: '/road-assistance-invoice-detail', handler: roadAssistanceInvoiceDetail },
 
-/* Installation Service Routes */
-router.post('/charging-installation-service', serviceRequest); 
-router.get('/charging-installation-list', requestList);
-router.get('/charging-installation-detail', requestDetails);
+    /* Installation Service Routes */
+    { method: 'post', path: '/charging-installation-service', handler: serviceRequest },
+    { method: 'get', path: '/charging-installation-list', handler: requestList },
+    { method: 'get', path: '/charging-installation-detail', handler: requestDetails },
 
-/* Club Routes */
-router.get('/club-list', clubList);
-router.get('/club-detail', clubDetail);
+    /* Club Routes */
+    { method: 'get', path: '/club-list', handler: clubList },
+    { method: 'get', path: '/club-detail', handler: clubDetail },
 
-/* Vehicle Routes */
-router.get('/vehicle-list', vehicleList);
-router.get('/vehicle-detail', vehicleDetail);
-router.post('/interest-register', interestedPeople);
-router.post('/sell-vehicle', sellVehicle);
-router.get('/all-sell-vehicle-list', allSellVehicleList);
-router.get('/sell-vehicle-list', sellVehicleList);
-router.get('/sell-vehicle-detail', sellVehicleDetail);
-router.post('/edit-sell-vehicle', updateSellVehicle);
-router.get('/delete-sell-vehicle', deleteSellVehicle);
-router.get('/sold-sell-vehicle', soldSellVehicle);
+    /* Vehicle Routes */
+    { method: 'get', path: '/vehicle-list', handler: vehicleList },
+    { method: 'get', path: '/vehicle-detail', handler: vehicleDetail },
+    { method: 'post', path: '/interest-register', handler: interestedPeople },
+    { method: 'post', path: '/sell-vehicle', handler: sellVehicle },
+    { method: 'get', path: '/all-sell-vehicle-list', handler: allSellVehicleList },
+    { method: 'get', path: '/sell-vehicle-list', handler: sellVehicleList },
+    { method: 'get', path: '/sell-vehicle-detail', handler: sellVehicleDetail },
+    { method: 'post', path: '/edit-sell-vehicle', handler: updateSellVehicle },
+    { method: 'get', path: '/delete-sell-vehicle', handler: deleteSellVehicle },
+    { method: 'get', path: '/sold-sell-vehicle', handler: soldSellVehicle },
 
-/* Discussion Board */
-router.post('/add-discussion-board', addDiscussionBoard);
-router.get('/discussion-board-list', getDiscussionBoardList);
-router.get('/discussion-board-detail', getDiscussionBoardDetail);
-router.post('/add-comment', addComment);
-router.post('/reply-comment', replyComment);
-router.get('/board-like', boardLike);
-router.get('/board-view', boardView);
-router.get('/board-share', boardShare);
-router.get('/board-vote-poll', votePoll);
-router.get('/discussion-board-report', reportOnBoard);
-router.get('/discussion-board-not-interested', boardNotInterested);
-router.get('/discussion-board-delete', boardDelete);
-router.post('/discussion-board-edit', editBoard);
-router.post('/board-vote-edit', editPoll);
-router.post('/delete-comment', deleteComment);
-router.post('/delete-reply-comment', deleteReplyComment);
-router.get('/comment-like', commentLike);
-router.get('/reply-comment-like', replyCommentLike);
+    /* Discussion Board */
+    { method: 'post', path: '/add-discussion-board', handler: addDiscussionBoard },
+    { method: 'get', path: '/discussion-board-list', handler: getDiscussionBoardList },
+    { method: 'get', path: '/discussion-board-detail', handler: getDiscussionBoardDetail },
+    { method: 'post', path: '/add-comment', handler: addComment },
+    { method: 'post', path: '/reply-comment', handler: replyComment },
+    { method: 'get', path: '/board-like', handler: boardLike },
+    { method: 'get', path: '/board-view', handler: boardView },
+    { method: 'get', path: '/board-share', handler: boardShare },
+    { method: 'get', path: '/board-vote-poll', handler: votePoll },
+    { method: 'get', path: '/discussion-board-report', handler: reportOnBoard },
+    { method: 'get', path: '/discussion-board-not-interested', handler: boardNotInterested },
+    { method: 'get', path: '/discussion-board-delete', handler: boardDelete },
+    { method: 'post', path: '/discussion-board-edit', handler: editBoard },
+    { method: 'post', path: '/board-vote-edit', handler: editPoll },
+    { method: 'post', path: '/delete-comment', handler: deleteComment },
+    { method: 'post', path: '/delete-reply-comment', handler: deleteReplyComment },
+    { method: 'get', path: '/comment-like', handler: commentLike },
+    { method: 'get', path: '/reply-comment-like', handler: replyCommentLike },
 
-/* Charging Service */
-router.post('/charging-service-slot-list', getChargingServiceSlotList);
-router.post('/charging-service', requestService);
-router.get('/charging-service-list', listServices);
-router.get('/charging-service-details', getServiceOrderDetail);
-router.get('/pick-and-drop-invoice-list', getInvoiceList);
-router.get('/pick-and-drop-invoice-detail', getInvoiceDetail);
+    /* Charging Service */
+    { method: 'post', path: '/charging-service-slot-list', handler: getChargingServiceSlotList },
+    { method: 'post', path: '/charging-service', handler: requestService },
+    { method: 'get', path: '/charging-service-list', handler: listServices },
+    { method: 'get', path: '/charging-service-details', handler: getServiceOrderDetail },
+    { method: 'get', path: '/pick-and-drop-invoice-list', handler: getInvoiceList },
+    { method: 'get', path: '/pick-and-drop-invoice-detail', handler: getInvoiceDetail },
 
+    /* Portable charger */
+    { method: 'get', path: '/portable-charger-list', handler: chargerList },
+    { method: 'get', path: '/portable-charger-booking', handler: chargerBooking },
+    { method: 'get', path: '/portable-charger-booking-list', handler: chargerBookingList },
+    { method: 'get', path: '/portable-charger-booking-detail', handler: chargerBookingDetail },
+    { method: 'get', path: '/portable-charger-booking-detail', handler: invoiceList },
 
-/* Portable charger */
-router.get('/portable-charger-list', chargerList);
-router.get('/portable-charger-booking', chargerBooking);
-router.get('/portable-charger-booking-list', chargerBookingList);
-router.get('/portable-charger-booking-detail', chargerBookingDetail);
-router.get('/portable-charger-booking-detail', invoiceList);
+    /* Offer Routes */
+    { method: 'get', path: '/offer-list', handler: offerList },
+    { method: 'get', path: '/offer-detail', handler: offerDetail },
 
-/* Offer Routes */
-router.get('/offer-list', offerList);
-router.get('/offer-detail', offerDetail);
+    /* Service Shop */
+    { method: 'get', path: '/service-shop-list', handler: shopList },
+    { method: 'get', path: '/service-shop-detail', handler: shopDetail },
 
-/* Service Shop */
-router.get('/service-shop-list', shopList);
-router.get('/service-shop-detail', shopDetail);
+    /* EV Insurance */
+    { method: 'post', path: '/add-insurance', handler: addInsurance},
+    { method: 'post', path: '/insurance-list', handler: insuranceList },
+    { method: 'post', path: '/insurance-details', handler: insuranceDetails },
+    { method: 'post', path: '/ev-pre-sale-testing', handler: evPreSaleBooking },
+    { method: 'get', path: '/ev-pre-sale-list', handler: evPreSaleList },
+    { method: 'get', path: '/ev-pre-sale-detail', handler: evPreSaleDetails },
+    { method: 'post', path: '/ev-pre-sale-slot-list', handler: preSaleSlotList },
+];
+authzAndAuthRoutes.forEach(({ method, path, handler }) => {
+    const middlewares = [apiAuthorization]; 
 
-/* EV Insurance */
-router.post('/add-insurance', upload.fields([
-    { name: 'vehicle_registration_img', maxCount: 10 },
-    { name: 'driving_licence', maxCount: 10 },
-    { name: 'car_images', maxCount: 10 },
-    { name: 'car_type_image', maxCount: 10 },
-    { name: 'scretch_image', maxCount: 10 },
-    { name: 'emirates_id', maxCount: 10 }
-]),addInsurance);
-router.post('/insurance-list', insuranceList);
-router.post('/insurance-details', insuranceDetails);
-router.post('/ev-pre-sale-testing', evPreSaleBooking);
-router.get('/ev-pre-sale-list', evPreSaleList);
-router.get('/ev-pre-sale-detail', evPreSaleDetails);
-router.post('/ev-pre-sale-slot-list', preSaleSlotList);
+    if(path === '/rider-profile-change'){
+        middlewares.push(handleFileUpload('rider_profile', ['profile_image'], 1));
+    }
+    if(path === '/sell-vehicle'){
+        middlewares.push(handleFileUpload('vehicle-image', ['car_images', 'car_tyre_image', 'other_images'], ['car_images', 'car_tyre_image'], 5));
+    }
+    if(path === '/add-discussion-board'){
+        middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
+    }
+    if(path === '/discussion-board-edit'){
+        middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
+    }
+    if(path === '/add-insurance'){
+        middlewares.push(handleFileUpload('insurance-images', ['vehicle_registration_img', 'driving_licence', 'car_images', 'car_type_image', 'scretch_image', 'emirates_id'], 5));
+    }
+    
+    middlewares.push(apiAuthentication);
+    router[method](path, ...middlewares, handler);
+});
 
 
 /* -- Api Auth & Api RSA Authz middleware -- */
+const authzRsaAndAuthRoutes = [
+    /* Road Assitance with RSA */
+    { method: 'get', path: '/rsa-order-stage', handler: getRsaOrderStage },
+    { method: 'get', path: '/order-action', handler: orderAction },
+    /* Charging Service */
+    { method: 'post', path: '/charger-service-action', handler: handleBookingAction },
+    { method: 'get', path: '/charger-service-stage', handler: getRsaBookingStage },
+    { method: 'post', path: '/charger-service-reject', handler: handleRejectBooking },
+    /* POD with RSA */
+    { method: 'get', path: '/portable-charger-stage', handler: rsaBookingStage },
+    { method: 'post', path: '/portable-charger-action', handler: bookingAction },
+    { method: 'post', path: '/portable-charger-reject', handler: rejectBooking }
+];
+authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
+    router[method](path, apiAuthorization, apiRsaAuthentication, handler);
+});
 
-/* Road Assitance with RSA */
-router.get('/rsa-order-stage', getRsaOrderStage);
-router.get('/order-action', orderAction);
-/* Charging Service */
-router.post('/charger-service-action', handleBookingAction);
-router.get('/charger-service-stage', getRsaBookingStage);
-router.post('/charger-service-reject', handleRejectBooking);
-/* POD with RSA */
-router.get('/portable-charger-stage', rsaBookingStage);
-router.post('/portable-charger-action', bookingAction);
-router.post('/portable-charger-reject', rejectBooking);
 
 
 export default router;

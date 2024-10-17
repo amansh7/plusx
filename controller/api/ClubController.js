@@ -1,6 +1,7 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB } from '../../dbUtils.js';
+import { mergeParam} from '../../utils.js';
 
 export const clubList = async (req, resp) => {
     const {rider_id, page_no, preference, search_text, age_group, location, category } = mergeParam(req);

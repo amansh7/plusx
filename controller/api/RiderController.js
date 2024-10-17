@@ -9,7 +9,6 @@ import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP,
 import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
 import transporter from "../../mailer.js";
-import { handleFileUpload } from "../../fileUpload.js";
 dotenv.config();
 
 /* Rider Auth */
@@ -351,9 +350,9 @@ export const getRiderData = async(req, resp) => {
 
 export const updateProfile = async (req, resp) => {
     try{
-        const files = await handleFileUpload('rider_profile', 'profile_image', 1, false, ['png','jpeg', 'jpg'])(req, resp);
-        const profile_image = files ? files[0].filename : '';;
-        
+        const files = req.files;
+
+        const profile_image = files ? files['profile_image'][0].filename : '';
         const { rider_id, rider_name ,rider_email , country, date_of_birth, emirates, leased_from=''} = req.body;
         const riderId = rider_id;
 
@@ -364,7 +363,6 @@ export const updateProfile = async (req, resp) => {
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
         const rider = await queryDB(`SELECT profile_img, leased_from FROM riders WHERE rider_id=?`, [riderId]);
-        const updatedProfileImg = req.file ? profile_image : rider.profile_img;
 
         if (req.file){
             const oldImagePath = path.join('uploads', 'rider_profile', rider.profile_img || '');
@@ -374,15 +372,12 @@ export const updateProfile = async (req, resp) => {
                 }
             });
         }
-        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: updatedProfileImg, date_of_birth};        
+        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth};        
         await updateRecord('riders', updates, ['rider_id'], [riderId]);
         
         return resp.json({status: 1, code: 200, message: "Rider profile updated successfully"});
     }catch(err){
-        const error = JSON.parse(err.message);
-        if (error.code === 422){
-            return resp.status(422).json({status: 0, code: 422, message: error.message });
-        }
+        console.log(err);
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 };
@@ -550,7 +545,7 @@ export const addRiderAddress = async (req, resp) => {
     ]);
 
     return resp.json({
-        message: insert.affectedRows > 0 ? 'Address added successfully!' : 'Oops! Something went wrong. Please try again.',
+        message: insert.affectedRows > 0 ? ['Address added successfully!'] : ['Oops! Something went wrong. Please try again.'],
         status: insert.affectedRows > 0 ? 1 : 0
     });
     
@@ -569,7 +564,7 @@ export const deleteRiderAddress = async (req, resp) => {
         const [del] = await db.execute(`DELETE FROM rider_address WHERE rider_id=? AND address_id=?`,[rider_id, address_id]);
         
         return resp.json({
-            message: del.affectedRows > 0 ? 'Address deleted successfully!' : 'Oops! Something went wrong. Please try again.',
+            message: del.affectedRows > 0 ? ['Address deleted successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: del.affectedRows > 0 ? 1 : 0
         });
     }catch(err){
@@ -626,7 +621,7 @@ export const addRiderVehicle = async (req, resp) => {
     return resp.json({
         status: insert.affectedRows > 0 ? 1 : 0,
         code: 200,
-        message: insert.affectedRows > 0 ? 'Rider vehicle added successfully!' : 'Oops! Something went wrong. Please try again.',
+        message: insert.affectedRows > 0 ? ['Rider vehicle added successfully!'] : ['Oops! Something went wrong. Please try again.'],
     }); 
 };
 
@@ -645,7 +640,7 @@ export const editRiderVehicle = async (req, resp) => {
     return resp.json({
         status: update.affectedRows > 0 ? 1 : 0,
         code: 200,
-        message: update.affectedRows > 0 ? 'Rider vehicle updated successfully!' : 'Oops! Something went wrong. Please try again.',
+        message: update.affectedRows > 0 ? ['Rider vehicle updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
     }); 
 };
 
@@ -661,7 +656,8 @@ export const deleteRiderVehicle = async (req, resp) => {
     const [del] = await db.execute(`DELETE FROM riders_vehicles WHERE rider_id=? AND vehicle_id=?`,[rider_id, vehicle_id]);
         
     return resp.json({
-        message: del.affectedRows > 0 ? 'Rider vehicle deleted successfully!' : 'Oops! Something went wrong. Please try again.',
-        status: del.affectedRows > 0 ? 1 : 0
+        message: del.affectedRows > 0 ? ['Rider vehicle deleted successfully!'] : ['Oops! Something went wrong. Please try again.'],
+        status: del.affectedRows > 0 ? 1 : 0,
+        code: 200
     });
 };

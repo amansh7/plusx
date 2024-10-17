@@ -1,7 +1,7 @@
 import db from "../config/db.js";
 
 export const apiAuthentication = async (req, resp, next) => {
-  const token = req.headers["access_token"];
+  const token = req.headers["accesstoken"];
   const riderId = req.body.rider_id;
 
   if (!token) {

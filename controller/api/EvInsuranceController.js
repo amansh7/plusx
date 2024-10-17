@@ -1,95 +1,106 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
-import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import moment from "moment";
 import transporter from "../../mailer.js";
 import generateUniqueId from 'generate-unique-id';
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/insurance-images/');
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + file.originalname);
-    }
-});
-
-export const upload = multer({ storage });
-
 export const addInsurance = async (req, resp) => {
-    const { rider_id, owner_name, date_of_birth, country, country_code, mobile_no, email, vehicle, registration_place, car_brand, insurance_expired, bank_loan,
-        insurance_expiry, type_of_insurance, bank_name
-    } = req.body
+    try{
+        const fileFields = ['vehicle_registration_img', 'driving_licence', 'car_images', 'car_type_image', 'scretch_image', 'emirates_id'];
+        let tempFileNames = {};
+        const uploadedFiles = req.files;
+        fileFields.forEach(field => {
+            tempFileNames[field] = uploadedFiles[field]?.map(file => file.filename).join('*') || '';
+        });
+        
+        const { rider_id, owner_name, date_of_birth, country, country_code, mobile_no, email, vehicle, registration_place, car_brand, insurance_expired, bank_loan,
+            insurance_expiry, type_of_insurance, bank_name
+        } = req.body
+        
+        const { isValid, errors } = validateFields(req.body, {
+            rider_id: ["required"],
+            owner_name: ["required"],
+            date_of_birth: ["required"],
+            country: ["required"],
+            country_code: ["required"],
+            mobile_no: ["required"],
+            email: ["required"],
+            vehicle: ["required"],
+            registration_place: ["required"],
+            car_brand: ["required"],
+            insurance_expired: ["required"],
+            bank_loan: ["required"],
+        });
 
-    const { isValid, errors } = validateFields(req.body, {
-        rider_id: ["required"],
-        owner_name: ["required"],
-        date_of_birth: ["required"],
-        country: ["required"],
-        country_code: ["required"],
-        mobile_no: ["required"],
-        email: ["required"],
-        vehicle: ["required"],
-        registration_place: ["required"],
-        car_brand: ["required"],
-        insurance_expired: ["required"],
-        bank_loan: ["required"],
-    });
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });   
+        if (insurance_expired === 'Yes' && !type_of_insurance) resp.json({ status: 0, code: 422, message: 'Type of insurance is required'});
+        if (insurance_expired === 'Yes' && !insurance_expiry) resp.json({ status: 0, code: 422, message: 'Insurance expiry is required'});
+        if (bank_loan === 'Yes' && !bank_name) resp.json({ status: 0, code: 422, message: 'Bank name is required'});
+        
+        let fileNames = {vehicle_registration_img: '',driving_licence: '',car_images: '',car_type_image: '',scretch_image: '',emirates_id: ''};
+        if (insurance_expired === 'Yes') {
+            Object.keys(tempFileNames).forEach(key => {
+                fileNames[key] = tempFileNames[key];
+            });
+        }else{
+            fileFields.forEach(field => {
+                uploadedFiles[field]?.forEach(file => {
+                    const filePath = path.join('uploads', 'insurance-images', file.filename);
+                    fs.unlink(filePath, (err) => {
+                        if (err) console.error(`Error deleting file ${filePath}:`, err);
+                    });
+                });
+            });
+        }
+        
+        const insuranceId = 'EVI' + generateUniqueId({length:12});
+        const formattedInsuranceExpiry = insurance_expiry ? moment(insurance_expiry).format('YYYY-MM-DD') : null;
     
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    if (insurance_expired === 'Yes' && !type_of_insurance) resp.json({ status: 0, code: 422, message: 'Type of insurance is required'});
-    if (insurance_expired === 'Yes' && !insurance_expiry) resp.json({ status: 0, code: 422, message: 'Insurance expiry is required'});
-    if (bank_loan === 'Yes' && !bank_name) resp.json({ status: 0, code: 422, message: 'Bank name is required'});
-    const getImageFilenames = (fileKey) => req.files[fileKey]?.map(file => file.filename).join('*') || '';
-    let registration_img = '', licence_img = '', car_images = '', car_type_image = '', scretch_image = '', emirates_id = '';
+        const insert = await insertRecord('ev_insurance', [
+            'insurance_id', 'rider_id', 'owner_name', 'date_of_birth', 'country', 'country_code', 'mobile_no', 'email', 'vehicle', 'registration_place', 'car_brand', 
+            'bank_loan', 'bank_name', 'type_of_insurance', 'insurance_expiry', 'insurance_expired', 'vehicle_registration_img', 'driving_licence', 'car_images', 
+            'car_type_image', 'scretch_image', 'emirates_id', 
+        ], [
+            insuranceId, rider_id, owner_name, date_of_birth, country, country_code, mobile_no, email, vehicle, registration_place, car_brand, bank_loan, 
+            bank_name, type_of_insurance, insurance_expiry, insurance_expired, fileNames['vehicle_registration_img'], fileNames['driving_licence'], fileNames['car_images'], 
+            fileNames['car_type_image'], fileNames['scretch_image'], fileNames['emirates_id'], 
+        ]);
+    
+        if(insert.affectedRows === 0 ) return resp.json({status:0, code:200, error: true, message: ['Oops! There is something went wrong! Please Try Again']});
+    
+        await transporter.sendMail({
+            from: `"PlusX Electric App" <media@plusxelectric.com>`,
+            to: email,
+            subject: `Thank You for Choosing PlusX Electric App for Your EV Insurance Needs!`,
+            html: `<html>
+                <body>
+                    <h4>Dear ${owner_name},</h4>
+                    <p>Thank you for selecting PlusX Electric App for your EV insurance requirements. 
+                    We have successfully received your details, and our EV insurance executive will be reaching out to you shortly.</p><br/>
+                    <p>We look forward to assisting you with your EV insurance needs.</p> <br /> <br /> 
+                    <p> Regards,<br/> PlusX Electric App </p>
+                </body>
+            </html>`,
+        });
+    
+        return resp.json({
+            status: 1,
+            code: 200,
+            error: false,
+            message: ["Thank you for sharing your details. We will revert shortly."],
+        });
 
-    if (insurance_expired === 'Yes') {
-        registration_img = getImageFilenames('vehicle_registration_img');
-        licence_img = getImageFilenames('driving_licence');
-        car_images = getImageFilenames('car_images');
-        car_type_image = getImageFilenames('car_type_image');
-        scretch_image = getImageFilenames('scretch_image');
-        emirates_id = getImageFilenames('emirates_id');
+    }catch(err){
+        console.log('Error : ', err);
+        const error = JSON.parse(err.message);
+        if (error.code === 422){
+            return resp.status(422).json({status: 0, code: 422, message: error.message });
+        }
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-
-    const insuranceId = 'EVI' + generateUniqueId({length:12});
-    const formattedInsuranceExpiry = insurance_expiry ? moment(insurance_expiry).format('YYYY-MM-DD') : null;
-
-    const insert = await insertRecord('ev_insurance', [
-        'insurance_id', 'rider_id', 'owner_name', 'date_of_birth', 'country', 'country_code', 'mobile_no', 'email', 'vehicle', 'registration_place', 'car_brand', 
-        'bank_loan', 'bank_name', 'type_of_insurance', 'insurance_expiry', 'insurance_expired', 'vehicle_registration_img', 'driving_licence', 'car_images', 
-        'car_type_image', 'scretch_image', 'emirates_id', 
-    ], [
-        insuranceId, rider_id, owner_name, date_of_birth, country, country_code, mobile_no, email, vehicle, registration_place, car_brand, bank_loan, 
-        bank_name, type_of_insurance, insurance_expiry, insurance_expired, registration_img, licence_img, car_images, car_type_image, scretch_image, emirates_id, 
-    ]);
-
-    if(insert.affectedRows === 0 ) return resp.json({status:0, code:200, error: true, message: ['Oops! There is something went wrong! Please Try Again']});
-
-    await transporter.sendMail({
-        from: `"PlusX Electric App" <media@plusxelectric.com>`,
-        to: email,
-        subject: `Thank You for Choosing PlusX Electric App for Your EV Insurance Needs!`,
-        html: `<html>
-            <body>
-                <h4>Dear ${owner_name},</h4>
-                <p>Thank you for selecting PlusX Electric App for your EV insurance requirements. 
-                We have successfully received your details, and our EV insurance executive will be reaching out to you shortly.</p><br/>
-                <p>We look forward to assisting you with your EV insurance needs.</p> <br /> <br /> 
-                <p> Regards,<br/> PlusX Electric App </p>
-            </body>
-        </html>`,
-    });
-
-    return resp.json({
-        status: 1,
-        code: 200,
-        error: false,
-        message: ["Thank you for sharing your details. We will revert shortly."],
-    });
-
 };
 
 export const insuranceList = async (req, resp) => {
