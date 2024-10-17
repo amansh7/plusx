@@ -135,7 +135,7 @@ export const roadAssistanceList = async (req, resp) => {
 };
 
 export const roadAssistanceDetail = async (req, resp) => {
-    const {rider_id, order_id } = mergeParam(req);
+    const { rider_id, order_id } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], order_id: ["required"]});
     
@@ -145,16 +145,19 @@ export const roadAssistanceDetail = async (req, resp) => {
         FROM road_assistance WHERE rider_id = ? AND request_id = ? LIMIT 1
     `, [rider_id, order_id]);
 
+    
     const [history] = await db.execute(`SELECT order_status, cancel_by, cancel_reason as reason, rsa_id, created_at, (select rsa.rsa_name from rsa where rsa.rsa_id = order_history.rsa_id) as rsa_name
         FROM order_history 
         WHERE order_id = ?
         ORDER BY id DESC
     `,[order_id]);
 
-    roadAssistance.invoice_url = '';
-    if (roadAssistance[0].order_status == 'VD') {
-        const invoice_id = roadAssistance[0].request_id.replace('RAO', 'INVR');
-        roadAssistance[0].invoice_url = `${req.protocol}://${req.get('host')}/uploads/road-side-invoice/${invoice_id}-invoice.pdf`;
+    if(roadAssistance.length > 0){
+        roadAssistance[0].invoice_url = '';
+        if (roadAssistance[0].order_status == 'VD') {
+            const invoice_id = roadAssistance[0].request_id.replace('RAO', 'INVR');
+            roadAssistance[0].invoice_url = `${req.protocol}://${req.get('host')}/uploads/road-side-invoice/${invoice_id}-invoice.pdf`;
+        }
     }
 
     return resp.json({

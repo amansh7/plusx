@@ -478,13 +478,13 @@ export const notificationList = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
-    const start = (page_no * limit) - limit;
+    const start = parseInt((page_no * limit) - limit, 10);
 
     const totalRows = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = 'Rider' AND receive_id = ?`, [rider_id]);
     const total_page = Math.ceil(totalRows.total / limit) || 1; 
     
     const [rows] = await db.execute(`SELECT id, heading, description, module_name, panel_to, panel_from, receive_id, status, created_at, href_url
-        FROM notifications WHERE panel_to = 'Rider' AND receive_id = ? ORDER BY id DESC LIMIT ?, ? 
+        FROM notifications WHERE panel_to = 'Rider' AND receive_id = ? ORDER BY id DESC LIMIT ${start}, ${parseInt(limit)} 
     `, [rider_id, start, limit]);
 
     const notifications = rows;
