@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '../config/db.js';
+import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
-import { generateRandomPassword } from '../utils.js';
+import { generateRandomPassword } from '../../utils.js';
 dotenv.config();
 
 var transporter = nodemailer.createTransport({
