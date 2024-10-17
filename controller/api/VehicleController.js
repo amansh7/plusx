@@ -43,7 +43,6 @@ export const vehicleDetail = async (req, resp) => {
 
     const vehicleData = await queryDB(`SELECT * FROM vehicle WHERE vehicle_id= ? LIMIT 1`, [vehicle_id]);
     [gallery] = await db.execute(`SELECT image_name FROM vehicle_gallery WHERE vehicle_id = ? ORDER BY id DESC LIMIT 5`, [vehicle_id]);
-    console.log(vehicleData);
     const imgName = gallery.map(row => row.image_name);
     
     return resp.json({
