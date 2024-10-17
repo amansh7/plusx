@@ -24,17 +24,31 @@ export const authorizeUser = (req, resp, next) => {
     });
 };
 
-export const authenticateAdmin = (req, resp, next) => {
-  
-  const token = req.headers["access_token"];
+
+export const authenticateAdmin = async (req, resp, next) => {
+  const userId = req.body.userId;
+  const email  = req.body.email
+  const token  = req.headers["access_token"];
 
   if (!token) {
     return resp.status(401).json({ message: 'Access token is missing' });
   }
 
-  if(token === process.env.CUSTOM_TOKEN) {
-    next();
-  } else {
+  if (token !== process.env.CUSTOM_TOKEN) {
     return resp.status(403).json({ message: "Unauthorized access" });
   }
-}
+
+  try {
+    const [rows] = await db.execute("SELECT * FROM users WHERE id = ? AND email = ? AND status = 1", [userId, email]);
+
+    if (rows.length === 0) {
+      return resp.status(403).json({ message: "Unauthorized access or invalid user status" });
+    }
+
+    next();
+
+  } catch (error) {
+    console.error('Error in authentication:', error);
+    return resp.status(500).json({ message: "Internal server error" });
+  }
+};

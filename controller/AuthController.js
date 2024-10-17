@@ -53,7 +53,6 @@ export const logout = async (req, resp) => {
   }
 };
 
-
 export const forgotPassword = async (req, resp) => {
     const { email } = req.body;
   
@@ -93,7 +92,6 @@ export const forgotPassword = async (req, resp) => {
     }
 };
 
-
 export const updatePassword = async (req, resp) => {
   
   const { email, currentPassword, newPassword } = req.body;
@@ -125,8 +123,4 @@ export const updatePassword = async (req, resp) => {
       console.error("Error updating password:", error);
       resp.status(500).json({ message: "Failed to update password." });
   }
-};
-
-export const getDashboardData = async(req, resp) => {
-  resp.status(200).json({message:"Hello admin"})
 };
