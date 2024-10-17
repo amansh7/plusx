@@ -388,7 +388,7 @@ export const areaList = async (req, resp) => {
 
     query += ` ORDER BY area_name ASC`;
 
-    const result = await queryDB(query, queryParams);
+    const [result] = await db.execute(query, queryParams);
 
     return resp.json({
         status: 1, 
