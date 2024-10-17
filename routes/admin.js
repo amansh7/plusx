@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { authorizeUser, authenticateAdmin } from "../middleware/authorizeMiddleware.js";
+import { authenticateAdmin } from "../middleware/admin/authenticationMiddleware.js";
+import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/AuthController.js";
-import { appSignupList, getDashboardData } from "../controller/AdminController.js";
+import { getDashboardData } from "../controller/admin/AdminController.js";
 
 const router = Router();
 
@@ -9,10 +10,10 @@ const router = Router();
 router.post('/login', login);
 router.put('/logout', logout);
 router.post('/forgot-password', forgotPassword);
-router.put('/change-password',authenticateAdmin, updatePassword);
+router.put('/change-password',adminAuthorization,authenticateAdmin, updatePassword);
 
-router.get('/dashboard',authenticateAdmin, getDashboardData);
-router.get('/signup-list',authenticateAdmin, appSignupList);
+router.get('/dashboard',adminAuthorization, authenticateAdmin, getDashboardData);
+
 
 
 export default router;

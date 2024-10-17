@@ -1,6 +1,9 @@
-import db from '../config/db.js';
+import db from '../../config/db.js';
 import dotenv from 'dotenv';
+import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
+import validateFields from "../../validation.js";
 dotenv.config();
+
 
 export const getDashboardData = async (req, resp) => {
     try {
@@ -54,69 +57,8 @@ export const getDashboardData = async (req, resp) => {
     }
 };
 
-export const appSignupList = async (req, resp) => {
-    const { pageNo, pageSize, riderName, riderEmail, addedFrom, riderMobile } = mergeParam(req);
 
-    // Validate required fields
-    const { isValid, errors } = validateFields(mergeParam(req), { pageNo: ["required"], pageSize: ["required"] });
-    
-    if (!isValid) {
-        return resp.json({ status: 0, code: 422, message: errors });
-    }
 
-    // Calculate offset for pagination
-    const offset = (pageNo - 1) * pageSize;
-
-    // Construct the base query and filters
-    let query = "SELECT * FROM riders WHERE status = ?";
-    const queryParams = [1]; // Assuming you want to filter only active riders
-
-    // Add filters if they are provided
-    if (riderName) {
-        query += " AND rider_name LIKE ?";
-        queryParams.push(`%${riderName}%`);
-    }
-    if (riderEmail) {
-        query += " AND rider_email LIKE ?";
-        queryParams.push(`%${riderEmail}%`);
-    }
-    if (addedFrom) {
-        query += " AND added_from = ?";
-        queryParams.push(addedFrom);
-    }
-    if (riderMobile) {
-        query += " AND rider_mobile LIKE ?";
-        queryParams.push(`%${riderMobile}%`);
-    }
-
-    // Get total count for pagination
-    const [totalCountResult] = await db.execute(`SELECT COUNT(*) as total FROM (${query}) as total_count`, queryParams);
-    const totalCount = totalCountResult[0].total;
-
-    // Add pagination to the query
-    query += " LIMIT ?, ?";
-    queryParams.push(parseInt(offset, 10), parseInt(pageSize, 10)); // Ensure these are integers
-
-    // Debugging: Log the query and parameters
-    console.log("Executing Query:", query);
-    console.log("With Parameters:", queryParams);
-
-    try {
-        const [signupList] = await db.execute(query, queryParams);
-
-        return resp.json({
-            message: ["Rider List fetched successfully!"],
-            data: signupList,
-            totalCount,
-            totalPages: Math.ceil(totalCount / pageSize) || 1,
-            status: 1,
-            code: 200
-        });
-    } catch (error) {
-        console.error('Error fetching rider list:', error);
-        resp.status(500).json({ message: 'Error fetching rider list' });
-    }
-};
 
 
 
