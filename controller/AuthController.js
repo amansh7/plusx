@@ -24,9 +24,35 @@ export const login = async(req, resp) => {
     if (!isMatch) {
         return resp.status(401).json({ message: 'Invalid email or password' });
     }
+
+    await db.execute('UPDATE users SET status = 1 WHERE email = ?', [email]);
     // const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    resp.status(200).json({message:"Login successfully", userDetails: users[0], Token: process.env.CUSTOM_TOKEN})
+    resp.status(200).json({message:"Login successfull", userDetails: users[0], Token: process.env.CUSTOM_TOKEN})
 };
+
+export const logout = async (req, resp) => {
+  const { email } = req.body;
+  
+  if (!email) {
+      return resp.status(400).json({ message: "Email is required." });
+  }
+
+  try {
+      const [users] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+
+      if (users.length === 0) {
+          return resp.status(404).json({ message: "User not found." });
+      }
+
+      await db.execute('UPDATE users SET status = 0 WHERE email = ?', [email]);
+
+      resp.status(200).json({ message: "Logged out successfully." });
+  } catch (error) {
+      console.error("Error during logout:", error);
+      resp.status(500).json({ message: "Logout failed." });
+  }
+};
+
 
 export const forgotPassword = async (req, resp) => {
     const { email } = req.body;
@@ -69,6 +95,7 @@ export const forgotPassword = async (req, resp) => {
 
 
 export const updatePassword = async (req, resp) => {
+  
   const { email, currentPassword, newPassword } = req.body;
   if (!email || !currentPassword || !newPassword) {
       return resp.status(400).json({ message: "Email, current password, and new password are required." });
@@ -98,4 +125,8 @@ export const updatePassword = async (req, resp) => {
       console.error("Error updating password:", error);
       resp.status(500).json({ message: "Failed to update password." });
   }
+};
+
+export const getDashboardData = async(req, resp) => {
+  resp.status(200).json({message:"Hello admin"})
 };
