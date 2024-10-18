@@ -38,8 +38,7 @@ export const stationList = async (req, resp) => {
     }
 
     const sortOrder = (sort_by === 'd') ? 'DESC' : 'ASC';
-    query += ` ORDER BY distance ${sortOrder} LIMIT ?, ?`;
-    queryParams.push(start, limit);
+    query += ` ORDER BY distance ${sortOrder} LIMIT ${start}, ${limit}`;
     
     const [stations] = await db.execute(query, queryParams);
 

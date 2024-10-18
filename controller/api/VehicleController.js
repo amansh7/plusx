@@ -376,7 +376,7 @@ export const soldSellVehicle = async (req, resp) => {
 
 /* Dynamic Data */
 export const areaList = async (req, resp) => {
-    const { location_id, area_name } = req.body;
+    const { location_id, area_name } = mergeParam(req);
 
     let query = `SELECT id AS loc_id, location_id, area_name FROM locations_area_list WHERE location_id = ? AND status = ?`;
     const queryParams = [location_id, 1];
