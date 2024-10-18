@@ -2,6 +2,7 @@ import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import transporter from "../../mailer.js";
+import { mergeParam } from "../../utils.js";
 
 export const serviceRequest = async (req, resp) => {
     const {
@@ -89,10 +90,8 @@ export const serviceRequest = async (req, resp) => {
 };
 
 export const requestList = async (req, resp) => {
-    const {rider_id, page_no, sort_by } = req.body;
-        
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
-    
+    const {rider_id, page_no, sort_by } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const sortOrder = sort_by === 'd' ? 'DESC' : 'ASC';
@@ -117,11 +116,9 @@ export const requestList = async (req, resp) => {
 
 };
 
-export const requestDetails = async (req, resp) => {
-    const {rider_id, request_id } = req.body;
-        
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], request_id: ["required"]});
-    
+export const requestDetails = async (req, resp) => { 
+    const {rider_id, request_id } = mergeParam(req);     
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const [orderData] = await db.execute(`SELECT * FROM charging_installation_service WHERE request_id = ? LIMIT 1`, [request_id]);
@@ -136,7 +133,7 @@ export const requestDetails = async (req, resp) => {
 
     return resp.json({
         message: ["Charging Installation Service fetched successfully!"],
-        order_data: orderData,
+        service_data: orderData[0],
         order_history: history,
         status: 1,
         code: 200,

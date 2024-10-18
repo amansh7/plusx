@@ -4,6 +4,7 @@ import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbU
 import transporter from "../../mailer.js";
 import moment from "moment";
 import 'moment-duration-format';
+import { mergeParam } from '../../utils.js';
 
 export const chargerList = async (req, resp) => {
     const {rider_id, page_no } = req.body;
@@ -187,7 +188,7 @@ export const chargerBookingList = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
-    const start = (page_no * limit) - limit;
+    const start = parseInt((page_no * limit) - limit, 10);
     const statusCondition = (history && history == 1) ? ['PU', 'C'] : ['PU', 'C'];
 
     const totalQuery = `SELECT COUNT(*) AS total FROM portable_charger_booking WHERE rider_id = ? AND status NOT IN (?, ?)`;
@@ -197,10 +198,10 @@ export const chargerBookingList = async (req, resp) => {
     const totalPage = Math.max(Math.ceil(total / limit), 1);
 
     const bookingsQuery = `SELECT booking_id, service_name, service_price, service_type, user_name, country_code, contact_no, slot_date, slot_time, status, created_at 
-        FROM portable_charger_booking WHERE rider_id = ? AND status NOT IN (?, ?) ORDER BY id DESC LIMIT ?, ?
+        FROM portable_charger_booking WHERE rider_id = ? AND status NOT IN (?, ?) ORDER BY id DESC LIMIT ${start}, ${parseInt(limit, 10)}
     `;
 
-    const [bookingList] = await db.execute(bookingsQuery, [rider_id, ...statusCondition, start, limit]);
+    const [bookingList] = await db.execute(bookingsQuery, [rider_id, ...statusCondition]);
 
     return resp.json({
         message: ["Portable Charger Booking List fetched successfully!"],

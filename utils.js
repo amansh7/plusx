@@ -2,6 +2,8 @@ import NodeCache from "node-cache";
 import axios from "axios";
 import multer from 'multer';
 import path from 'path';
+import puppeteer from 'puppeteer';
+import ejs from 'ejs';
 
 export function mergeParam(req) {
   return { ...req.query, ...req.body };
@@ -89,8 +91,6 @@ export const sendOtp = async (mobile, otpMsg) => {
   }
 };
 
-/* Handle file upload */
-
 
 /* Format Timings */
 export const getOpenAndCloseTimings = (data) => {
@@ -143,3 +143,103 @@ export const getOpenAndCloseTimings = (data) => {
     return [{ days: 'Always Open', time: '' }];
   }
 };
+
+/* Generates a PDF from an EJS template. */
+export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
+  const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
+  let success = false; 
+  try{
+    const html = await ejs.renderFile(templatePath, { ...pdfTemplateContext, imgUrl });
+  
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+  
+    page.setViewport({ width: 1280, height: 1050 });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+  
+    await browser.close();
+    return { success: true, pdfPath }; 
+  }catch(error){
+    console.error('Error generating PDF:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/* Amount Number To Word Converter */
+export function numberToWords(num) {
+  const ones = [
+      "ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE",
+      "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN",
+      "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN",
+      "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"
+  ];
+
+  const tens = [
+      "ZERO", "TEN", "TWENTY", "THIRTY", "FORTY",
+      "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"
+  ];
+
+  const hundreds = [
+      "HUNDRED", "THOUSAND", "MILLION", "BILLION", "TRILLION", "QUARDRILLION"
+  ];
+
+  num = Number(num).toFixed(2);
+  const numParts = num.split(".");
+  const wholeNum = numParts[0];
+  const decNum = numParts[1];
+
+  const wholeArr = Array.from(wholeNum).reverse().join('').split(/(?=(?:\d{3})+$)/g).reverse();
+  let resultText = "";
+
+  for (let key = 0; key < wholeArr.length; key++) {
+      let i = wholeArr[key].replace(/^0+/, '');
+
+      if (i.length === 0) continue;
+
+      if (i < 20) {
+          resultText += ones[parseInt(i)];
+      } else if (i < 100) {
+          resultText += tens[Math.floor(i / 10)];
+          if (i % 10 > 0) resultText += " " + ones[i % 10];
+      } else {
+          resultText += ones[Math.floor(i / 100)] + " " + hundreds[0];
+          const remainder = i % 100;
+          if (remainder > 0) {
+              if (remainder < 20) {
+                  resultText += " " + ones[remainder];
+              } else {
+                  resultText += " " + tens[Math.floor(remainder / 10)];
+                  if (remainder % 10 > 0) resultText += " " + ones[remainder % 10];
+              }
+          }
+      }
+
+      if (key > 0) {
+          resultText += " " + hundreds[key] + " ";
+      }
+  }
+
+  if (decNum > 0) {
+      resultText += " UAE Dirhams and ";
+      if (decNum < 20) {
+          resultText += ones[parseInt(decNum)];
+      } else {
+          resultText += tens[Math.floor(decNum / 10)];
+          if (decNum % 10 > 0) resultText += " " + ones[decNum % 10];
+      }
+      resultText += " Fils Only";
+  } else {
+      resultText += " UAE Dirhams Only";
+  }
+
+  return resultText.replace("Uae", "UAE").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/* Format Number */
+export function formatNumber(value) {
+  return new Intl.NumberFormat('en-US', { 
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+  }).format(value);
+}

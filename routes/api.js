@@ -27,6 +27,7 @@ import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
 import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
 import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
 import { handleFileUpload } from "../fileUpload.js";
+import multer from "multer";
 
 const router = Router();
 
@@ -48,7 +49,12 @@ const authzRoutes = [
     { method: 'post', path: '/vehicle-model-list', handler: vehicleModelList },
 ];
 authzRoutes.forEach(({ method, path, handler }) => {
-    router[method](path, apiAuthorization, handler);
+    const middlewares = [apiAuthorization];
+    if(path === '/registration'){
+        const noUpload = multer();
+        middlewares.push(noUpload.none()); 
+    }
+    router[method](path, ...middlewares, handler);
 });
 
 
@@ -164,7 +170,7 @@ const authzAndAuthRoutes = [
     { method: 'post', path: '/ev-pre-sale-slot-list', handler: preSaleSlotList },
 ];
 authzAndAuthRoutes.forEach(({ method, path, handler }) => {
-    const middlewares = [apiAuthorization]; 
+    const middlewares = []; 
 
     if(path === '/rider-profile-change'){
         middlewares.push(handleFileUpload('rider_profile', ['profile_image'], 1));
@@ -179,6 +185,7 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
         middlewares.push(handleFileUpload('insurance-images', ['vehicle_registration_img', 'driving_licence', 'car_images', 'car_type_image', 'scretch_image', 'emirates_id'], 5));
     }
     
+    middlewares.push(apiAuthorization);
     middlewares.push(apiAuthentication);
     router[method](path, ...middlewares, handler);
 });

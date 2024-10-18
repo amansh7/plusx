@@ -1,9 +1,11 @@
 import db from "../config/db.js";
+import { mergeParam } from "../utils.js";
 
 export const apiAuthentication = async (req, resp, next) => {
   const token = req.headers["accesstoken"];
-  const riderId = req.body.rider_id;
-
+  const {rider_id} = mergeParam(req);
+  const riderId = rider_id;
+  
   if (!token) {
     return resp.status(401).json({ message: 'Access Token key is missing', code: 400, data: {}, status: 0 });
   }
