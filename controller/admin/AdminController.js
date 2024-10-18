@@ -1,6 +1,7 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
+import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
 
@@ -56,6 +57,142 @@ export const getDashboardData = async (req, resp) => {
         resp.status(500).json({ message: 'Error fetching dashboard data' });
     }
 };
+
+export const riderList = async (req, resp) => {
+    let { pageNo, sortBy, riderName, riderEmail, riderMobile, addedFrom } = req.body;
+
+    pageNo = parseInt(pageNo, 10);
+    if (isNaN(pageNo) || pageNo < 1) {
+        pageNo = 1;
+    }
+
+    const sortOrder = sortBy === 'd' ? 'DESC' : 'ASC';
+
+    try {
+        const result = await getPaginatedData({
+            tableName: 'riders',
+            columns: 'rider_id, rider_name, rider_email, country_code, rider_mobile, emirates, profile_img, vehicle_type, status, created_at, updated_at',
+            sortColumn: 'created_at', 
+            sortOrder,
+            page_no : pageNo,
+            limit: 10,
+            searchFields: ['rider_name', 'rider_email', 'rider_mobile', 'added_from'],
+            searchTexts: [riderName, riderEmail, riderMobile, addedFrom],
+        });
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: ["Rider list fetched successfully!"],
+            data: result.data,
+            total_page: result.totalPage,
+            total: result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching rider list:', error);
+        return resp.status(500).json({
+            status: 0,
+            code: 500,
+            message: 'Error fetching rider list',
+        });
+    }
+};
+
+export const riderDetails = async (req, resp) => {
+    const { riderId } = req.body; 
+
+    if (!riderId) {
+        return resp.status(400).json({
+            status: 0,
+            code: 400,
+            message: 'Rider ID is required'
+        });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT r.*, 
+                    ra.*, 
+                    rv.*
+             FROM riders r
+             LEFT JOIN rider_address ra ON r.rider_id = ra.rider_id
+             LEFT JOIN riders_vehicles rv ON r.rider_id = rv.rider_id
+             WHERE r.rider_id = ?`, 
+            [riderId]
+        );
+
+        if (rows.length === 0) {
+            return resp.status(404).json({
+                status: 0,
+                code: 404,
+                message: 'Rider not found'
+            });
+        }
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            data: rows 
+        });
+    } catch (error) {
+        console.error('Error fetching rider details:', error);
+        return resp.status(500).json({
+            status: 0,
+            code: 500,
+            message: 'Error fetching rider details',
+        });
+    }
+};
+
+export const deleteRider = async (req, resp) => {
+    const { riderId } = req.body; 
+
+    if (!riderId) {
+        return resp.status(400).json({
+            status: 0,
+            code: 400,
+            message: 'Rider ID is required'
+        });
+    }
+
+    try {
+        const [result] = await db.execute(
+            `DELETE FROM riders 
+             WHERE rider_id = ?`, 
+            [riderId]
+        );
+
+        if (result.affectedRows === 0) {
+            return resp.status(404).json({
+                status: 0,
+                code: 404,
+                message: 'Rider not found'
+            });
+        }
+
+        return resp.status(200).json({
+            status: 1,
+            code: 200,
+            message: 'Rider deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting rider:', error);
+        return resp.status(500).json({
+            status: 0,
+            code: 500,
+            message: 'Error deleting rider',
+        });
+    }
+};
+
+
+
+
+
+
+
+
+
 
 
 
