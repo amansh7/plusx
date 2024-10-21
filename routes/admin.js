@@ -8,6 +8,7 @@ import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList
 import { handleFileUpload } from "../fileUpload.js";
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList } from "../controller/admin/PickAndDropController.js";
 import { stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
+import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 
 const router = Router();
 
@@ -17,6 +18,7 @@ const adminAuthRoutes = [
 adminAuthRoutes.forEach(({ method, path, handler }) => {
     router[method](path, adminAuthorization, handler);
 });
+
 const adminRoutes = [
     { method: 'put', path: '/logout', handler: logout },
     { method: 'post', path: '/forgot-password', handler: forgotPassword },
@@ -61,6 +63,11 @@ const adminRoutes = [
      //Public Charger
      { method: 'get', path: '/public-charger-station-list', handler: stationList },
      { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
+
+
+     //Charger Installation
+     { method: 'get', path: '/charger-installation-list', handler: chargerInstallationList },
+     { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
 ];
 

@@ -6,21 +6,22 @@ import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbU
 import validateFields from "../../validation.js";
 dotenv.config();
 
+
 export const stationList = async (req, resp) => {
     try {
-        const { page_no, search_text = '', sort_by = 'd' } = req.body; 
+        const { page_no, search_text, sort_by = 'd' } = req.body; 
 
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) {
             return resp.json({ status: 0, code: 422, message: errors });
         }
 
-        let whereClause = '';
-        let whereParams = [];
-        if (search_text.trim() !== '') {
-            whereClause = 'station_name LIKE ?';
-            whereParams.push(`%${search_text}%`);
-        }
+        // let whereClause = '';
+        // let whereParams = [];
+        // if (search_text.trim() !== '') {
+        //     whereClause = 'station_name LIKE ?';
+        //     whereParams.push(`%${station_name}%`);
+        // }
         const result = await getPaginatedData({
             tableName: 'public_charging_station_list',
             columns: `station_id, station_name, address, status, station_image, latitude, longitude, 
@@ -31,8 +32,8 @@ export const stationList = async (req, resp) => {
             sortOrder: sort_by === 'd' ? 'DESC' : 'ASC',
             page_no,
             limit: 10,
-            whereClause,
-            whereParams
+            searchFields: ['station_name'],
+            searchTexts: [search_text],
         });
 
         return resp.json({

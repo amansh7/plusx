@@ -236,7 +236,6 @@ export const chargerBookingDetails = async (req, resp) => {
     }
 };
 
-
 /* Invoice */
 export const invoiceList = async (req, resp) => {
     try {

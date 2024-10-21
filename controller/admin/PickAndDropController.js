@@ -8,7 +8,7 @@ dotenv.config();
 
 export const bookingList = async (req, resp) => {
     try {
-        const { page_no } = req.body;
+        const { page_no, request_id, name, contact_no, order_status  } = req.body;
     const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -19,8 +19,8 @@ export const bookingList = async (req, resp) => {
         sortOrder: 'DESC',
         page_no,
         limit: 10,
-        // whereField: 'status',
-        // whereValue: 1
+        searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
+        searchTexts: [request_id, name, contact_no, order_status],
     });
 
     return resp.json({
