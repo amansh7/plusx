@@ -4,6 +4,7 @@ import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import transporter from "../../mailer.js";
 import moment from "moment";
 import 'moment-duration-format';
+import { createNotification } from "../../utils.js";
 
 export const getChargingServiceSlotList = async (req, resp) => {
     const [slot] = await db.execute(`SELECT * FROM pick_drop_slot WHERE status = ?`, [1]);
@@ -66,11 +67,11 @@ export const requestService = async (req, resp) => {
     await db.execute(`UPDATE pick_drop_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?`, [slot_id]);
     await insertRecord('charging_service_history', ['service_id', 'rider_id', 'order_status'], [requestId, rider_id, 'CNF']);
 
-    // const href = 'charging_service/' + requestId;
-    // const heading = 'Valet charging service created!';
-    // const desc = `Your booking the Valet Charging service booking id: ${requestId} has been placed.`;
-    // createNotification(heading, desc, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
-    // pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
+    const href = 'charging_service/' + requestId;
+    const heading = 'Valet charging service created!';
+    const desc = `Your booking the Valet Charging service booking id: ${requestId} has been placed.`;
+    createNotification(heading, desc, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
+    pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
 
     const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
     

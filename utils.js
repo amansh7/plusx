@@ -4,6 +4,12 @@ import multer from 'multer';
 import path from 'path';
 import puppeteer from 'puppeteer';
 import ejs from 'ejs';
+import { insertRecord } from "./dbUtils.js";
+import { GoogleAuth } from "google-auth-library";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function mergeParam(req) {
   return { ...req.query, ...req.body };
@@ -242,4 +248,89 @@ export function formatNumber(value) {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
   }).format(value);
-}
+};
+
+/* Create Notification */
+export const createNotification = async (heading, desc, module_name, panel_to, panel_from, created_by, receive_id, href_url='') => {
+  await insertRecord('notifications', [
+    'heading', 'description', 'module_name', 'panel_to', 'panel_from', 'created_by', 'receive_id', 'status', 'href_url'
+  ],[
+    heading, desc, module_name, panel_to, panel_from, created_by, receive_id, 0, href_url=''
+  ]);
+};
+
+/* Send Notification */
+const getAccessToken = async (fcmType) => {
+  try {
+      const fileName = (fcmType === 'RSAFCM') ? 'plusx-support-firebase.json' : 'plusx-electric-firebase.json';
+      const serviceAccountPath = path.join(__dirname, 'public/firebase-files/', fileName);
+
+      const auth = new GoogleAuth({
+          keyFilename: serviceAccountPath,
+          scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+      });
+
+      const client = await auth.getClient();
+      const accessTokenResponse = await client.getAccessToken();
+      const accessToken = accessTokenResponse.token;
+
+      return accessToken;
+  } catch (error) {
+      console.error('Error fetching access token:', error.message);
+      throw error;
+  }
+};
+
+export const pushNotification = async ( deviceToken, title, body, fcmType, clickAction ) => {
+  try {
+    const accessToken = await getAccessToken(fcmType);
+    const clickActionParts = clickAction.split("/");
+    
+    const notification = {
+      title: title,
+      body: body,
+    };
+    
+    const data = {
+      title: title,
+      body: body,
+      click_action: clickActionParts[0],
+      refrence_id: clickActionParts[1],
+    };
+    
+    const message = {
+      message: {
+        token: deviceToken,
+        notification: notification,
+        data: data,
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+            },
+          },
+        },
+        android: {
+          priority: "high",
+          notification: {
+            click_action: clickActionParts[0],
+          },
+        },
+      },
+    };
+    
+    const projectId = (fcmType === 'RSAFCM') ? 'plusx-support' : 'plusx-electric-27f64';
+    const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+    const response = await axios.post(url, message, {
+      headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('Notification sent successfully:', response.data);
+  } catch (error) {
+    console.error('Error sending notification:', error.response ? error.response.data : error.message);
+  }
+};

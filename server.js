@@ -8,8 +8,6 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 dotenv.config();
 
-import {portableChargerInvoicePdf, chargerInstallationInvoicePdf, PreSaleInvoicePdf, pickAndDropInvoicePdf} from './controller/TestController.js';
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -31,14 +29,9 @@ app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
 
 /* test routes s*/
-app.get('/test', (req, resp) => {
-    
-    return resp.json({ text: 'txt' });
+app.get('/test-notification', (req, resp) => {
+    return resp.send('Hello');
 });
-app.get('/generate-pdf', portableChargerInvoicePdf);
-app.get('/generate-pdf-ci', chargerInstallationInvoicePdf);
-app.get('/generate-pdf-ps', PreSaleInvoicePdf);
-app.get('/generate-pdf-pnd', pickAndDropInvoicePdf);
 /* test routes e*/
 
 app.listen(PORT, ()=>{

@@ -23,6 +23,8 @@ import {
     addDiscussionBoard, getDiscussionBoardList, getDiscussionBoardDetail, addComment, replyComment, boardLike, boardView, boardShare, votePoll, 
     reportOnBoard, boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
 } from '../controller/api/DiscussionBoardController.js';
+import { redeemCoupon, createIntent } from '../controller/PaymentController.js';
+import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
 import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
 import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
 import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
@@ -31,6 +33,17 @@ import multer from "multer";
 
 const router = Router();
 
+router.post('/validate-coupon', redeemCoupon);
+router.post('/payment-intent', createIntent);
+//invoice related route -> authzAndAuthRoutes
+router.post('/create-rsa-invoice', rsaInvoice);
+router.post('/create-pick-drop-invoice', pickAndDropInvoice);
+router.post('/create-portable-charger-invoice', portableChargerInvoice);
+router.post('/create-pre-sale-invoice', preSaleTestingInvoice);
+router.get('/create-charger-installation-invoice', chargerInstallationInvoice);
+
+
+/* -- Api Auth Middleware -- */
 const authzRoutes = [
     /* API Routes */
     {method: 'post', path: '/rider-login', handler: login},
@@ -58,7 +71,7 @@ authzRoutes.forEach(({ method, path, handler }) => {
 });
 
 
-/* -- Api Auth & Api Authz middleware -- */
+/* -- Api Auth & Api Authz Middleware -- */
 const authzAndAuthRoutes = [
     { method: 'get', path: '/rider-home', handler: home },
     { method: 'get', path: '/get-rider-data', handler: getRiderData },
@@ -191,7 +204,7 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
 });
 
 
-/* -- Api Auth & Api RSA Authz middleware -- */
+/* -- Api Auth & Api RSA Authz Middleware -- */
 const authzRsaAndAuthRoutes = [
     /* Road Assitance with RSA */
     { method: 'get', path: '/rsa-order-stage', handler: getRsaOrderStage },
