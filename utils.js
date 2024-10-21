@@ -144,6 +144,26 @@ export const getOpenAndCloseTimings = (data) => {
   }
 };
 
+/* convert  time */
+export const convertTo24HourFormat = (timeStr) => {
+  const [time, modifier] = timeStr.split(' '); 
+  let [hours, minutes] = time.split(':');
+
+  hours = String(hours); 
+
+  if (modifier === 'PM' && hours !== '12') {
+      hours = (parseInt(hours, 10) + 12).toString(); 
+  }
+
+  if (modifier === 'AM' && hours === '12') {
+      hours = '00'; // Convert 12 AM to 00 hours
+  }
+
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`; 
+};
+
+
+
 /* Generates a PDF from an EJS template. */
 export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
   const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
