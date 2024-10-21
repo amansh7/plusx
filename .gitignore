@@ -1,6 +1,7 @@
 # Node.js artifact files
 node_modules/
 dist/
+/public/firebase-files/
 
 # Environment variable files
 .env

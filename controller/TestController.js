@@ -1,6 +1,7 @@
 import {generatePDF, numberToWords, formatNumber} from '../utils.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import transporter from '../mailer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,12 +50,22 @@ export const portableChargerInvoicePdf = async (req, resp) => {
         const pdfPath = path.join(__dirname,  '../public/files',`portable-charger-invoice-pdf-${today.getTime()}.pdf`);
         const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req);
 
-        resp.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `inline; filename=${pdf.pdfPath}.pdf`
+        await transporter.sendMail({
+            from: `"Easylease Admin" <admin@easylease.com>`,
+            to: 'famoney244@avzong.com',
+            subject: 'Test mail - PlusX Electric App',
+            html: `<html><body><h1>Hello </h1></body></html>`,
+            attachments: [{
+                filename: 'charger-installation-invoice.pdf',
+                path: pdfPath,
+                contentType: 'application/pdf'
+            }]
         });
-
-        resp.sendFile(pdf.pdfPath);
+        
+        return resp.json({
+            message: ["Invoice send successfully"],
+            pdf_path: pdfPath
+        });
 
     }catch(err){
         console.log('Error in generating PDF', err);
@@ -168,6 +179,17 @@ export const pickAndDropInvoicePdf = async (req, resp) => {
 
         // resp.sendFile(pdf.pdfPath);
         if (pdf.success) {
+            await transporter.sendMail({
+                from: `"Easylease Admin" <admin@easylease.com>`,
+                to: 'famoney244@avzong.com',
+                subject: 'Test mail - PlusX Electric App',
+                html: `<html><body><h1>Hello </h1></body></html>`,
+                attachments: [{
+                    filename: 'charger-installation-invoice.pdf',
+                    path: pdfPath,
+                    contentType: 'application/pdf'
+                }]
+            });
             // Respond with a JSON object containing the status, message, and PDF path
             return resp.json({
                 status: 1,

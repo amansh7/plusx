@@ -91,46 +91,29 @@
                         <td class="texr-center"><%= data.name %></td>
                     </tr>
                     <tr>
-                        <td class="colr1 font14">Email  </td>
-                        <td class="texr-center"><%= data.email %></td>
-                    </tr>
-                    <tr>
                         <td class="colr1 font14">Mobile No.  </td>
                         <td class="texr-center"><%= data.country_code %> - <%= data.contact_no %></td>
                     </tr>
                     <tr> 
-                        <td class="colr1 font14 ">Company Name</td>
-                        <td class="texr-center"><%= data.company_name %></td>
-                    </tr>
-                    <tr>
-                        <td class="colr1 font14 ">Service Type</td>
-                        <td class="texr-center"><%= data.service_type %></td>
-                    </tr>
-                    <tr>
-                        <td class="colr1 font14 ">Vehicle Model</td>
-                        <td class="texr-center"><%= data.vehicle_model %></td>
-                    </tr>
-                    <tr>
-                        <td class="colr1 font14 ">Resident Type</td>
-                        <td class="texr-center"><%= data.resident_type %></td>
-                    </tr>
-                    <tr>
-                        <td class="colr1 font14 ">No Of Charger</td>
-                        <td class="texr-center"><%= data.no_of_charger %></td>
+                        <td class="colr1 font14 ">Types Of Issue</td>
+                        <td class="texr-center"><%= data.types_of_issue %></td>
                     </tr>
                 </tbody>
             </table>
-            <table style="margin-top: 362px;width: 100%;float: left;" class="width-100 bdrall">
+            <table style="margin-top: 215px;width: 100%;float: left;" class="width-100 bdrall"></table>
                 <thead>
                     <tr>
-                        <th class="colr1 font14" colspan="3">Pickup Address</th>
+                        <th class="colr1 font14">Pickup Address</th>
+                        <th class="colr1 font14" colspan="2">Drop Address</th>
                         <th class="colr1 font14">Base Price</th>
                         <th class="colr1 font14">Total (<%= data.currency.toUpperCase() %>)</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <% let price = data.price / 100; %>
                     <tr>
-                        <td class="bdr bdl" colspan="3"><%= data.address %></td>
+                        <td class="bdr bdl"><%= data.pickup_address %></td>
+                        <td class="bdr bdl" colspan="2"><%= data.drop_address %></td>
                         <td class="bdr bdl"><%= data.currency.toUpperCase() %> : <%= formatNumber(data.price) %></td>
                         <td class="bdr bdl"><%= formatNumber(data.price) %></td>
                     </tr>
@@ -139,9 +122,7 @@
                         <td><b><%= formatNumber(data.price) %></b></td>
                     </tr>   
                     <tr>
-                        <?php 
-                            $total_amt = $result['price']; // + $tax;
-                        ?>
+                        <% let total_amt = data.price; %>
                         <td class="texr-center colr1 font14" colspan="4" style="font-size: 16px">Grand Total </td>
                         <td style="font-size: 16px">
                             <b><%= formatNumber(data.price) %></b><br>
