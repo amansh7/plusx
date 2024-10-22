@@ -29,22 +29,22 @@ const adminRoutes = [
     { method: 'post', path: '/delete-rider', handler: deleteRider },
 
     //Portable Charger 
-    { method: 'get', path: '/charger-list', handler: chargerList },
+    { method: 'post', path: '/charger-list', handler: chargerList },
     { method: 'post', path: '/add-charger', handler: addCharger },
     { method: 'post', path: '/edit-charger', handler: editCharger },
     { method: 'post', path: '/delete-charger', handler: deleteCharger },
 
     //Portable Charger Booking
-    { method: 'get', path: '/charger-booking-list', handler: chargerBookingList },
-    { method: 'get', path: '/charger-booking-details', handler: chargerBookingDetails },
-    { method: 'get', path: '/charger-booking-invoice-list', handler: invoiceList },
-    { method: 'get', path: '/charger-booking-invoice-details', handler: invoiceDetails },
+    { method: 'post', path: '/charger-booking-list', handler: chargerBookingList },
+    { method: 'post', path: '/charger-booking-details', handler: chargerBookingDetails },
+    { method: 'post', path: '/charger-booking-invoice-list', handler: invoiceList },
+    { method: 'post', path: '/charger-booking-invoice-details', handler: invoiceDetails },
 
     //Portable Charger Slot List
-    { method: 'get', path: '/charger-slot-list', handler: slotList },
+    { method: 'post', path: '/charger-slot-list', handler: slotList },
     { method: 'post', path: '/charger-add-time-slot', handler: addSlot },
-    { method: 'put', path: '/charger-edit-time-slot', handler: editSlot },
-    { method: 'delete', path: '/charger-delete-time-slot', handler: deleteSlot },
+    { method: 'post', path: '/charger-edit-time-slot', handler: editSlot },
+    { method: 'post', path: '/charger-delete-time-slot', handler: deleteSlot },
 
 
      //Pick & Drop Booking

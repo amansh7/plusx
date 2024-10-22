@@ -15,9 +15,9 @@ export const chargerList = async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'portable_charger',
-        columns: 'charger_id, charger_name, charger_price, charger_feature, image, charger_type',
-        sortColumn: 'id',
-        sortOrder: 'ASC',
+        columns: 'charger_id, charger_name, charger_price, charger_feature, image, charger_type, status',
+        sortColumn: 'created_at',
+        sortOrder: 'DESC',
         page_no,
         limit: 10,
         whereField: 'status',
@@ -253,7 +253,7 @@ export const invoiceList = async (req, resp) => {
                 (select concat(user_name, ",", country_code, "-", contact_no) from portable_charger_booking as pcb where pcb.booking_id = portable_charger_invoice.request_id limit 1)
                 AS riderDetails`,
             sortColumn: 'id',
-            sortOrder: 'DESC',
+            sortOrder: 'ASC',
             page_no,
             limit: 10,
             // whereField,

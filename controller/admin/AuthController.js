@@ -15,6 +15,7 @@ var transporter = nodemailer.createTransport({
   }
 });
 
+
 export const login = async(req, resp) => {
     const { email, password } = req.body;
     const [users] = (await db.execute('SELECT * FROM users WHERE email=?', [email]));
