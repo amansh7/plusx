@@ -2,7 +2,7 @@ import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import transporter from "../../mailer.js";
-import { mergeParam } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification } from "../../utils.js";
 
 export const serviceRequest = async (req, resp) => {
     const {

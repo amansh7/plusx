@@ -418,7 +418,7 @@ export const reminder_sell_vehicle_list = async (req, resp) => {
         const msg = 'Has your car been sold?';
         const href = `sell_vehicle/${val.sell_id}`;
         
-        // await pushNotification([val.fcm_token], title, msg, 'RDRFCM', href);
+        await pushNotification([val.fcm_token], title, msg, 'RDRFCM', href);
     }
 
     return resp.json({ status: 1, code: 200, message: "Notification Sent!" });

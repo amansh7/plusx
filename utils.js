@@ -270,10 +270,10 @@ export function formatNumber(value) {
 
 /* Create Notification */
 export const createNotification = async (heading, desc, module_name, panel_to, panel_from, created_by, receive_id, href_url='') => {
-  await insertRecord('notifications', [
+  const result = await insertRecord('notifications', [
     'heading', 'description', 'module_name', 'panel_to', 'panel_from', 'created_by', 'receive_id', 'status', 'href_url'
   ],[
-    heading, desc, module_name, panel_to, panel_from, created_by, receive_id, 0, href_url=''
+    heading, desc, module_name, panel_to, panel_from, created_by, receive_id, '0', href_url=''
   ]);
 
   return {

@@ -8,19 +8,18 @@ import db from "./config/db.js";
  * @param {Array<any>} values - An array of values corresponding to the columns.
  * @returns {Promise<Object>} - The result of the insert operation.
  */
-export const insertRecord = async (table, columns, values) => {
+export const insertRecord = async (table, columns, values, connection = null) => {
   const placeholders = columns.map(() => "?").join(", ");
-  const sql = `INSERT INTO ${table} (${columns.join(
-    ", "
-  )}) VALUES (${placeholders})`;
+  const sql = `INSERT INTO ${table} (${columns.join( ", " )}) VALUES (${placeholders})`;
   try {
-    const [result] = await db.execute(sql, values);
+    const dbConn = connection ? connection : await db.getConnection();
+    const [result] = await dbConn.execute(sql, values);
+    if (!connection) { dbConn.release(); }
+
     return {
       insertId: result.insertId,
       affectedRows: result.affectedRows,
-      data: Object.fromEntries(
-        columns.map((col, index) => [col, values[index]])
-      ),
+      data: Object.fromEntries(columns.map((col, index) => [col, values[index]])),
     };
   } catch (error) {
     throw new Error(`Insert operation failed: ${error.message}`);
@@ -36,7 +35,7 @@ export const insertRecord = async (table, columns, values) => {
  * @param {Array<any>} whereValues - The value of the column to filter the rows to update.
  * @returns {Promise<Object>} - The result of the update operation.
  */
-export const updateRecord = async (table, updates, whereColumns, whereValues) => {
+export const updateRecord = async (table, updates, whereColumns, whereValues, connection = null) => {
   const setClause = Object.keys(updates).map((col) => `${col} = ?`).join(", ");
   
   const whereClause = whereColumns.map(col => `${col} = ?`).join(" AND ");
@@ -44,10 +43,16 @@ export const updateRecord = async (table, updates, whereColumns, whereValues) =>
   const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereClause}`;
   
   try {
-    const [result] = await db.execute(sql, [
+    const dbConn = connection ? connection : await db.getConnection();
+
+    const [result] = await dbConn.execute(sql, [
       ...Object.values(updates),
       ...whereValues,
     ]);
+
+    if (!connection) {
+      dbConn.release();
+    }
     
     return {
       affectedRows: result.affectedRows,
@@ -67,8 +72,12 @@ export const updateRecord = async (table, updates, whereColumns, whereValues) =>
  * @param {Array<any>} params - An array of values corresponding to placeholders in the query.
  * @returns {Promise<Object>} - The result of the operation.
  */
-export const queryDB = async (query, params) => {
-  const [[results]] = await db.execute(query, params);
+export const queryDB = async (query, params, connection = null) => {
+  const dbConn = connection ? connection : await db.getConnection();
+  const [[results]] = await dbConn.execute(query, params);
+  if (!connection) {
+    dbConn.release();
+  }
   return results;
 };
 
