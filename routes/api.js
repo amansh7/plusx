@@ -1,35 +1,39 @@
 import { Router } from "express";
-import { 
-    login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, 
-    notificationList, addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount, addRiderVehicle ,editRiderVehicle, riderVehicleList, deleteRiderVehicle
-} from "../controller/api/RiderController.js";
-import {stationList, stationDetail, nearestChargerList} from '../controller/api/ChargingStationController.js';
-import {carList, carDetail} from '../controller/api/ElectricCarRentalController.js';
-import {bikeList, bikeDetail} from '../controller/api/ElectricBikeRentalController.js';
-import {
-    addRoadAssistance, roadAssistanceList, roadAssistanceDetail, roadAssistanceInvoiceList, roadAssistanceInvoiceDetail, getRsaOrderStage, orderAction
-} from '../controller/api/RoadAssistanceController.js';
-import {serviceRequest, requestList, requestDetails} from '../controller/api/ChargingInstallationServiceController.js';
-import {clubList, clubDetail } from '../controller/api/ClubController.js';
-import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList, sellVehicleDetail, 
-    updateSellVehicle, deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
-} from '../controller/api/VehicleController.js';
-import {offerList, offerDetail} from '../controller/api/OfferController.js';
-import {shopList, shopDetail} from '../controller/api/ShopController.js';
-import {chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking} from '../controller/api/PortableChargerController.js';
-import { getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking } from '../controller/api/ChargingServiceController.js';
-import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList} from '../controller/api/EvInsuranceController.js';
-import { 
-    addDiscussionBoard, getDiscussionBoardList, getDiscussionBoardDetail, addComment, replyComment, boardLike, boardView, boardShare, votePoll, 
-    reportOnBoard, boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
-} from '../controller/api/DiscussionBoardController.js';
+import { handleFileUpload } from "../fileUpload.js";
+import multer from "multer";
+import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
+import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
+import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
+import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { redeemCoupon, createIntent } from '../controller/PaymentController.js';
-import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
+import { offerList, offerDetail } from '../controller/api/OfferController.js';
+import { shopList, shopDetail } from '../controller/api/ShopController.js';
+import { clubList, clubDetail } from '../controller/api/ClubController.js';
 import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
 import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
 import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
-import { handleFileUpload } from "../fileUpload.js";
-import multer from "multer";
+import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList } from '../controller/api/EvInsuranceController.js';
+import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
+import { 
+    login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, notificationList, 
+    addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount, addRiderVehicle ,editRiderVehicle, riderVehicleList, deleteRiderVehicle
+} from "../controller/api/RiderController.js";
+import {
+    addRoadAssistance, roadAssistanceList, roadAssistanceDetail, roadAssistanceInvoiceList, roadAssistanceInvoiceDetail, getRsaOrderStage, orderAction
+} from '../controller/api/RoadAssistanceController.js';
+import { 
+    addDiscussionBoard, getDiscussionBoardList, getDiscussionBoardDetail, addComment, replyComment, boardLike, boardView, boardShare, votePoll, reportOnBoard, 
+    boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
+} from '../controller/api/DiscussionBoardController.js';
+import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList, sellVehicleDetail, updateSellVehicle, 
+    deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
+} from '../controller/api/VehicleController.js';
+import { 
+    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking
+} from '../controller/api/PortableChargerController.js';
+import { 
+    getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking 
+} from '../controller/api/ChargingServiceController.js';
 
 const router = Router();
 
