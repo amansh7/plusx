@@ -168,8 +168,6 @@ export const convertTo24HourFormat = (timeStr) => {
   return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`; 
 };
 
-
-
 /* Generates a PDF from an EJS template. */
 export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
   const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
@@ -277,6 +275,10 @@ export const createNotification = async (heading, desc, module_name, panel_to, p
   ],[
     heading, desc, module_name, panel_to, panel_from, created_by, receive_id, 0, href_url=''
   ]);
+
+  return {
+    affectedRows: result.affectedRows
+  };
 };
 
 /* Send Notification */
