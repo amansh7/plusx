@@ -28,12 +28,6 @@ app.set('views', path.join(__dirname, 'views'));
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
 
-/* test routes s*/
-app.get('/test-notification', (req, resp) => {
-    return resp.send('Hello');
-});
-/* test routes e*/
-
 app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);
 });
