@@ -34,18 +34,9 @@ import {
 import { 
     getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking 
 } from '../controller/api/ChargingServiceController.js';
+import { createNotification, pushNotification } from "../utils.js";
 
 const router = Router();
-
-router.post('/validate-coupon', redeemCoupon);
-router.post('/payment-intent', createIntent);
-//invoice related route -> authzAndAuthRoutes
-router.post('/create-rsa-invoice', rsaInvoice);
-router.post('/create-pick-drop-invoice', pickAndDropInvoice);
-router.post('/create-portable-charger-invoice', portableChargerInvoice);
-router.post('/create-pre-sale-invoice', preSaleTestingInvoice);
-router.get('/create-charger-installation-invoice', chargerInstallationInvoice);
-
 
 /* -- Api Auth Middleware -- */
 const authzRoutes = [
@@ -185,6 +176,16 @@ const authzAndAuthRoutes = [
     { method: 'get', path: '/ev-pre-sale-list', handler: evPreSaleList },
     { method: 'get', path: '/ev-pre-sale-detail', handler: evPreSaleDetails },
     { method: 'post', path: '/ev-pre-sale-slot-list', handler: preSaleSlotList },
+
+    /* Payment */
+    { method: 'post', path: '/payment-intent', handler: createIntent },
+
+    /* Invoice */
+    { method: 'post', path: '/create-rsa-invoice', handler: rsaInvoice },
+    { method: 'post', path: '/create-pick-drop-invoice', handler: pickAndDropInvoice },
+    { method: 'post', path: '/create-portable-charger-invoice', handler: portableChargerInvoice },
+    { method: 'post', path: '/create-pre-sale-invoice', handler: preSaleTestingInvoice },
+    { method: 'get', path: '/create-charger-installation-invoice', handler: chargerInstallationInvoice },
 ];
 authzAndAuthRoutes.forEach(({ method, path, handler }) => {
     const middlewares = []; 
@@ -213,10 +214,12 @@ const authzRsaAndAuthRoutes = [
     /* Road Assitance with RSA */
     { method: 'get', path: '/rsa-order-stage', handler: getRsaOrderStage },
     { method: 'get', path: '/order-action', handler: orderAction },
+    
     /* Charging Service */
     { method: 'post', path: '/charger-service-action', handler: handleBookingAction },
     { method: 'get', path: '/charger-service-stage', handler: getRsaBookingStage },
     { method: 'post', path: '/charger-service-reject', handler: handleRejectBooking },
+    
     /* POD with RSA */
     { method: 'get', path: '/portable-charger-stage', handler: rsaBookingStage },
     { method: 'post', path: '/portable-charger-action', handler: bookingAction },
@@ -226,6 +229,20 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
     router[method](path, apiAuthorization, apiRsaAuthentication, handler);
 });
 
+
+router.post('/validate-coupon', redeemCoupon);
+
+router.get('/test-notification', async (req, resp)=>{
+    const { rider_id, request_id } = req.body;
+    const fcm_token = "cspvkHYwRDqLWhvoCNHW6P:APA91bHtXmyYuQNICJCzh7iRVrnH4MkfOJmtLjozYDqvWaC23NLhQGTG_JMRSGLyHZdyEsazrTBOuBK8gKNU8HTlbDsy2N068bgWjsvwMrezjMdEXmuNwevbjMGBUFWi10tn7Mfp0ztq";
+    const href = 'test_notification/' + request_id;
+    const heading = 'Test Roadside Assistance Created!';
+    const desc = `This is a test Roadside Assistance desc of id: ${request_id}`;
+    // createNotification(heading, desc, 'Roadside Assistance', 'Rider', 'Admin','', rider_id, href);
+    const nresp =  pushNotification(fcm_token, heading, desc, 'RDRFCM', href);
+
+    return resp.json({nresp});
+});
 
 
 export default router;
