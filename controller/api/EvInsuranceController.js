@@ -4,9 +4,9 @@ import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import path from 'path';
 import fs from 'fs';
 import moment from "moment";
-import transporter from "../../mailer.js";
 import generateUniqueId from 'generate-unique-id';
 import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import emailQueue from "../../emailQueue.js";
 
 export const addInsurance = async (req, resp) => {
     try{
@@ -66,26 +66,23 @@ export const addInsurance = async (req, resp) => {
             'car_type_image', 'scretch_image', 'emirates_id', 
         ], [
             insuranceId, rider_id, owner_name, date_of_birth, country, country_code, mobile_no, email, vehicle, registration_place, car_brand, bank_loan, 
-            bank_name, type_of_insurance, insurance_expiry, insurance_expired, fileNames['vehicle_registration_img'], fileNames['driving_licence'], fileNames['car_images'], 
+            bank_name, type_of_insurance, formattedInsuranceExpiry, insurance_expired, fileNames['vehicle_registration_img'], fileNames['driving_licence'], fileNames['car_images'], 
             fileNames['car_type_image'], fileNames['scretch_image'], fileNames['emirates_id'], 
         ]);
     
         if(insert.affectedRows === 0 ) return resp.json({status:0, code:200, error: true, message: ['Oops! There is something went wrong! Please Try Again']});
     
-        await transporter.sendMail({
-            from: `"PlusX Electric App" <media@plusxelectric.com>`,
-            to: email,
-            subject: `Thank You for Choosing PlusX Electric App for Your EV Insurance Needs!`,
-            html: `<html>
-                <body>
-                    <h4>Dear ${owner_name},</h4>
-                    <p>Thank you for selecting PlusX Electric App for your EV insurance requirements. 
-                    We have successfully received your details, and our EV insurance executive will be reaching out to you shortly.</p><br/>
-                    <p>We look forward to assisting you with your EV insurance needs.</p> <br /> <br /> 
-                    <p> Regards,<br/> PlusX Electric App </p>
-                </body>
-            </html>`,
-        });
+        const html = `<html>
+            <body>
+                <h4>Dear ${owner_name},</h4>
+                <p>Thank you for selecting PlusX Electric App for your EV insurance requirements. 
+                We have successfully received your details, and our EV insurance executive will be reaching out to you shortly.</p><br/>
+                <p>We look forward to assisting you with your EV insurance needs.</p> <br /> <br /> 
+                <p> Regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`;
+
+        emailQueue.addEmail(email, 'Thank You for Choosing PlusX Electric App for Your EV Insurance Needs!', html);
     
         return resp.json({
             status: 1,
@@ -215,39 +212,31 @@ export const evPreSaleBooking = async (req, resp) => {
 
     const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
 
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: rider.rider_email,
-        subject: 'Your EV-pre Sale Booking Confirmation - PlusX Electric App',
-        html: `<html>
-            <body>
-                <h4>Dear ${rider.rider_name},</h4>
-                <p>Thank you for using the PlusX Electric App for your Valet Charging service. We have successfully received your booking request. 
-                Below are the details of your roadside assistance booking:</p> <br />
-                <p>Booking Reference: ${bookingId}</p>
-                <p>Date & Time of Request: ${formattedDateTime}</p> 
-                <p>Pick Up Address: ${pickup_address}</p>                         
-                <p>Reason: ${reason_of_testing}</p><br/><br/>  
-                <p> Regards,<br/> The Friendly PlusX Electric Team </p>
-            </body>
-        </html>`,
-    });
+    const htmlUser = `<html>
+        <body>
+            <h4>Dear ${rider.rider_name},</h4>
+            <p>Thank you for using the PlusX Electric App for your Valet Charging service. We have successfully received your booking request. 
+            Below are the details of your roadside assistance booking:</p> <br />
+            <p>Booking Reference: ${bookingId}</p>
+            <p>Date & Time of Request: ${formattedDateTime}</p> 
+            <p>Pick Up Address: ${pickup_address}</p>                         
+            <p>Reason: ${reason_of_testing}</p><br/><br/>  
+            <p> Regards,<br/> The Friendly PlusX Electric Team </p>
+        </body>
+    </html>`;
+    const htmlAdmin = `<html>
+        <body>
+            <h4>Dear Admin,</h4>
+            <p>We have received a new booking for our Valet Charging service. Below are the details:</p> 
+            <p>Customer Name : ${rider.rider_name}</p>
+            <p>Pickup & Drop Address : ${pickup_address}</p>
+            <p>Booking Date & Time : ${formattedDateTime}</p> <br/>                        
+            <p> Best regards,<br/> PlusX Electric App </p>
+        </body>
+    </html>`;
 
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: 'admin@plusxelectric.com',
-        subject: `EV-pre Sale Booking - ${bookingId}`,
-        html: `<html>
-            <body>
-                <h4>Dear Admin,</h4>
-                <p>We have received a new booking for our Valet Charging service. Below are the details:</p> 
-                <p>Customer Name : ${rider.rider_name}</p>
-                <p>Pickup & Drop Address : ${pickup_address}</p>
-                <p>Booking Date & Time : ${formattedDateTime}</p> <br/>                        
-                <p> Best regards,<br/> PlusX Electric App </p>
-            </body>
-        </html>`,
-    });
+    emailQueue.addEmail(rider.rider_email, 'Your EV-pre Sale Booking Confirmation - PlusX Electric App', htmlUser);
+    emailQueue.addEmail('admin@plusxelectric.com', `EV-pre Sale Booking - ${bookingId}`, htmlAdmin);
 
     return resp.json({
         status: 1,

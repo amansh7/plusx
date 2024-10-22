@@ -1,8 +1,8 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
-import transporter from "../../mailer.js";
 import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import emailQueue from "../../emailQueue.js";
 
 export const serviceRequest = async (req, resp) => {
     const {
@@ -34,47 +34,38 @@ export const serviceRequest = async (req, resp) => {
     if(insert.affectedRows > 0){
         await insertRecord('charging_installation_service_history', ['service_id', 'rider_id', 'vehicle_model', 'order_status'], [requestId, rider_id, vehicle_model, 'P']);
         
-        // const href = 'charging_installation_service/' + requestId;
-        // const heading = 'Order Created!';
-        // const desc = `Your request for charging installation service at home order no. ${requestId} has been placed.`;
-        // createNotification(heading, desc, 'Charging Installation Service', 'Rider', 'Admin','', rider_id, href);
-        // pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
+        const href = 'charging_installation_service/' + requestId;
+        const heading = 'Order Created!';
+        const desc = `Your request for charging installation service at home order no. ${requestId} has been placed.`;
+        createNotification(heading, desc, 'Charging Installation Service', 'Rider', 'Admin','', rider_id, href);
+        pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
 
         const now = new Date();
         const formattedDateTime = now.toISOString().replace('T', ' ').substring(0, 19);
+        const htmlUser = `<html>
+            <body>
+                <h4>Dear ${name},</h4>
+                <p>Thank you for using the PlusX Electric App for Charging Installation service. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p> <br/>
+                <p>Booking Reference: ${requestId}</p>
+                <p>Date & Time of Request: ${formattedDateTime}</p> 
+                <p>Address: ${address}</p>                         
+                <p>Service Type: ${service_type}</p> <br/>
+                <p> Regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`;
+        const htmlAdmin = `<html>
+            <body>
+                <h4>Dear Admin,</h4>
+                <p>We have received a new booking for our Charging Installation service. Below are the details:</p> <br/>
+                <p>Customer Name  : ${name}</p>
+                <p>Address : ${address}</p>
+                <p>Booking Time   : ${formattedDateTime}</p> <br/>                        
+                <p> Best regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`;
 
-        await transporter.sendMail({
-            from: `"Easylease Admin" <admin@easylease.com>`,
-            to: email,
-            subject: 'Your Charging Installation Booking Confirmation - PlusX Electric App',
-            html: `<html>
-                <body>
-                    <h4>Dear ${name},</h4>
-                    <p>Thank you for using the PlusX Electric App for Charging Installation service. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p> <br/>
-                    <p>Booking Reference: ${requestId}</p>
-                    <p>Date & Time of Request: ${formattedDateTime}</p> 
-                    <p>Address: ${address}</p>                         
-                    <p>Service Type: ${service_type}</p> <br/>
-                    <p> Regards,<br/> PlusX Electric App </p>
-                </body>
-            </html>`,
-        });
-
-        await transporter.sendMail({
-            from: `"Easylease Admin" <admin@easylease.com>`,
-            to: 'admin@plusxelectric.com',
-            subject: `Charging Installation Booking - ${requestId}`,
-            html: `<html>
-                <body>
-                    <h4>Dear Admin,</h4>
-                    <p>We have received a new booking for our Charging Installation service. Below are the details:</p> <br/>
-                    <p>Customer Name  : ${name}</p>
-                    <p>Address : ${address}</p>
-                    <p>Booking Time   : ${formattedDateTime}</p> <br/>                        
-                    <p> Best regards,<br/> PlusX Electric App </p>
-                </body>
-            </html>`,
-        });
+        emailQueue.addEmail(email, 'Your Charging Installation Booking Confirmation - PlusX Electric App', htmlUser);
+        emailQueue.addEmail('admin@plusxelectric.com', `Charging Installation Booking - ${requestId}`, htmlAdmin);
 
         return resp.json({
             status: 1, 
