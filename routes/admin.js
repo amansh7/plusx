@@ -7,7 +7,7 @@ import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList
     invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot} from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList } from "../controller/admin/PickAndDropController.js";
-import { stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
+import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 
 const router = Router();
@@ -63,6 +63,8 @@ const adminRoutes = [
      //Public Charger
      { method: 'get', path: '/public-charger-station-list', handler: stationList },
      { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
+     { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
+     { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
 
      //Charger Installation

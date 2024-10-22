@@ -100,3 +100,21 @@ export const stationDetail = async (req, resp) => {
         });
     }
 };
+
+export const addPublicCharger = async (req, resp) => {
+    try {
+        
+    } catch (error) {
+        console.error('Something went wrong:', error);
+        resp.status(500).json({ message: 'Something went wrong' });
+    }
+};
+
+export const editPublicCharger = async (req, resp) => {
+    try {
+        
+    } catch (error) {
+        console.error('Something went wrong:', error);
+        resp.status(500).json({ message: 'Something went wrong' });
+    }
+};
