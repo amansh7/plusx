@@ -93,8 +93,4 @@ adminRoutes.forEach(({ method, path, handler }) => {
     router[method](path, ...middlewares, handler);
 });
 
-
-
-
-
 export default router;

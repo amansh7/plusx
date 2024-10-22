@@ -384,8 +384,8 @@ export const addSlot = async (req, resp) => {
         };
         
 
-    const slot_id = generateSlotId();
-    console.log(slot_id, status, startTime24, endTime24, req.body);
+        const slot_id = generateSlotId();
+        console.log(slot_id, status, startTime24, endTime24, req.body);
     
     
         const insert = await insertRecord('portable_charger_slot', [
@@ -466,6 +466,68 @@ export const deleteSlot = async (req, resp) => {
 }
 /* Slot */
 
+// Assign Booking
+export const assignBooking = async (req, resp) => {
+    const {  rsa_id, booking_id  } = mergeParam(req);
+    const { isValid, errors }      = validateFields(mergeParam(req), {
+        rsa_id     : ["required"],
+        booking_id : ["required"],
+    });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    const conn = await startTransaction();
+    
+    try{
+        const booking_data = await queryDB( `SELECT rider_id, rsa_id, (select fcm_token from riders as r where r.rider_id = portable_charger_booking.rider_id ) as fcm_token FROM portable_charger_booking WHERE booking_id = ?
+        `, [booking_id ], conn );
+    
+        if (!booking_data) {
+            return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+        }
+        if(rsa_id == booking_data.rsa_id) {
+            return resp.json({ message: [`This driver already assin on this booking!, please select another driver`], status: 0, code: 404 });
+        }
+        if( booking_data.rsa_id) {
+            await updateRecord('portable_charger_booking_assign', {rsa_id: rsa_id, status: 0}, 'order_id', booking_id, conn);
+
+        } else {
+            await insertRecord('portable_charger_booking_assign', 
+                [ 'order_id', 'rsa_id', 'rider_id', 'status' ], 
+                [ order_id, booking_data.rider_id, rsa_id ], 
+            conn);
+        }
+        await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, 'booking_id', booking_id, conn);
+        // await insertRecord('portable_charger_history', ['booking_id', 'rider_id', 'rsa_id', 'order_status'], [booking_id, booking_data.rider_id, rsa_id, 'A'], conn);
+        
+        const href    = 'portable_charger_booking/' + booking_id;
+        const heading = 'Booking Assigned!';
+        const desc    = `Your POD Booking has been assigned to Driver by PlusX admin with booking id : ${booking_id}`;
+        createNotification(heading, desc, 'Portable Charging Booking', 'Rider', 'Admin','', booking_data.rider_id, href);
+        pushNotification(booking_data.fcm_token, heading, desc, 'RDRFCM', href);
+    
+        const rsa = await queryDB(`SELECT fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
+        if(rsa){
+            
+            const heading1 = 'Portable Charger Booking';
+            const desc1    = `A Booking of the portable charging booking has been assigned to you with booking id :  ${booking_id}`;
+            createNotification(heading1, desc1, 'Portable Charger', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
+            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+        }
+        await commitTransaction(conn);
+        
+        return resp.json({
+            status  : 1, 
+            code    : 200,
+            message : "You have successfully assigned POD booking." 
+        });
+
+    } catch(err){
+        await rollbackTransaction(conn);
+        console.error("Transaction failed:", err);
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    }finally{
+        if (conn) conn.release();
+    }
+};
 
 
 

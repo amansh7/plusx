@@ -232,5 +232,17 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
 router.post('/validate-coupon', redeemCoupon);
 
+router.get('/test-notification', async (req, resp)=>{
+    const { rider_id, request_id } = req.body;
+    const fcm_token = "dRnPCiCWQpSVewTmIqBQO6:APA91bEUnBE5lOTYIeY7N3hQWJCOk9287OOiIRJS5qZoSQANnvzu1Khe-NY_hqQkYeAn519RzSvakECvZ6cS_jjHnt_jPXIc_arSccQGN8WqOqcBNMJskhhwiuXUiY-y2LCQvMwb1dyZ";
+    const href = 'test_notification/' + request_id;
+    const heading = 'Test Roadside Assistance Created!';
+    const desc = `This is a test Roadside Assistance desc of id: ${request_id}`;
+    // createNotification(heading, desc, 'Roadside Assistance', 'Rider', 'Admin','', rider_id, href);
+    const nresp =  pushNotification(fcm_token, heading, desc, 'RDRFCM', href);
+
+    return resp.json({nresp});
+});
+
 
 export default router;
