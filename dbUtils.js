@@ -89,6 +89,7 @@ export const queryDB = async (query, params) => {
  * @returns {Promise<Object>} - An object containing paginated data, total records, and total pages.
  * 
  **/
+
 export const getPaginatedData = async ({
   tableName,
   columns = '*',
@@ -104,11 +105,10 @@ export const getPaginatedData = async ({
 }) => {
   const start = parseInt((page_no * limit) - limit, 10);
 
+  let whereCondition = '';
   let searchCondition = '';
   const queryParams = [];
 
-  // Build the where condition based on whereField and whereValue
-  let whereCondition = '';
   if (whereField.length > 0 && whereValue.length > 0) {
     whereField.forEach((field, index) => {
       const operator = whereOperator[index] || '=';
@@ -123,14 +123,12 @@ export const getPaginatedData = async ({
     });
   }
 
-  // Build the search conditions dynamically
   searchFields.forEach((field, index) => {
     if (searchTexts[index]) {
-      searchCondition += ` AND ${field} LIKE ?`;
+      searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' AND ') + `${field} LIKE ?`;
       queryParams.push(`%${searchTexts[index].trim()}%`);
     }
   });
-
 
   // Final query
   let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
@@ -149,4 +147,6 @@ export const getPaginatedData = async ({
     totalPage
   };
 };
+
+
 

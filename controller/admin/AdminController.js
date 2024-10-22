@@ -1,6 +1,7 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
+import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
 
@@ -56,6 +57,163 @@ export const getDashboardData = async (req, resp) => {
         resp.status(500).json({ message: 'Error fetching dashboard data' });
     }
 };
+
+export const riderList = async (req, resp) => {
+    let { pageNo, sortBy, riderName, riderEmail, riderMobile, addedFrom } = req.body;
+
+    pageNo = parseInt(pageNo, 10);
+    if (isNaN(pageNo) || pageNo < 1) {
+        pageNo = 1;
+    }
+
+    const sortOrder = sortBy === 'd' ? 'DESC' : 'ASC';
+
+    try {
+        const result = await getPaginatedData({
+            tableName: 'riders',
+            columns: 'rider_id, rider_name, rider_email, country_code, rider_mobile, emirates, profile_img, vehicle_type, status, created_at, updated_at',
+            sortColumn: 'created_at', 
+            sortOrder,
+            page_no : pageNo,
+            limit: 10,
+            searchFields: ['rider_name', 'rider_email', 'rider_mobile', 'added_from'],
+            searchTexts: [riderName, riderEmail, riderMobile, addedFrom],
+        });
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: ["Rider list fetched successfully!"],
+            data: result.data,
+            total_page: result.totalPage,
+            total: result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching rider list:', error);
+        return resp.status(500).json({
+            status: 0,
+            code: 500,
+            message: 'Error fetching rider list',
+        });
+    }
+};
+
+export const riderDetails = async (req, resp) => {
+    const { riderId } = req.body; 
+
+    if (!riderId) {
+        return resp.status(400).json({
+            status: 0,
+            code: 400,
+            message: 'Rider ID is required'
+        });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT r.*, 
+                    ra.*, 
+                    rv.*
+             FROM riders r
+             LEFT JOIN rider_address ra ON r.rider_id = ra.rider_id
+             LEFT JOIN riders_vehicles rv ON r.rider_id = rv.rider_id
+             WHERE r.rider_id = ?`, 
+            [riderId]
+        );
+
+        if (rows.length === 0) {
+            return resp.status(404).json({
+                status: 0,
+                code: 404,
+                message: 'Rider not found'
+            });
+        }
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            data: rows 
+        });
+    } catch (error) {
+        console.error('Error fetching rider details:', error);
+        return resp.status(500).json({
+            status: 0,
+            code: 500,
+            message: 'Error fetching rider details',
+        });
+    }
+};
+
+export const deleteRider = async (req, resp) => {
+    const riderId = req.body 
+    if (!riderId) return resp.json({ status: 0, code: 422, message: "Rider ID is required" });
+
+    const connection = await db.getConnection();
+
+    try {
+        await connection.beginTransaction();
+        
+        // Fetch the rider's profile image
+        // const [rider] = await connection.execute('SELECT profile_img FROM riders WHERE rider_id = ?', [riderId]);
+        // if (rider.length === 0) return resp.json({ status: 0, message: 'Rider not found.' });
+
+        // const oldImagePath = path.join('uploads', 'rider_profile', rider[0].profile_img || '');
+        
+        // // Delete the rider's old profile image
+        // fs.unlink(oldImagePath, (err) => {
+        //     if (err) {
+        //         console.error(`Failed to delete rider old image: ${oldImagePath}`, err);
+        //     }
+        // });
+
+        // Array of delete queries
+        const deleteQueries = [
+            'DELETE FROM notifications                         WHERE receive_id = ?',
+            'DELETE FROM road_assistance                       WHERE rider_id   = ?',
+            'DELETE FROM order_assign                          WHERE rider_id   = ?',
+            'DELETE FROM order_history                         WHERE rider_id   = ?',
+            'DELETE FROM charging_installation_service         WHERE rider_id   = ?',
+            'DELETE FROM charging_installation_service_history WHERE rider_id   = ?',
+            'DELETE FROM charging_service                      WHERE rider_id   = ?',
+            'DELETE FROM charging_service_history              WHERE rider_id   = ?',
+            'DELETE FROM portable_charger_booking              WHERE rider_id   = ?',
+            'DELETE FROM portable_charger_history              WHERE rider_id   = ?',
+            'DELETE FROM discussion_board                      WHERE rider_id   = ?',
+            'DELETE FROM board_comment                         WHERE rider_id   = ?',
+            'DELETE FROM board_comment_reply                   WHERE rider_id   = ?',
+            'DELETE FROM board_likes                           WHERE rider_id   = ?',
+            'DELETE FROM board_poll                            WHERE rider_id   = ?',
+            'DELETE FROM board_poll_vote                       WHERE rider_id   = ?',
+            'DELETE FROM board_share                           WHERE sender_id  = ?',
+            'DELETE FROM board_views                           WHERE rider_id   = ?',
+            'DELETE FROM riders                                WHERE rider_id   = ?'
+        ];
+
+        // Execute each delete query
+        for (const query of deleteQueries) {
+            await connection.execute(query, [riderId]);
+        }
+
+        await connection.commit();
+
+        return resp.json({ status: 1, code: 200, error: false, message: ['Rider account deleted successfully!'] });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error deleting rider account:', err.message);
+        return resp.json({ status: 1, code: 500, error: true, message: ['Something went wrong. Please try again!'] });
+    } finally {
+        connection.release();
+    }
+};
+
+
+
+
+
+
+
+
+
 
 
 
