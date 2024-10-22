@@ -463,8 +463,8 @@ export const reportOnBoard = async (req, resp) => {
             const href = 'disscussion_board/' + board_id;
             const heading = 'Report On Discussion Board';
             const desc = `One Report added on Discussion Board with board id : ${board_id} by rider : ${board.rider_name}`;
-            // pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
-            // createNotification(heading, desc, 'Discussion Board', 'Admin', 'Rider', rider_id, '',  href);
+            pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
+            createNotification(heading, desc, 'Discussion Board', 'Admin', 'Rider', rider_id, '',  href);
         }
 
         return resp.status(200).json({

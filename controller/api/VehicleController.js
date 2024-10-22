@@ -2,9 +2,9 @@ import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
-import transporter from "../../mailer.js";
 import moment from "moment";
 import { mergeParam} from '../../utils.js';
+import emailQueue from "../../emailQueue.js";
 
 export const vehicleList = async (req, resp) => {
     const {vehicle_type, page_no, vehicle_name, vehicle_model } = req.body;
@@ -132,20 +132,17 @@ export const sellVehicle = async (req, resp) => {
     
         const rider = await queryDB(`SELECT rider_name, rider_email FROM riders WHERE rider_id = ?`, [rider_id]);
     
-        await transporter.sendMail({
-            from: `"Easylease Admin" <admin@easylease.com>`,
-            to: rider.rider_email,
-            subject: 'Your EV Car Sale Listing Is Now Live on PlusX Electric App!',
-            html: `<html>
-                <body>
-                    <h4>Dear ${rider.rider_name},</h4>
-                    <p>Greetings from the PlusX Electric App.</p><br />
-                    <p>We are pleased to inform you that your listing for the sale of your EV car on the PlusX Electric App is now live and available for potential buyers to view. </p>
-                    <p>Thank you for choosing the PlusX Electric App to list your EV for sale. We wish you the best of luck in finding the perfect buyer for your car!</p> <br /> <br /> 
-                    <p> Best regards,<br/> PlusX Electric App </p>
-                </body>
-            </html>`,
-        });
+        const html = `<html>
+            <body>
+                <h4>Dear ${rider.rider_name},</h4>
+                <p>Greetings from the PlusX Electric App.</p><br />
+                <p>We are pleased to inform you that your listing for the sale of your EV car on the PlusX Electric App is now live and available for potential buyers to view. </p>
+                <p>Thank you for choosing the PlusX Electric App to list your EV for sale. We wish you the best of luck in finding the perfect buyer for your car!</p> <br /> <br /> 
+                <p> Best regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`;
+
+        emailQueue.addEmail(rider.rider_email, `Your EV Car Sale Listing Is Now Live on PlusX Electric App!`, html);
     
         return resp.json({
             status: 1, 

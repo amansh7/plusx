@@ -1,10 +1,10 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
-import transporter from "../../mailer.js";
 import moment from "moment";
 import multer from 'multer';
 import { mergeParam } from '../../utils.js';
+import emailQueue from "../../emailQueue.js";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -59,40 +59,33 @@ export const addRoadAssistance = async (req, resp) => {
         const now = new Date();
         const formattedDateTime = now.toISOString().replace('T', ' ').substring(0, 19);
 
-        await transporter.sendMail({
-            from: `"Easylease Admin" <admin@easylease.com>`,
-            to: rider.rider_email,
-            subject: 'Your Roadside Assistance Booking Confirmation - PlusX Electric App',
-            html: `<html>
-                <body>
-                    <h4>Dear ${rider.rider_name},</h4>
-                    <p>Thank you for using the PlusX Electric App for your roadside assistance needs. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p> 
-                    <p>Booking Reference: ${requestId}</p>
-                    <p>Date & Time of Request: ${formattedDateTime}</p> 
-                    <p>Location: ${pickup_address}</p>                         
-                    <p>Type of Assistance Required: ${types_of_issue}</p> 
-                
-                    <p> Regards,<br/> PlusX Electric App </p>
-                </body>
-            </html>`,
-        });
+        const htmlUser = `<html>
+            <body>
+                <h4>Dear ${rider.rider_name},</h4>
+                <p>Thank you for using the PlusX Electric App for your roadside assistance needs. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p> 
+                <p>Booking Reference: ${requestId}</p>
+                <p>Date & Time of Request: ${formattedDateTime}</p> 
+                <p>Location: ${pickup_address}</p>                         
+                <p>Type of Assistance Required: ${types_of_issue}</p> 
+            
+                <p> Regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`;
+        const htmlAdmin = `<html>
+            <body>
+                <h4>Dear Admin,</h4>
+                <p>We have received a new booking for our Road Side Assistance. Below are the details:</p> 
+                <p>Customer Name  : ${rider.rider_name}</p>
+                <p>Pickup Address : ${pickup_address}</p>
+                <p>Drop Address   : ${drop_address}</p> 
+                <p>Booking Time   : ${formattedDateTime}</p>                         
+                <p> Best regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`;
+        
+        emailQueue.addEmail(rider.rider_email, 'Your Roadside Assistance Booking Confirmation - PlusX Electric App', htmlUser);
+        emailQueue.addEmail('admin@plusxelectric.com', `Roadside Assistance Booking Confirmation - PlusX Electric App`, htmlAdmin);
 
-        await transporter.sendMail({
-            from: `"Easylease Admin" <admin@easylease.com>`,
-            to: 'admin@plusxelectric.com',
-            subject: 'Your Roadside Assistance Booking Confirmation - PlusX Electric App',
-            html: `<html>
-                <body>
-                    <h4>Dear Admin,</h4>
-                    <p>We have received a new booking for our Road Side Assistance. Below are the details:</p> 
-                    <p>Customer Name  : ${rider.rider_name}</p>
-                    <p>Pickup Address : ${pickup_address}</p>
-                    <p>Drop Address   : ${drop_address}</p> 
-                    <p>Booking Time   : ${formattedDateTime}</p>                         
-                    <p> Best regards,<br/> PlusX Electric App </p>
-                </body>
-            </html>`,
-        });
         await commitTransaction(conn);
         
         return resp.json({

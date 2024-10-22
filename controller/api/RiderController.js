@@ -8,8 +8,8 @@ import validateFields from "../../validation.js";
 import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp } from '../../utils.js';
 import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
-import transporter from "../../mailer.js";
 import moment from "moment";
+import emailQueue from "../../emailQueue.js";
 dotenv.config();
 
 /* Rider Auth */
@@ -151,26 +151,20 @@ export const forgotPassword = async (req, resp) => {
     const hashedPswd = await bcrypt.hash(generateRandomPassword(6), 10);
     await db.execute('UPDATE riders SET password=? WHERE rider_email=?', [hashedPswd, email])
     try {
-        await transporter.sendMail({
-          from: `"Easylease Admin" <admin@easylease.com>`,
-          to: email,
-          subject: 'Forgot Password Request - PlusX Electric App',
-          html: `
-            <html>
-              <body>
-                <h4>Dear ${rider.rider_name},</h4>
-                <p>We have generated a new password for you <b>'${password}'</b> Please use this temporary password to log in to your account.</p> 
-                <p>Once logged in, we highly recommend that you change your password to something more memorable. You can do this by following these simple steps: </p>
-                <p>Log in to your account using the provided temporary password.</p>
-                <p>Navigate to the "Profile" section.</p> 
-                <p>Look for the "Reset Password" option within the profile settings.</p>                         
-                <p>Enter your new password and confirm it.</p> 
-                <p>Save the changes.</p> 
-                <p>Regards,<br/> PlusX Electric App </p>
-              </body>
-            </html>
-          `,
-        });
+        const html = `<html>
+          <body>
+            <h4>Dear ${rider.rider_name},</h4>
+            <p>We have generated a new password for you <b>'${password}'</b> Please use this temporary password to log in to your account.</p> 
+            <p>Once logged in, we highly recommend that you change your password to something more memorable. You can do this by following these simple steps: </p>
+            <p>Log in to your account using the provided temporary password.</p>
+            <p>Navigate to the "Profile" section.</p> 
+            <p>Look for the "Reset Password" option within the profile settings.</p>                         
+            <p>Enter your new password and confirm it.</p> 
+            <p>Save the changes.</p> 
+            <p>Regards,<br/> PlusX Electric App </p>
+          </body>
+        </html>`;
+        emailQueue.addEmail(email, `Forgot Password Request - PlusX Electric App`, html);
     
         resp.status(200).json({ status: 1, code: 200, message: ["An email has been sent to your given email address. Kindly check your email"] });
     } catch (error) {

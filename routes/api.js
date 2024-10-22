@@ -34,7 +34,7 @@ import {
 import { 
     getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking 
 } from '../controller/api/ChargingServiceController.js';
-import { createNotification, pushNotification } from "../utils.js";
+import emailQueue from "../emailQueue.js";
 
 const router = Router();
 
@@ -243,6 +243,26 @@ router.get('/test-notification', async (req, resp)=>{
 
     return resp.json({nresp});
 });
+
+
+/* router.get('/test-queue-mail', (req, res)=>{
+    const toAddress = 'famoney244@avzong.com' ;
+    const subject = 'Test mail using queue - Node';
+    const html = `<html><body><h1>Hello Test Case ${'0'}</h1></body></html>`;
+
+    try {
+        for (let i = 0; i < 1; i++) {
+            const subject = `Test mail using queue - Node ${i}`;
+            const html = `<html><body><h1>Hello Test Case ${i}</h1></body></html>`;
+    
+            emailQueue.addEmail(toAddress, subject, html);
+        }
+        res.status(200).send({ message: '20 Email queued for sending' });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: 'Failed to queue email', error });
+    }
+}); */
 
 
 export default router;
