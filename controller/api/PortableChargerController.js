@@ -1,10 +1,10 @@
-import db from "../../config/db.js";
+import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import transporter from "../../mailer.js";
 import moment from "moment";
 import 'moment-duration-format';
-import { mergeParam } from '../../utils.js';
+import { createNotification, mergeParam, pushNotification } from "../../utils.js";
 
 export const chargerList = async (req, resp) => {
     const {rider_id, page_no } = req.body;
@@ -40,9 +40,8 @@ export const chargerBooking = async (req, resp) => {
     const { 
         rider_id, charger_id, vehicle_id, service_name, service_type, service_feature, user_name, country_code, contact_no, address, latitude, longitude, 
         slot_date, slot_time, slot_id, service_price='', coupan_code, user_id
-    } = mergeparam(req);
-
-    const { isValid, errors } = validateFields(mergeparam(req), {
+    } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"],
         charger_id: ["required"],
         vehicle_id: ["required"],
@@ -58,128 +57,140 @@ export const chargerBooking = async (req, resp) => {
         slot_date: ["required"],
         slot_time: ["required"],
     });
-
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const rider = await queryDB(`
-        SELECT 
-            fcm_token, rider_name, rider_email,
-            (SELECT MAX(id) FROM portable_charger_booking) AS last_index,
-            (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
-            (SELECT booking_limit FROM portable_charger_slot AS pcs WHERE pcs.slot_id = ?) AS booking_limit
-        FROM riders AS r
-        WHERE r.rider_id = ?
-    `, [charger_id, slot_id, rider_id]);
-
-    const { charg_count, booking_limit } = rider;
-
-    if (charg_count === 0) return resp.json({ message: "Charger id invalid!", status: 0, code: 405, error: true });
-    if (booking_limit === 0) return resp.json({ message: "Booking Slot Full!, please select another slot", status: 0, code: 405, error: true });
-
-    if (service_type.toLowerCase() === "get monthly subscription") {
-        const [subsCountRows] = await db.execute(`SELECT COUNT(*) AS count FROM portable_charger_subscription WHERE rider_id = ? AND (total_booking >= 10 OR expiry_date < ?)`, 
-            [rider_id, moment().format('YYYY-MM-DD')]
-        );
-
-        const subsCount = subsCountRows[0].count;
-
-        if (subsCount > 0) { 
-            return resp.json({ message: "Subscription limit exceeded or expired!", status: 0, code: 405, error: true });
+    const conn = await startTransaction();
+    
+    try{
+        const rider = await queryDB(`
+            SELECT 
+                fcm_token, rider_name, rider_email,
+                (SELECT MAX(id) FROM portable_charger_booking) AS last_index,
+                (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
+                (SELECT booking_limit FROM portable_charger_slot AS pcs WHERE pcs.slot_id = ?) AS booking_limit
+            FROM riders AS r
+            WHERE r.rider_id = ?
+        `, [charger_id, slot_id, rider_id], conn);
+    
+        const { charg_count, booking_limit } = rider;
+    
+        if (charg_count === 0) return resp.json({ message: "Charger id invalid!", status: 0, code: 405, error: true });
+        if (booking_limit === 0) return resp.json({ message: "Booking Slot Full!, please select another slot", status: 0, code: 405, error: true });
+    
+        if (service_type.toLowerCase() === "get monthly subscription") {
+            const [subsCountRows] = await db.execute(`SELECT COUNT(*) AS count FROM portable_charger_subscription WHERE rider_id = ? AND (total_booking >= 10 OR expiry_date < ?)`, 
+                [rider_id, moment().format('YYYY-MM-DD')]
+            );
+    
+            const subsCount = subsCountRows[0].count;
+    
+            if (subsCount > 0) { 
+                return resp.json({ message: "Subscription limit exceeded or expired!", status: 0, code: 405, error: true });
+            }
         }
-    }
-
-    const start = (!rider.last_index) ? 0 : rider.last_index; 
-    const nextId = start + 1;
-    const bookingId = 'PCD' + String(nextId).padStart(4, '0');
     
-    const insert = await insertRecord('portable_charger_booking', [
-        'booking_id', 'rider_id', 'charger_id', 'vehicle_id', 'service_name', 'service_price', 'service_type', 'service_feature', 'user_name', 'country_code', 
-        'contact_no', 'slot', 'slot_date', 'slot_time', 'address', 'latitude', 'longitude', 'status'
-    ], [
-        bookingId, rider_id, charger_id, vehicle_id, service_name, service_price, service_type, service_feature, user_name, country_code, contact_no,
-        slot_id, slot_date, slot_time, address, latitude, longitude, 'CNF'
-    ]);
-
-    if(insert.affectedRows = 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]});
-
-    if(coupan_code){
-        await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id'], [coupan_code, user_id, bookingId]);
-    }
-
-    await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [slot_id]);
-    
-    if (service_type.toLowerCase() === "get monthly subscription") {
-        await db.execute('UPDATE portable_charger_subscriptions SET total_booking = total_booking + 1 WHERE rider_id = ?', [rider_id]);
-    }
-
-    await insertRecord('portable_charger_history', ['booking_id', 'rider_id', 'order_status'], [bookingId, rider_id, 'CNF']);
-    
-    // const href = 'portable_charger_booking/' + bookingId;
-    // const heading = 'Portable Charging Booking!';
-    // const desc = `Your request for portable charging at home booking id: ${bookingId} has been placed.`;
-    // createNotification(heading, desc, 'Portable Charging Booking', 'Rider', 'Admin','', rider_id, href);
-    // pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
-
-    const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: rider.rider_email,
-        subject: 'Your Portable Charger Booking Confirmation - PlusX Electric App',
-        html: `<html>
-            <body>
-                <h4>Dear ${rider.rider_name},</h4>
-                <p>Thank you for using the PlusX Electric App for Portable Charger Booking. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p><br/>
-                <p>Booking Reference: ${bookingId}</p>
-                <p>Date & Time of Request: ${formattedDateTime}</p> 
-                <p>Address: ${address}</p>                         
-                <p>Service Type: ${service_type}</p><br/>
-                <p> Regards,<br/> PlusX Electric App </p>
-            </body>
-        </html>`,
-    });
-
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: 'podbookings@plusxelectric.com',
-        subject: `Portable Charger Booking - ${bookingId}`,
-        html: `<html>
-            <body>
-                <h4>Dear Admin,</h4>
-                <p>We have received a new booking for our Charging Installation service. Below are the details:</p> <br/>
-                <p>Customer Name  : ${rider.rider_name}</p>
-                <p>Address : ${address}</p>
-                <p>Booking Time : ${formattedDateTime}</p> <br/>                        
-                <p> Best regards,<br/> PlusX Electric App </p>
-            </body>
-        </html>`,
-    });
-
-    const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ?, booking_type = ?`, [2, 'Portable Charger']);
-    let respMsg = "Booking Request Submitted! Our team will be in touch with you shortly."; 
-
-    if(rsa){
-        const slotDateTime = moment(slot_date).format('YYYY-MM-DD') + ' ' + moment(slot_time, 'HH:mm:ss').format('HH:mm:ss');
+        const start = (!rider.last_index) ? 0 : rider.last_index; 
+        const nextId = start + 1;
+        const bookingId = 'PCD' + String(nextId).padStart(4, '0');
         
-        await insertRecord('portable_charger_booking_assign', 
-            ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider.rider_id, slotDateTime, 0]
-        );
+        const insert = await insertRecord('portable_charger_booking', [
+            'booking_id', 'rider_id', 'charger_id', 'vehicle_id', 'service_name', 'service_price', 'service_type', 'service_feature', 'user_name', 'country_code', 
+            'contact_no', 'slot', 'slot_date', 'slot_time', 'address', 'latitude', 'longitude', 'status'
+        ], [
+            bookingId, rider_id, charger_id, vehicle_id, service_name, service_price, service_type, service_feature, user_name, country_code, contact_no,
+            slot_id, slot_date, slot_time, address, latitude, longitude, 'CNF'
+        ], conn);
+    
+        if(insert.affectedRows = 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]});
+    
+        if(coupan_code){
+            await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id'], [coupan_code, user_id, bookingId], conn);
+        }
+    
+        await conn.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [slot_id]);
+        
+        if (service_type.toLowerCase() === "get monthly subscription") {
+            await conn.execute('UPDATE portable_charger_subscriptions SET total_booking = total_booking + 1 WHERE rider_id = ?', [rider_id]);
+        }
+    
+        await insertRecord('portable_charger_history', ['booking_id', 'rider_id', 'order_status'], [bookingId, rider_id, 'CNF'], conn);
+        
+        const href = 'portable_charger_booking/' + bookingId;
+        const heading = 'Portable Charging Booking!';
+        const desc = `Your request for portable charging at home booking id: ${bookingId} has been placed.`;
+        createNotification(heading, desc, 'Portable Charging Booking', 'Rider', 'Admin','', rider_id, href);
+        pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
+    
+        const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+        await transporter.sendMail({
+            from: `"Easylease Admin" <admin@easylease.com>`,
+            to: rider.rider_email,
+            subject: 'Your Portable Charger Booking Confirmation - PlusX Electric App',
+            html: `<html>
+                <body>
+                    <h4>Dear ${rider.rider_name},</h4>
+                    <p>Thank you for using the PlusX Electric App for Portable Charger Booking. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p><br/>
+                    <p>Booking Reference: ${bookingId}</p>
+                    <p>Date & Time of Request: ${formattedDateTime}</p> 
+                    <p>Address: ${address}</p>                         
+                    <p>Service Type: ${service_type}</p><br/>
+                    <p> Regards,<br/> PlusX Electric App </p>
+                </body>
+            </html>`,
+        });
+    
+        await transporter.sendMail({
+            from: `"Easylease Admin" <admin@easylease.com>`,
+            to: 'podbookings@plusxelectric.com',
+            subject: `Portable Charger Booking - ${bookingId}`,
+            html: `<html>
+                <body>
+                    <h4>Dear Admin,</h4>
+                    <p>We have received a new booking for our Charging Installation service. Below are the details:</p> <br/>
+                    <p>Customer Name  : ${rider.rider_name}</p>
+                    <p>Address : ${address}</p>
+                    <p>Booking Time : ${formattedDateTime}</p> <br/>                        
+                    <p> Best regards,<br/> PlusX Electric App </p>
+                </body>
+            </html>`,
+        });
+    
+        const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ?, booking_type = ?`, [2, 'Portable Charger']);
+        let respMsg = "Booking Request Submitted! Our team will be in touch with you shortly."; 
+    
+        if(rsa){
+            const slotDateTime = moment(slot_date).format('YYYY-MM-DD') + ' ' + moment(slot_time, 'HH:mm:ss').format('HH:mm:ss');
+            
+            await insertRecord('portable_charger_booking_assign', 
+                ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider.rider_id, slotDateTime, 0], conn
+            );
+    
+            await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, 'booking_id', bookingId, conn);
+    
+            const heading1 = 'Portable Charger!';
+            const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
+            createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider.rider_id, rsa.rsa_id, href);
+            pushNotification(rsa.fcm_token, heading, desc, 'RSAFCM', href);
+    
+            respMsg = "You have successfully placed Portable Charger booking. You will be notified soon."
+        }
 
-        await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, 'booking_id', bookingId);
+        await commitTransaction(conn);
+        
+        return resp.json({
+            status:1, 
+            code: 200,
+            booking_id: bookingId,
+            message: respMsg 
+        });
 
-        // const heading1 = 'Portable Charger!';
-        // const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
-        // createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider.rider_id, rsa.rsa_id, href);
-        // pushNotification(rsa.fcm_token, heading, desc, 'RSAFCM', href);
-
-        respMsg = "You have successfully placed Portable Charger booking. You will be notified soon."
+    }catch(err){
+        await rollbackTransaction(conn);
+        console.error("Transaction failed:", err);
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    }finally{
+        if (conn) conn.release();
     }
-
-    return resp.json({
-        status:1, 
-        code: 200,
-        booking_id: bookingId,
-        message: respMsg 
-    });
 };
 
 export const chargerBookingList = async (req, resp) => {
@@ -383,11 +394,11 @@ export const rejectBooking = async (req, resp) => {
     await insertRecord('portable_charger_booking_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
     await db.execute(`DELETE FROM portable_charger_booking_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
 
-    // const href = `portable_charger_booking/${booking_id}`;
-    // const title = 'Booking Rejected';
-    // const message = `Driver has rejected the portable charger booking with booking id: ${booking_id}`;
-    // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-    // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+    const href = `portable_charger_booking/${booking_id}`;
+    const title = 'Booking Rejected';
+    const message = `Driver has rejected the portable charger booking with booking id: ${booking_id}`;
+    await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+    await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
     await transporter.sendMail({
         from: `"Easylease Admin" <admin@easylease.com>`,
@@ -437,11 +448,11 @@ const acceptBooking = async (req, resp) => {
     if (ordHistoryCount.count === 0) {
         await updateRecord('portable_charger_booking', {status: 'A', rsa_id}, 'booking_id', booking_id);
 
-        // const href = `portable_charger_booking/${booking_id}`;
-        // const title = 'POD Booking Accepted';
-        // const message = `Driver has accepted your POD booking service with booking id: ${booking_id} and he is enroute now`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `portable_charger_booking/${booking_id}`;
+        const title = 'POD Booking Accepted';
+        const message = `Driver has accepted your POD booking service with booking id: ${booking_id} and he is enroute now`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         const insert = await db.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "A", ?, ?, ?)',
@@ -490,11 +501,11 @@ const reachedLocation = async (req, resp) => {
 
         await updateRecord('portable_charger_booking', {status: 'RL', rsa_id}, 'booking_id', booking_id);
 
-        // const href = `portable_charger_booking/${booking_id}`;
-        // const title = 'POD Reached at Location';
-        // const message = `Portable Charger Reached at Location Successfully!`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `portable_charger_booking/${booking_id}`;
+        const title = 'POD Reached at Location';
+        const message = `Portable Charger Reached at Location Successfully!`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['POD Reached at Location Successfully!'], status: 1, code: 200 });
     } else {

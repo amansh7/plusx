@@ -1,10 +1,10 @@
-import db from "../../config/db.js";
+import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import transporter from "../../mailer.js";
 import moment from "moment";
 import 'moment-duration-format';
-import { createNotification } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification } from "../../utils.js";
 
 export const getChargingServiceSlotList = async (req, resp) => {
     const [slot] = await db.execute(`SELECT * FROM pick_drop_slot WHERE status = ?`, [1]);
@@ -19,9 +19,9 @@ export const getChargingServiceSlotList = async (req, resp) => {
 export const requestService = async (req, resp) => {
     const { rider_id, name, country_code, contact_no, slot_id, pickup_address, pickup_latitude, pickup_longitude,vehicle_id, parking_number, parking_floor, 
         slot_date_time, coupan_code, price = '', order_status = ''
-    } = req.body;
+    } = mergeParam(req);
 
-    const { isValid, errors } = validateFields(req.body, {
+    const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"],
         name: ["required"],
         country_code: ["required"],
@@ -37,107 +37,115 @@ export const requestService = async (req, resp) => {
     });
 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    const conn = await startTransaction();
+    try{
+        const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email,
+            (SELECT MAX(id) FROM charging_service) AS last_index,
+            (SELECT booking_limit FROM pick_drop_slot AS pds WHERE pds.slot_id=?) AS booking_limit
+            FROM riders WHERE rider_id=? LIMIT 1
+        `, [slot_id, rider_id]);
+        if(rider.booking_limit === 0) return resp.json({status: 1, code: 405, message: ["Booking Slot Full!, please select another slot"]});
+        
+        const nextId = (!rider.last_index) ? 0 : rider.last_index + 1;
+        const requestId = 'CS' + String(nextId).padStart(4, '0');
+        const slotDateTime = moment(slot_date_time).format('YYYY-MM-DD HH:mm:ss');
 
-    const rider = queryDB(`SELECT fcm_token, rider_name, rider_email,
-        (SELECT MAX(id) FROM charging_service) AS last_index,
-        (SELECT booking_limit FROM pick_drop_slot AS pds WHERE pds.slot_id=?) AS booking_limit
-        FROM riders WHERE rider_id=? LIMIT 1
-    `, [slot_id, rider_id]);
+        const insert = await insertRecord('charging_service', [
+            'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'vehicle_id', 'slot', 'slot_date_time', 'pickup_address', 'parking_number', 'parking_floor', 
+            'price', 'order_status', 'pickup_latitude', 'pickup_longitude', 
+        ],[
+            requestId, rider_id, name, country_code, contact_no, vehicle_id, slot_id, slotDateTime, pickup_address, parking_number, parking_floor, price, 
+            order_status, pickup_latitude, pickup_longitude
+        ], conn);
 
-    if(rider.booking_limit === 0) return resp.json({status: 1, code: 405, message: ["Booking Slot Full!, please select another slot"]});
+        if(insert.affectedRows === 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]}); 
 
-    const nextId = (!rider.last_index) ? 0 : rider.last_index + 1;
-    const requestId = 'CS' + String(nextId).padStart(4, '0');
-    const slotDateTime = moment(slot_date_time).format('YYYY-MM-DD HH:mm:ss');
-
-    const insert = await insertRecord('charging_service', [
-        'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'vehicle_id', 'slot', 'slot_date_time', 'pickup_address', 'parking_number', 'parking_floor', 
-        'price', 'order_status', 'pickup_latitude', 'pickup_longitude', 
-    ],[
-        requestId, rider_id, name, country_code, contact_no, vehicle_id, slot_id, slotDateTime, pickup_address, parking_number, parking_floor, price, 
-        order_status, pickup_latitude, pickup_longitude
-    ]);
-
-    if(insert.affectedRows === 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]}); 
-
-    if(coupan_code){
-        await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id'], [coupan_code, user_id, bookingId]);
-    }
-
-    await db.execute(`UPDATE pick_drop_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?`, [slot_id]);
-    await insertRecord('charging_service_history', ['service_id', 'rider_id', 'order_status'], [requestId, rider_id, 'CNF']);
-
-    const href = 'charging_service/' + requestId;
-    const heading = 'Valet charging service created!';
-    const desc = `Your booking the Valet Charging service booking id: ${requestId} has been placed.`;
-    createNotification(heading, desc, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
-    pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
-
-    const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+        if(coupan_code){
+            await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id'], [coupan_code, rider_id, requestId], conn);
+        }
     
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: rider.rider_email,
-        subject: 'Your Valet Charge Booking Confirmation',
-        html: `<html>
-            <body>
-                <h4>Dear ${name},</h4>
-                <p>Thank you for booking our EV Valet Charging Service through our PlusX App.</p><br />
-                <p>Booking Details:</p><br /> 
-                <p>Booking Reference: ${requestId}</p>
-                <p>Scheduled Service Time: ${slotDateTime}</p> 
-                <p>Pick Up Address: ${pickup_address}</p>                         
-                <p>Service Type: ${service_type}</p><br/>
-                <p>What's Next:</p><br/>
-                <p>Your valet driver will call or message you to confirm he is on the way.</p>
-                <p>Your valet driver will identify himself with our PlusX Badge.</p> 
-                <p>Your valet driver will fill out a brief vehicle condition report and take pictures of your car for reference.</p> 
-                <p>Your valet driver will charge your car at the nearest available supercharging station.</p> 
-                <p>Your valet driver will return your car with a minimum 80% charge within 3 hours.</p><br/>
-                <p>Thank you once again for choosing PlusX for your EV car charging needs and if you have any questions please feel free to email us back on support@plusxelectric.com.</p>  
-                <br/><br/>  
-                <p> Regards,<br/> The Friendly PlusX Electric Team </p>
-            </body>
-        </html>`,
-    });
+        await conn.execute(`UPDATE pick_drop_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?`, [slot_id]);
+        await insertRecord('charging_service_history', ['service_id', 'rider_id', 'order_status'], [requestId, rider_id, 'CNF'], conn);
+    
+        const href = 'charging_service/' + requestId;
+        const heading = 'Valet charging service created!';
+        const desc = `Your booking the Valet Charging service booking id: ${requestId} has been placed.`;
+        createNotification(heading, desc, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
+        pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
+    
+        const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
 
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: 'podbookings@plusxelectric.com',
-        subject: `Portable Charger Booking - ${bookingId}`,
-        html: `<html>
-            <body>
-                <h4>Dear Admin,</h4>
-                <p>We have received a new booking for our Valet Charging service via the PlusX app. Below are the details:</p> 
-                <p>Customer Name  : ${name}</p>
-                <p>Pickup & Drop Address : ${pickup_address}</p>
-                <p>Booking Date & Time : ${formattedDateTime}</p> <br/>                        
-                <p> Best regards,<br/> PlusX Electric App </p>
-            </body>
-        </html>`,
-    });
+        await transporter.sendMail({
+            from: `"Easylease Admin" <admin@easylease.com>`,
+            to: rider.rider_email,
+            subject: 'Your Valet Charge Booking Confirmation',
+            html: `<html>
+                <body>
+                    <h4>Dear ${name},</h4>
+                    <p>Thank you for booking our EV Valet Charging Service through our PlusX App.</p><br />
+                    <p>Booking Details:</p><br /> 
+                    <p>Booking Reference: ${requestId}</p>
+                    <p>Scheduled Service Time: ${slotDateTime}</p> 
+                    <p>Pick Up Address: ${pickup_address}</p>                         
+                    <p>What's Next:</p><br/>
+                    <p>Your valet driver will call or message you to confirm he is on the way.</p>
+                    <p>Your valet driver will identify himself with our PlusX Badge.</p> 
+                    <p>Your valet driver will fill out a brief vehicle condition report and take pictures of your car for reference.</p> 
+                    <p>Your valet driver will charge your car at the nearest available supercharging station.</p> 
+                    <p>Your valet driver will return your car with a minimum 80% charge within 3 hours.</p><br/>
+                    <p>Thank you once again for choosing PlusX for your EV car charging needs and if you have any questions please feel free to email us back on support@plusxelectric.com.</p>  
+                    <br/><br/>  
+                    <p> Regards,<br/> The Friendly PlusX Electric Team </p>
+                </body>
+            </html>`,
+        });
+    
+        await transporter.sendMail({
+            from: `"Easylease Admin" <admin@easylease.com>`,
+            to: 'podbookings@plusxelectric.com',
+            subject: `Portable Charger Booking - ${requestId}`,
+            html: `<html>
+                <body>
+                    <h4>Dear Admin,</h4>
+                    <p>We have received a new booking for our Valet Charging service via the PlusX app. Below are the details:</p> 
+                    <p>Customer Name  : ${name}</p>
+                    <p>Pickup & Drop Address : ${pickup_address}</p>
+                    <p>Booking Date & Time : ${formattedDateTime}</p> <br/>                        
+                    <p> Best regards,<br/> PlusX Electric App </p>
+                </body>
+            </html>`,
+        }); 
+        
+        const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
+        let responseMsg = 'Booking Request Submitted! Our team will be in touch with you shortly.';
+    
+        if(rsa){
+            await insertRecord('charging_service_assign', ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [requestId, rsa.rsa_id, rider_id, slotDateTime, '0']);
+            await db.execute(`UPDATE charging_service SET rsa_id = ? WHERE request_id = ?`, [rsa.rsa_id, requestId]);
+    
+            const heading1 = 'Valet Charging Service';
+            const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
+            createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
+            pushNotification(rider.fcm_token, heading1, desc1, 'RDRFCM', href);
+    
+            responseMsg = 'You have successfully placed charging service booking. You will be notified soon';
+        }
 
-    const rsa = db.execute(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
-    let responseMsg = 'Booking Request Submitted! Our team will be in touch with you shortly.';
-
-    if(rsa){
-        await insertRecord('charging_service_assign', ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [requestId, rsa.rsa_id, rider_id, slotDateTime, '0']);
-        await db.execute(`UPDATE charging_service SET rsa_id = ? WHERE request_id = ?`, [rsa.rsa_id, requestId]);
-
-        // const heading1 = 'Valet Charging Service';
-        // const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
-        // createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
-        // pushNotification(rider.fcm_token, heading1, desc1, 'RDRFCM', href);
-
-        responseMsg = 'You have successfully placed charging service booking. You will be notified soon';
+        await commitTransaction(conn);
+    
+        return resp.json({
+            message: responseMsg,
+            status: 1,
+            request_id: requestId,
+            code: 200,
+        });
+    }catch(err){
+        await rollbackTransaction(conn);
+        console.error("Transaction failed:", err);
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    }finally{
+        if (conn) conn.release();
     }
-
-    return resp.json({
-        message: responseMsg,
-        status: 1,
-        request_id: requestId,
-        code: 200,
-    });
 };
 
 export const listServices = async (req, resp) => {
@@ -334,11 +342,11 @@ export const handleRejectBooking = async (req, resp) => {
     await insertRecord('charging_service_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
     await db.execute(`DELETE FROM charging_service_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
 
-    // const href = `charging_service/${booking_id}`;
-    // const title = 'Booking Rejected';
-    // const message = `Driver has rejected the valet service booking with booking id: ${booking_id}`;
-    // await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-    // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+    const href = `charging_service/${booking_id}`;
+    const title = 'Booking Rejected';
+    const message = `Driver has rejected the valet service booking with booking id: ${booking_id}`;
+    await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+    await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
     await transporter.sendMail({
         from: `"Easylease Admin" <admin@easylease.com>`,
@@ -387,11 +395,11 @@ const acceptBooking = async (req, resp) => {
     if (ordHistoryCount.count === 0) {
         await updateRecord('charging_service', {status: 'A', rsa_id}, 'request_id', booking_id);
 
-        // const href = `charging_service/${booking_id}`;
-        // const title = 'Booking Accepted';
-        // const message = `Driver has accepted your booking with booking id: ${booking_id} and he is enroute now`;
-        // await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `charging_service/${booking_id}`;
+        const title = 'Booking Accepted';
+        const message = `Driver has accepted your booking with booking id: ${booking_id} and he is enroute now`;
+        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         const insert = await db.execute(
             `INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "A", ?, ?, ?)`,
@@ -440,11 +448,11 @@ const vehiclePickUp = async (req, resp) => {
 
         await updateRecord('charging_service', {status: 'VP', rsa_id}, 'request_id', booking_id);
 
-        // const href = `charging_service/${booking_id}`;
-        // const title = 'Vehicle Pickup';
-        // const message = `Your vehicle picked-up for charging`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `charging_service/${booking_id}`;
+        const title = 'Vehicle Pickup';
+        const message = `Your vehicle picked-up for charging`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle picked-up successfully!'], status: 1, code: 200 });
     } else {
@@ -483,11 +491,11 @@ const reachedLocation = async (req, resp) => {
 
         await updateRecord('charging_service', {status: 'RS', rsa_id}, 'request_id', booking_id);
 
-        // const href = `portable_charger_booking/${booking_id}`;
-        // const title = 'Reached Charging Spot';
-        // const message = `Your vehicle reached at charging spot`;
-        // await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `portable_charger_booking/${booking_id}`;
+        const title = 'Reached Charging Spot';
+        const message = `Your vehicle reached at charging spot`;
+        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle reached at charging spot successfully!'], status: 1, code: 200 });
     } else {
@@ -526,11 +534,11 @@ const chargingComplete = async (req, resp) => {
 
         await updateRecord('charging_service', {status: 'CC', rsa_id}, 'request_id', booking_id);
 
-        // const href = `portable_charger_booking/${booking_id}`;
-        // const title = 'Charging Completed!';
-        // const message = `Your Vehicle Charging Completed!`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `portable_charger_booking/${booking_id}`;
+        const title = 'Charging Completed!';
+        const message = `Your Vehicle Charging Completed!`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle charging completed! successfully!'], status: 1, code: 200 });
     } else {
@@ -569,11 +577,11 @@ const vehicleDrop = async (req, resp) => {
 
         await updateRecord('charging_service', {status: 'DO', rsa_id}, 'request_id', booking_id);
 
-        // const href = `charging_service/${booking_id}`;
-        // const title = 'Vehicle Drop Off';
-        // const message = 'Your vehicle drop-off completed!';
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `charging_service/${booking_id}`;
+        const title = 'Vehicle Drop Off';
+        const message = 'Your vehicle drop-off completed!';
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle drop-off successfully!'], status: 1, code: 200 });
     } else {
@@ -619,11 +627,11 @@ const workComplete = async (req, resp) => {
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
         await db.execute('UPDATE pick_drop_slot SET booking_limit = booking_limit + 1 WHERE slot_id = ?', [checkOrder.slot_id]);
 
-        // const href = `charging_service/${booking_id}`;
-        // const title = 'Work Complete';
-        // const message = `Driver has successfully completed your charging service booking with booking id : ${booking_id}`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `charging_service/${booking_id}`;
+        const title = 'Work Complete';
+        const message = `Driver has successfully completed your charging service booking with booking id : ${booking_id}`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Work completed! successfully!'], status: 1, code: 200 });
     } else {

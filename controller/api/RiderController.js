@@ -49,7 +49,7 @@ export const login = async (req, resp) => {
             access_token: token
         };
     
-        return resp.json({status:1, code:200, message: ["Login successfully"], result: result});
+        return resp.json({status:1, code:200, message: ["Login successful"], result: result});
     }else{
         return resp.json({status:0, code:405, message: ["Oops! There is something went wrong! Please Try Again"], error: true});
     }
@@ -492,7 +492,7 @@ export const notificationList = async (req, resp) => {
 
     const notifications = rows;
     
-    // await db.execute(`UPDATE notifications SET status = 1 WHERE status=0 AND panel_to=Rider AND receive_id=?`, [rider_id]);
+    await db.execute(`UPDATE notifications SET status=? WHERE status=? AND panel_to=? AND receive_id=?`, ['1', '0', 'Rider', rider_id]);
     
     return resp.json({status:1, code: 200, message: ["Notification list fetch successfully"], data: notifications, total_page: total_page, totalRows: totalRows.total});
 };

@@ -23,36 +23,38 @@ export const upload = multer({ storage: storage });
 export const addRoadAssistance = async (req, resp) => {
     const {
         rider_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, pickup_latitude, pickup_longitude, drop_latitude, drop_longitude, order_status=''
-    } = req.body;
+    } = mergeParam;
 
-    const { isValid, errors } = validateFields(req.body, {
+    const { isValid, errors } = validateFields(mergeParam, {
         rider_id: ["required"], name: ["required"], country_code: ["required"], contact_no: ["required"], types_of_issue: ["required"], pickup_address: ["required"], 
         drop_address: ["required"], price: ["required"], pickup_latitude: ["required"], pickup_longitude: ["required"], drop_latitude: ["required"], drop_longitude: ["required"]
     });
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    const conn = await startTransaction();
+    try{
 
-    const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email, (SELECT MAX(id) FROM road_assistance) AS last_index FROM riders WHERE rider_id = ? LIMIT 1`, [rider_id]);
+        const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email, (SELECT MAX(id) FROM road_assistance) AS last_index FROM riders WHERE rider_id = ? LIMIT 1`, [rider_id]);
 
-    const start = (!rider.last_index) ? 0 : rider.last_index; 
-    const nextId = start + 1;
-    const requestId = 'RAO' + String(nextId).padStart(4, '0');
+        const start = (!rider.last_index) ? 0 : rider.last_index; 
+        const nextId = start + 1;
+        const requestId = 'RAO' + String(nextId).padStart(4, '0');
 
-    const insert = await insertRecord('road_assistance', [
-        'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'types_of_issue', 'pickup_address', 'drop_address', 'price', 'order_status', 'pickup_latitude', 'pickup_longitude', 'drop_latitude', 'drop_longitude'
-    ], [
-        requestId, rider_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, order_status, pickup_latitude, pickup_longitude, drop_latitude, drop_longitude
-    ]);
+        const insert = await insertRecord('road_assistance', [
+            'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'types_of_issue', 'pickup_address', 'drop_address', 'price', 'order_status', 'pickup_latitude', 'pickup_longitude', 'drop_latitude', 'drop_longitude'
+        ], [
+            requestId, rider_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, order_status, pickup_latitude, pickup_longitude, drop_latitude, drop_longitude
+        ], conn);
 
-    if(insert.affectedRows > 0){
-        await insertRecord('order_history', ['order_id', 'order_status', 'rider_id'], [requestId, 'BD', rider_id]);
+        if(insert.affectedRows === 0) return resp.json({status:0, code:200, message: ['Oops! There is something went wrong! Please Try Again.']});
+
+        await insertRecord('order_history', ['order_id', 'order_status', 'rider_id'], [requestId, 'BD', rider_id], conn);
         
         const href = 'road_assistance/' + requestId;
         const heading = 'Roadside Assistance Created';
         const desc = `One Roadside Assistance request has been placed by you with request id: ${requestId} It is also requested that you must reach on the location.`;
-
-        // createNotification(heading, desc, 'Roadside Assistance', 'Rider', 'Admin','', rider_id, href);
-        // pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
+        createNotification(heading, desc, 'Roadside Assistance', 'Rider', 'Admin','', rider_id, href);
+        pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
 
         const now = new Date();
         const formattedDateTime = now.toISOString().replace('T', ' ').substring(0, 19);
@@ -91,18 +93,22 @@ export const addRoadAssistance = async (req, resp) => {
                 </body>
             </html>`,
         });
-
+        await commitTransaction(conn);
+        
         return resp.json({
             status: 1, 
             code: 200, 
             message: ['You have successfully placed roadside assistance request. You will be notified soon'],
             request_id: requestId,
             rsa_id: ''
-        });       
-    }else{
-        return resp.json({status:0, code:200, message: ['Oops! There is something went wrong! Please Try Again.']});
-    }
-
+        });   
+    }catch(err){
+        await rollbackTransaction(conn);
+        console.error("Transaction failed:", err);
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    }finally{
+        if (conn) conn.release();
+    }    
 };
 
 export const roadAssistanceList = async (req, resp) => {
@@ -341,11 +347,11 @@ const acceptOrder = async (req, resp) => {
     if (ordHistoryCount.count === 0) {
         await updateRecord('road_assistance', {order_status: 'RA', rsa_id}, 'request_id', order_id);
 
-        // const href = `road_assistance/${order_id}`;
-        // const title = 'Request Accepted';
-        // const message = `RSA Team has accepted your boking with boking id : ${order_id} and he is enroute now`;
-        // await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `road_assistance/${order_id}`;
+        const title = 'Request Accepted';
+        const message = `RSA Team has accepted your boking with boking id : ${order_id} and he is enroute now`;
+        await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         const insert = await db.execute(
             `INSERT INTO order_history (order_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "RA", ?, ?, ?)`,
@@ -398,11 +404,11 @@ const arrivedOrder = async (req, resp) => {
 
         await updateRecord('road_assistance', {order_status: 'AR', rsa_id}, 'request_id', order_id);
 
-        // const href = `road_assistance/${order_id}`;
-        // const title = 'RSA Team Accepted';
-        // const message = `RSA Team is arrived at your location`;
-        // await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `road_assistance/${order_id}`;
+        const title = 'RSA Team Accepted';
+        const message = `RSA Team is arrived at your location`;
+        await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Arrived successfully!'], status: 1, code: 200 });
     } else {
@@ -444,11 +450,11 @@ const workComplete = async (req, resp) => {
 
         await updateRecord('road_assistance', {order_status: 'WC', rsa_id}, 'request_id', order_id);
 
-        // const href = `road_assistance/${order_id}`;
-        // const title = 'Work Completed';
-        // const message = `RSA Team has successfully completed the work which was required to do with your order id: ${order_id}`;
-        // await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `road_assistance/${order_id}`;
+        const title = 'Work Completed';
+        const message = `RSA Team has successfully completed the work which was required to do with your order id: ${order_id}`;
+        await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Work completed! successfully!'], status: 1, code: 200 });
     } else {
@@ -491,11 +497,11 @@ const esOrder = async (req, resp) => {
         await db.execute('DELETE FROM order_assign WHERE order_id = ? AND rsa_id = ?', [order_id, rsa_id]);
         await db.execute('UPDATE rsa SET running_order = 0 WHERE rsa_id = ?', [rsa_id]);
 
-        // const href = `road_assistance/${order_id}`;
-        // const title = 'Request Completed';
-        // const message = `RSA Team has successfully finished/completed your order with order id : ${order_id}`;
-        // await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, 'Order Completed', message, 'RDRFCM', href);
+        const href = `road_assistance/${order_id}`;
+        const title = 'Request Completed';
+        const message = `RSA Team has successfully finished/completed your order with order id : ${order_id}`;
+        await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, 'Order Completed', message, 'RDRFCM', href);
 
         return resp.json({ message: ['Order completed successfully!'], status: 1, code: 200 });
     } else {

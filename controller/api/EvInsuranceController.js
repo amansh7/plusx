@@ -6,6 +6,7 @@ import fs from 'fs';
 import moment from "moment";
 import transporter from "../../mailer.js";
 import generateUniqueId from 'generate-unique-id';
+import { createNotification, mergeParam, pushNotification } from "../../utils.js";
 
 export const addInsurance = async (req, resp) => {
     try{
@@ -206,11 +207,11 @@ export const evPreSaleBooking = async (req, resp) => {
 
     const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email FROM riders WHERE rider_id = ?`, [rider_id]);
 
-    // const href = 'pre_sale_testing/' + bookingId;
-    // const heading = 'EV-pre Sale booked!';
-    // const desc = `Your request for EV-pre sale testing booking_id: ${bookingId} has been placed.`;
-    // createNotification(heading, desc, 'EV-pre Sale', 'Rider', 'Admin','', rider_id, href);
-    // pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
+    const href = 'pre_sale_testing/' + bookingId;
+    const heading = 'EV-pre Sale booked!';
+    const desc = `Your request for EV-pre sale testing booking_id: ${bookingId} has been placed.`;
+    createNotification(heading, desc, 'EV-pre Sale', 'Rider', 'Admin','', rider_id, href);
+    pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
 
     const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
 
