@@ -1,10 +1,10 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
-import transporter from "../../mailer.js";
 import moment from "moment";
 import 'moment-duration-format';
 import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import emailQueue from "../../emailQueue.js";
 
 export const getChargingServiceSlotList = async (req, resp) => {
     const [slot] = await db.execute(`SELECT * FROM pick_drop_slot WHERE status = ?`, [1]);
@@ -74,54 +74,46 @@ export const requestService = async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-
-        await transporter.sendMail({
-            from: `"Easylease Admin" <admin@easylease.com>`,
-            to: rider.rider_email,
-            subject: 'Your Valet Charge Booking Confirmation',
-            html: `<html>
-                <body>
-                    <h4>Dear ${name},</h4>
-                    <p>Thank you for booking our EV Valet Charging Service through our PlusX App.</p><br />
-                    <p>Booking Details:</p><br /> 
-                    <p>Booking Reference: ${requestId}</p>
-                    <p>Scheduled Service Time: ${slotDateTime}</p> 
-                    <p>Pick Up Address: ${pickup_address}</p>                         
-                    <p>What's Next:</p><br/>
-                    <p>Your valet driver will call or message you to confirm he is on the way.</p>
-                    <p>Your valet driver will identify himself with our PlusX Badge.</p> 
-                    <p>Your valet driver will fill out a brief vehicle condition report and take pictures of your car for reference.</p> 
-                    <p>Your valet driver will charge your car at the nearest available supercharging station.</p> 
-                    <p>Your valet driver will return your car with a minimum 80% charge within 3 hours.</p><br/>
-                    <p>Thank you once again for choosing PlusX for your EV car charging needs and if you have any questions please feel free to email us back on support@plusxelectric.com.</p>  
-                    <br/><br/>  
-                    <p> Regards,<br/> The Friendly PlusX Electric Team </p>
-                </body>
-            </html>`,
-        });
-    
-        await transporter.sendMail({
-            from: `"Easylease Admin" <admin@easylease.com>`,
-            to: 'podbookings@plusxelectric.com',
-            subject: `Portable Charger Booking - ${requestId}`,
-            html: `<html>
-                <body>
-                    <h4>Dear Admin,</h4>
-                    <p>We have received a new booking for our Valet Charging service via the PlusX app. Below are the details:</p> 
-                    <p>Customer Name  : ${name}</p>
-                    <p>Pickup & Drop Address : ${pickup_address}</p>
-                    <p>Booking Date & Time : ${formattedDateTime}</p> <br/>                        
-                    <p> Best regards,<br/> PlusX Electric App </p>
-                </body>
-            </html>`,
-        }); 
+        
+        const htmlUser = `<html> 
+            <body>
+                <h4>Dear ${name},</h4>
+                <p>Thank you for booking our EV Valet Charging Service through our PlusX App.</p><br />
+                <p>Booking Details:</p><br /> 
+                <p>Booking Reference: ${requestId}</p>
+                <p>Scheduled Service Time: ${slotDateTime}</p> 
+                <p>Pick Up Address: ${pickup_address}</p>                         
+                <p>What's Next:</p><br/>
+                <p>Your valet driver will call or message you to confirm he is on the way.</p>
+                <p>Your valet driver will identify himself with our PlusX Badge.</p> 
+                <p>Your valet driver will fill out a brief vehicle condition report and take pictures of your car for reference.</p> 
+                <p>Your valet driver will charge your car at the nearest available supercharging station.</p> 
+                <p>Your valet driver will return your car with a minimum 80% charge within 3 hours.</p><br/>
+                <p>Thank you once again for choosing PlusX for your EV car charging needs and if you have any questions please feel free to email us back on support@plusxelectric.com.</p>  
+                <br/><br/>  
+                <p> Regards,<br/> The Friendly PlusX Electric Team </p>
+            </body>
+        </html>`;
+        const htmlAdmin = `<html>
+            <body>
+                <h4>Dear Admin,</h4>
+                <p>We have received a new booking for our Valet Charging service via the PlusX app. Below are the details:</p> 
+                <p>Customer Name  : ${name}</p>
+                <p>Pickup & Drop Address : ${pickup_address}</p>
+                <p>Booking Date & Time : ${formattedDateTime}</p> <br/>                        
+                <p> Best regards,<br/> PlusX Electric App </p>
+            </body>
+        </html>`;
+        
+        emailQueue.addEmail('famoney244@avzong.com', 'Your Valet Charge Booking Confirmation', htmlUser);
+        emailQueue.addEmail('famoney244@avzong.com', `Portable Charger Booking - ${requestId}`, htmlAdmin);
         
         const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
         let responseMsg = 'Booking Request Submitted! Our team will be in touch with you shortly.';
     
         if(rsa){
             await insertRecord('charging_service_assign', ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [requestId, rsa.rsa_id, rider_id, slotDateTime, '0']);
-            await db.execute(`UPDATE charging_service SET rsa_id = ? WHERE request_id = ?`, [rsa.rsa_id, requestId]);
+            await conn.execute(`UPDATE charging_service SET rsa_id = ? WHERE request_id = ?`, [rsa.rsa_id, requestId]);
     
             const heading1 = 'Valet Charging Service';
             const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
@@ -348,19 +340,15 @@ export const handleRejectBooking = async (req, resp) => {
     await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
     await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
-    await transporter.sendMail({
-        from: `"Easylease Admin" <admin@easylease.com>`,
-        to: 'valetbookings@plusxelectric.com',
-        subject: `Valet Charging Service Booking rejected - ${booking_id}`,
-        html: `<html>
-            <body>
-                <h4>Dear Admin,</h4>
-                <p>Driver has rejected the valet service booking. please assign one Driver on this booking</p> <br />
-                <p>Booking ID: ${booking_id}</p>
-                <p> Regards,<br/> PlusX Electric App </p>
-            </body>
-        </html>`,
-    });
+    const html = `<html>
+        <body>
+            <h4>Dear Admin,</h4>
+            <p>Driver has rejected the valet service booking. please assign one Driver on this booking</p> <br />
+            <p>Booking ID: ${booking_id}</p>
+            <p> Regards,<br/> PlusX Electric App </p>
+        </body>
+    </html>`;
+    emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Charging Service Booking rejected - ${booking_id}`, html);
 
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
 };
