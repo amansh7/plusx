@@ -125,13 +125,13 @@
                     <tr>
                         <th class="colr1 font14" colspan="3">Pickup Address</th>
                         <th class="colr1 font14">Base Price</th>
-                        <th class="colr1 font14">Total (<%= data.currency.toUpperCase() %>)</th>
+                        <th class="colr1 font14">Total (<%= data.currency ? data.currency.toUpperCase() : '' %>)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td class="bdr bdl" colspan="3"><%= data.address %></td>
-                        <td class="bdr bdl"><%= data.currency.toUpperCase() %> : <%= formatNumber(data.price) %></td>
+                        <td class="bdr bdl"><%= data.currency ? data.currency.toUpperCase() : '' %> : <%= formatNumber(data.price) %></td>
                         <td class="bdr bdl"><%= formatNumber(data.price) %></td>
                     </tr>
                     <tr>

@@ -101,7 +101,7 @@
                             <tbody>
                                 <tr style="border-bottom: 1px solid #5e676f;">
                                     <td style="font-size: 14px;">Valet Charging Service</td>
-                                    <td style="text-align: right; font-size: 14px;"><%= formatNumber(data.amount) %> <%= data.currency.toUpperCase() %></td>
+                                    <td style="text-align: right; font-size: 14px;"><%= formatNumber(data.amount) %> <%= data.currency ? data.currency.toUpperCase() : '' %></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -112,7 +112,7 @@
                         <p style="font-size: 14px; padding: 8px; font-weight: bold;">Total Amount:</p>
                     </td>
                     <td style="text-align: right;">
-                        <p style="font-size: 14px; padding: 8px; font-weight: bold;"><%= formatNumber(data.amount) %> <%= data.currency.toUpperCase() %></p>
+                        <p style="font-size: 14px; padding: 8px; font-weight: bold;"><%= formatNumber(data.amount) %> <%= data.currency ? data.currency.toUpperCase() : '' %></p>
                     </td>
                 </tr>
             </tbody>

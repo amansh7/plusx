@@ -7,6 +7,7 @@ import ejs from 'ejs';
 import { insertRecord } from "./dbUtils.js";
 import { GoogleAuth } from "google-auth-library";
 import { fileURLToPath } from 'url';
+import moment from "moment";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -181,7 +182,7 @@ export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req
     page.setViewport({ width: 1280, height: 1050 });
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
-  
+    console.log('pdf generated: ', pdfPath);
     await browser.close();
     return { success: true, pdfPath }; 
   }catch(error){
@@ -281,26 +282,26 @@ export const createNotification = async (heading, desc, module_name, panel_to, p
   };
 };
 
-    /* Send Notification */
-    const getAccessToken = async (fcmType) => {
-        try {
-            const fileName = (fcmType === 'RSAFCM') ? 'plusx-support-firebase.json' : 'plusx-electric-firebase.json';
-            const serviceAccountPath = path.join(__dirname, 'public/firebase-files/', fileName);
+/* Send Notification */
+const getAccessToken = async (fcmType) => {
+  try {
+    const fileName = (fcmType === 'RSAFCM') ? 'plusx-support-firebase.json' : 'plusx-electric-firebase.json';
+    const serviceAccountPath = path.join(__dirname, 'public/firebase-files/', fileName);
 
-            const auth = new GoogleAuth({
-                keyFilename: serviceAccountPath,
-                scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
-            });
-            const client = await auth.getClient();
-            const accessTokenResponse = await client.getAccessToken();
-            const accessToken = accessTokenResponse.token;
+    const auth = new GoogleAuth({
+        keyFilename: serviceAccountPath,
+        scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+    });
+    const client = await auth.getClient();
+    const accessTokenResponse = await client.getAccessToken();
+    const accessToken = accessTokenResponse.token;
 
-            return accessToken;
-        } catch (error) {
-            console.error('Error fetching access token:', error.message);
-            throw error;
-        }
-    };
+    return accessToken;
+} catch (error) {
+    console.error('Error fetching access token:', error.message);
+    throw error;
+}
+};
 
 export const pushNotification = async ( deviceToken, title, body, fcmType, clickAction ) => {
     try {
@@ -350,4 +351,14 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
     } catch (error) {
         console.error('Error sending notification:', error.response ? error.response.data : error.message);
     }
+};
+
+export const formatDateTime = (dateTime) => {
+  return moment.utc(dateTime).local().format('YYYY-MM-DD HH:mm:ss');
+};
+
+export const formatDateTimeInQuery = (columns) => {
+  return columns.map(column => {
+      return `DATE_FORMAT(${column}, '%Y-%m-%d %H:%i:%s') AS ${column}`;
+  }).join(', ');
 };

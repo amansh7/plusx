@@ -7,8 +7,8 @@ import { createNotification, mergeParam, pushNotification } from "../../utils.js
 import emailQueue from "../../emailQueue.js";
 
 export const chargerList = async (req, resp) => {
-    const {rider_id, page_no } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const result = await getPaginatedData({
@@ -18,8 +18,8 @@ export const chargerList = async (req, resp) => {
         sortOrder: 'ASC',
         page_no,
         limit: 10,
-        whereField: 'status',
-        whereValue: 1
+        whereField: ['status'],
+        whereValue: ['1']
     });
 
     const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
@@ -32,9 +32,19 @@ export const chargerList = async (req, resp) => {
         slot_data: slotData,
         total_page: result.totalPage,
         total: result.total,
-        base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/portable-charger/`,
     });
-}
+};
+
+export const getPcSlotList = async (req, resp) => {
+    const [slot] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
+    return resp.json({
+        message: [ "Slot List fetch successfully!" ], 
+        data: slot,
+        status: 1,
+        code: 200
+    });
+};
 
 export const chargerBooking = async (req, resp) => {
     const { 
@@ -235,6 +245,31 @@ export const chargerBookingDetail = async (req, resp) => {
         code: 200,
     });
 };
+
+export const getPcSubscriptionList = async (req, resp) => {
+    const { rider_id } = mergeParam(req);
+    if(!rider_id) return resp.json({status: 0, code: 200, error: true, message: ["Rider Id is required"]});
+
+    const data = await queryDB(`
+        SELECT subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date 
+        FROM portable_charger_subscriptions WHERE rider_id = ? ORDER BY id DESC
+    `, [rider_id]);
+
+    if(data?.amount){
+        data.amount /= 100; 
+    }
+    const sPrice = (data && data.expiry_date > moment().format("YYYY-MM-DD") && data.total_booking >= 10) ? 75 : 750;
+
+    return resp.json({
+        message: [ "Subscription Details fetch successfully!" ],
+        data: data,
+        status: 1,
+        subscription_price: sPrice,
+        code: 200,
+        subscription_img: `${req.protocol}://${req.get('host')}/public/pod-no-subscription.jpeg`,
+    });
+};
+
 
 /* Invoice */
 export const invoiceList = async (req, resp) => {
