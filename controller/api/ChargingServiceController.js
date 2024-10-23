@@ -3,11 +3,11 @@ import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
-import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
 export const getChargingServiceSlotList = async (req, resp) => {
-    const [slot] = await db.execute(`SELECT * FROM pick_drop_slot WHERE status = ?`, [1]);
+    const [slot] = await db.execute(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}  FROM pick_drop_slot WHERE status = ?`, [1]);
     return resp.json({
         message: [ "Slot List fetch successfully!" ], 
         data: slot,
@@ -49,7 +49,6 @@ export const requestService = async (req, resp) => {
         const nextId = (!rider.last_index) ? 0 : rider.last_index + 1;
         const requestId = 'CS' + String(nextId).padStart(4, '0');
         const slotDateTime = moment(slot_date_time).format('YYYY-MM-DD HH:mm:ss');
-
         const insert = await insertRecord('charging_service', [
             'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'vehicle_id', 'slot', 'slot_date_time', 'pickup_address', 'parking_number', 'parking_floor', 
             'price', 'order_status', 'pickup_latitude', 'pickup_longitude', 
@@ -74,6 +73,7 @@ export const requestService = async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+        /* 
         const htmlUser = `<html>
             <body>
                 <h4>Dear ${name},</h4>
@@ -81,6 +81,8 @@ export const requestService = async (req, resp) => {
                 <p> Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
+        emailQueue.addEmail(rider.rider_email, 'Your Valet Charge Booking Confirmation', htmlUser); */
+        
         const htmlAdmin = `<html>
             <body>
                 <h4>Dear Admin,</h4>
@@ -91,9 +93,7 @@ export const requestService = async (req, resp) => {
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
-        
-        emailQueue.addEmail(rider.rider_email, 'Your Valet Charge Booking Confirmation', htmlUser);
-        emailQueue.addEmail('admin@plusxelectric.com', `Portable Charger Booking - ${requestId}`, htmlAdmin);
+        emailQueue.addEmail('valetbookings@plusxelectric.com', `Portable Charger Booking - ${requestId}`, htmlAdmin);
         
         const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
         let responseMsg = 'Booking Request Submitted! Our team will be in touch with you shortly.';
@@ -106,16 +106,14 @@ export const requestService = async (req, resp) => {
             const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
             createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
             pushNotification(rsa.fcm_token, heading1, desc1, 'RDRFCM', href);
-    
-            responseMsg = 'You have successfully placed charging service booking. You will be notified soon';
         }
 
         await commitTransaction(conn);
     
         return resp.json({
-            message: responseMsg,
+            message: [responseMsg],
             status: 1,
-            request_id: requestId,
+            service_id: requestId,
             code: 200,
         });
     }catch(err){
@@ -128,8 +126,8 @@ export const requestService = async (req, resp) => {
 };
 
 export const listServices = async (req, resp) => {
-    const {rider_id, page_no, history } = mergeparam(req);
-    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, history } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
@@ -142,11 +140,12 @@ export const listServices = async (req, resp) => {
     const total = totalRows[0].total;
     const totalPage = Math.max(Math.ceil(total / limit), 1);
     
-    const servicesQuery = `SELECT request_id, name, country_code, contact_no, slot, slot_date_time, price, pickup_address, order_status, created_at 
-    FROM charging_service WHERE rider_id = ? AND ${statusCondition} ORDER BY id DESC LIMIT ?, ?
+    const formatCols = ['slot_date_time', 'created_at'];
+    const servicesQuery = `SELECT request_id, name, country_code, contact_no, slot, price, pickup_address, order_status, ${formatDateTimeInQuery(formatCols)} 
+    FROM charging_service WHERE rider_id = ? AND ${statusCondition} ORDER BY id DESC LIMIT ${parseInt(start)}, ${parseInt(limit)}
     `;
     
-    const [serviceList] = await db.execute(servicesQuery, [rider_id, ...statusParams, start, limit]);
+    const [serviceList] = await db.execute(servicesQuery, [rider_id, ...statusParams]);
 
     return resp.json({
         message: ["Charging Service List fetch successfully!"],
@@ -159,12 +158,15 @@ export const listServices = async (req, resp) => {
 };
 
 export const getServiceOrderDetail = async (req, resp) => {
-    const {rider_id, service_id } = mergeparam(req);
-    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], service_id: ["required"]});
+    const {rider_id, service_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], service_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const order = await queryDB(`SELECT * FROM charging_service WHERE request_id = ? LIMIT 1`, [service_id]);
-    const [history] = await db.execute(`SELECT * FROM charging_service_history WHERE service_id = ?`, [service_id]);
+    const formatCols = ['slot_date_time', 'created_at', 'updated_at'];
+    
+    const order = await queryDB(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service WHERE request_id = ? LIMIT 1`, [service_id]);
+    formatCols.shift();
+    const [history] = await db.execute(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service_history WHERE service_id = ?`, [service_id]);
 
     order.invoice_url = '';
     if (order.order_status == 'ES') {
@@ -180,7 +182,6 @@ export const getServiceOrderDetail = async (req, resp) => {
         code: 200,
     });
 };
-
 
 /* Invoice */
 export const getInvoiceList = async (req, resp) => {
