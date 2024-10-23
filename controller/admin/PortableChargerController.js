@@ -478,7 +478,7 @@ export const assignBooking = async (req, resp) => {
     
     try{
         const booking_data = await queryDB( `SELECT rider_id, rsa_id, (select fcm_token from riders as r where r.rider_id = portable_charger_booking.rider_id ) as fcm_token FROM portable_charger_booking WHERE booking_id = ?
-        `, [booking_id ], conn );
+        `, [booking_id ] );
     
         if (!booking_data) {
             return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });

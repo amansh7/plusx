@@ -4,9 +4,9 @@ import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
 import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, 
-    invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot} from "../controller/admin/PortableChargerController.js";
+    invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot, assignBooking} from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
-import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList } from "../controller/admin/PickAndDropController.js";
+import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking } from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 
@@ -39,19 +39,21 @@ const adminRoutes = [
     { method: 'post', path: '/charger-booking-details', handler: chargerBookingDetails },
     { method: 'post', path: '/charger-booking-invoice-list', handler: invoiceList },
     { method: 'post', path: '/charger-booking-invoice-details', handler: invoiceDetails },
-
+    { method: 'post', path: '/charger-booking-assign', handler: assignBooking },
+    
+    
     //Portable Charger Slot List
     { method: 'post', path: '/charger-slot-list', handler: slotList },
     { method: 'post', path: '/charger-add-time-slot', handler: addSlot },
     { method: 'post', path: '/charger-edit-time-slot', handler: editSlot },
     { method: 'post', path: '/charger-delete-time-slot', handler: deleteSlot },
 
-
      //Pick & Drop Booking
      { method: 'get', path: '/pick-and-drop-booking-list', handler: bookingList },
      { method: 'get', path: '/pick-and-drop-booking-details', handler: bookingDetails },
      { method: 'get', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
      { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
+     { method: 'get', path: '/pick-and-drop-assign', handler: assignBooking },
 
       //Pick & Drop  Slot List
      { method: 'get', path: '/pick-and-drop-slot-list', handler: pdSlotList },
