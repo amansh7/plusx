@@ -1,17 +1,17 @@
 import { Router } from "express";
 import { handleFileUpload } from "../fileUpload.js";
 import multer from "multer";
-import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
-import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
+import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
+import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
+import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
 import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { redeemCoupon, createIntent } from '../controller/PaymentController.js';
 import { offerList, offerDetail } from '../controller/api/OfferController.js';
 import { shopList, shopDetail } from '../controller/api/ShopController.js';
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
-import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
-import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
-import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
+import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
+import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
 import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList } from '../controller/api/EvInsuranceController.js';
 import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
 import { 
@@ -34,7 +34,6 @@ import {
 import { 
     getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking 
 } from '../controller/api/ChargingServiceController.js';
-import emailQueue from "../emailQueue.js";
 
 const router = Router();
 
@@ -231,38 +230,6 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
 
 router.post('/validate-coupon', redeemCoupon);
-
-router.get('/test-notification', async (req, resp)=>{
-    const { rider_id, request_id } = req.body;
-    const fcm_token = "dRnPCiCWQpSVewTmIqBQO6:APA91bEUnBE5lOTYIeY7N3hQWJCOk9287OOiIRJS5qZoSQANnvzu1Khe-NY_hqQkYeAn519RzSvakECvZ6cS_jjHnt_jPXIc_arSccQGN8WqOqcBNMJskhhwiuXUiY-y2LCQvMwb1dyZ";
-    const href = 'test_notification/' + request_id;
-    const heading = 'Test Roadside Assistance Created!';
-    const desc = `This is a test Roadside Assistance desc of id: ${request_id}`;
-    // createNotification(heading, desc, 'Roadside Assistance', 'Rider', 'Admin','', rider_id, href);
-    const nresp =  pushNotification(fcm_token, heading, desc, 'RDRFCM', href);
-
-    return resp.json({nresp});
-});
-
-
-/* router.get('/test-queue-mail', (req, res)=>{
-    const toAddress = 'famoney244@avzong.com' ;
-    const subject = 'Test mail using queue - Node';
-    const html = `<html><body><h1>Hello Test Case ${'0'}</h1></body></html>`;
-
-    try {
-        for (let i = 0; i < 1; i++) {
-            const subject = `Test mail using queue - Node ${i}`;
-            const html = `<html><body><h1>Hello Test Case ${i}</h1></body></html>`;
-    
-            emailQueue.addEmail(toAddress, subject, html);
-        }
-        res.status(200).send({ message: '20 Email queued for sending' });
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({ message: 'Failed to queue email', error });
-    }
-}); */
 
 
 export default router;

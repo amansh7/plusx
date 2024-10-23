@@ -487,7 +487,7 @@ export const assignBooking = async (req, resp) => {
             return resp.json({ message: [`This driver already assin on this booking!, please select another driver`], status: 0, code: 404 });
         }
         if( booking_data.rsa_id) {
-            await updateRecord('portable_charger_booking_assign', {rsa_id: rsa_id, status: 0}, 'order_id', booking_id, conn);
+            await updateRecord('portable_charger_booking_assign', {rsa_id: rsa_id, status: 0}, ['order_id'], [booking_id], conn);
 
         } else {
             await insertRecord('portable_charger_booking_assign', 
@@ -495,7 +495,7 @@ export const assignBooking = async (req, resp) => {
                 [ order_id, booking_data.rider_id, rsa_id ], 
             conn);
         }
-        await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, 'booking_id', booking_id, conn);
+        await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, ['booking_id'], [booking_id], conn);
         // await insertRecord('portable_charger_history', ['booking_id', 'rider_id', 'rsa_id', 'order_status'], [booking_id, booking_data.rider_id, rsa_id, 'A'], conn);
         
         const href    = 'portable_charger_booking/' + booking_id;
