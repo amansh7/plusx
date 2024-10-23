@@ -74,24 +74,11 @@ export const requestService = async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-        
-        const htmlUser = `<html> 
+        const htmlUser = `<html>
             <body>
                 <h4>Dear ${name},</h4>
-                <p>Thank you for booking our EV Valet Charging Service through our PlusX App.</p><br />
-                <p>Booking Details:</p><br /> 
-                <p>Booking Reference: ${requestId}</p>
-                <p>Scheduled Service Time: ${slotDateTime}</p> 
-                <p>Pick Up Address: ${pickup_address}</p>                         
-                <p>What's Next:</p><br/>
-                <p>Your valet driver will call or message you to confirm he is on the way.</p>
-                <p>Your valet driver will identify himself with our PlusX Badge.</p> 
-                <p>Your valet driver will fill out a brief vehicle condition report and take pictures of your car for reference.</p> 
-                <p>Your valet driver will charge your car at the nearest available supercharging station.</p> 
-                <p>Your valet driver will return your car with a minimum 80% charge within 3 hours.</p><br/>
-                <p>Thank you once again for choosing PlusX for your EV car charging needs and if you have any questions please feel free to email us back on support@plusxelectric.com.</p>  
-                <br/><br/>  
-                <p> Regards,<br/> The Friendly PlusX Electric Team </p>
+                <p>Thank you for booking our Valet Charging Service for your EV. We have successfully received your booking request. Below are the details of your booking. Additionally, please find the attached invoice for your reference.</p> 
+                <p> Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
         const htmlAdmin = `<html>
@@ -105,8 +92,8 @@ export const requestService = async (req, resp) => {
             </body>
         </html>`;
         
-        emailQueue.addEmail('famoney244@avzong.com', 'Your Valet Charge Booking Confirmation', htmlUser);
-        emailQueue.addEmail('famoney244@avzong.com', `Portable Charger Booking - ${requestId}`, htmlAdmin);
+        emailQueue.addEmail(rider.rider_email, 'Your Valet Charge Booking Confirmation', htmlUser);
+        emailQueue.addEmail('admin@plusxelectric.com', `Portable Charger Booking - ${requestId}`, htmlAdmin);
         
         const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
         let responseMsg = 'Booking Request Submitted! Our team will be in touch with you shortly.';
@@ -118,7 +105,7 @@ export const requestService = async (req, resp) => {
             const heading1 = 'Valet Charging Service';
             const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
             createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
-            pushNotification(rider.fcm_token, heading1, desc1, 'RDRFCM', href);
+            pushNotification(rsa.fcm_token, heading1, desc1, 'RDRFCM', href);
     
             responseMsg = 'You have successfully placed charging service booking. You will be notified soon';
         }

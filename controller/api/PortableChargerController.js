@@ -122,22 +122,17 @@ export const chargerBooking = async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-
         const htmlUser = `<html>
             <body>
                 <h4>Dear ${rider.rider_name},</h4>
-                <p>Thank you for using the PlusX Electric App for Portable Charger Booking. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p><br/>
-                <p>Booking Reference: ${bookingId}</p>
-                <p>Date & Time of Request: ${formattedDateTime}</p> 
-                <p>Address: ${address}</p>                         
-                <p>Service Type: ${service_type}</p><br/>
-                <p> Regards,<br/> PlusX Electric App </p>
+                <p>Thank you for using the PlusX Electric App to book your portable charger for charging your EV. We have successfully received your booking request. Below are the details of your booking. Additionally, please find the attached invoice for your reference.</p> 
+                <p> Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
         const htmlAdmin = `<html>
             <body>
                 <h4>Dear Admin,</h4>
-                <p>We have received a new booking for our Charging Installation service. Below are the details:</p> <br/>
+                <p>We have received a new booking for our Portable Charger service. Below are the details:</p> 
                 <p>Customer Name  : ${rider.rider_name}</p>
                 <p>Address : ${address}</p>
                 <p>Booking Time : ${formattedDateTime}</p> <br/>                        
