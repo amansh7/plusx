@@ -227,12 +227,12 @@ export const portableChargerInvoice = async (req, resp) => {
     const data = await queryDB(`
         SELECT 
             pci.invoice_id, pci.amount, pci.invoice_date, pci.currency, 
-            pcb.user_name, pcb.booking_id
+            pcb.user_name, pcb.booking_id,
             (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email
         FROM 
             portable_charger_invoice AS pci
         LEFT JOIN
-            portable_charger_booking AS pcb ON pcb.request_id = pci.request_id
+            portable_charger_booking AS pcb ON pcb.booking_id = pci.request_id
         WHERE 
             pci.invoice_id = ?
         LIMIT 1
@@ -245,7 +245,7 @@ export const portableChargerInvoice = async (req, resp) => {
     if(pdf.success){
         const html = `<html>
             <body>
-                <h4>Dear ${data.name}</h4>
+                <h4>Dear ${data.user_name}</h4>
                 <p>Thank you for choosing PlusX Electric's Portable Charger. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
                 <p> Regards,<br/> PlusX Electric App Team </p>
             </body>

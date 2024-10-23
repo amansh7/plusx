@@ -155,7 +155,7 @@ export const roadAssistanceDetail = async (req, resp) => {
         roadAssistance[0].invoice_url = '';
         if (roadAssistance[0].order_status == 'VD') {
             const invoice_id = roadAssistance[0].request_id.replace('RAO', 'INVR');
-            roadAssistance[0].invoice_url = `${req.protocol}://${req.get('host')}/uploads/road-side-invoice/${invoice_id}-invoice.pdf`;
+            roadAssistance[0].invoice_url = `${req.protocol}://${req.get('host')}/public/road-side-invoice/${invoice_id}-invoice.pdf`;
         }
     }
 
@@ -224,7 +224,7 @@ export const roadAssistanceInvoiceDetail = async (req, resp) => {
             rsi.invoice_id = ?
     `, [invoice_id]);
 
-    invoice.invoice_url = `${req.protocol}://${req.get('host')}/uploads/road-side-invoice/${invoice_id}-invoice.pdf`;
+    invoice.invoice_url = `${req.protocol}://${req.get('host')}/public/road-side-invoice/${invoice_id}-invoice.pdf`;
 
     return resp.json({
         message: ["Road Assistance Invoice Details fetch successfully!"],

@@ -169,9 +169,10 @@ export const getServiceOrderDetail = async (req, resp) => {
     const [history] = await db.execute(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service_history WHERE service_id = ?`, [service_id]);
 
     order.invoice_url = '';
-    if (order.order_status == 'ES') {
+    order.slot = 'Schedule';
+    if (order.order_status == 'WC') {
         const invoiceId = order.request_id.replace('CS', 'INVCS');
-        order.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoiceId}-invoice.pdf`;
+        order.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoiceId}-invoice.pdf`;
     }
 
     return resp.json({
@@ -237,7 +238,7 @@ export const getInvoiceDetail = async (req, resp) => {
             csi.invoice_id = ?
     `, [invoice_id]);
 
-    invoice.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+    invoice.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
 
     return resp.json({
         message: ["Pick & Drop Invoice Details fetch successfully!"],

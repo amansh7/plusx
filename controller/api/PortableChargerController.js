@@ -132,13 +132,15 @@ export const chargerBooking = async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-        const htmlUser = `<html>
+        /* const htmlUser = `<html>
             <body>
                 <h4>Dear ${rider.rider_name},</h4>
                 <p>Thank you for using the PlusX Electric App to book your portable charger for charging your EV. We have successfully received your booking request. Below are the details of your booking. Additionally, please find the attached invoice for your reference.</p> 
                 <p> Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
+        emailQueue.addEmail(rider.rider_email, 'Your Portable Charger Confirmation - PlusX Electric App', htmlUser); */
+        
         const htmlAdmin = `<html>
             <body>
                 <h4>Dear Admin,</h4>
@@ -149,28 +151,26 @@ export const chargerBooking = async (req, resp) => {
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
-
-        emailQueue.addEmail(rider.rider_email, 'Your Portable Charger Confirmation - PlusX Electric App', htmlUser);
         emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
     
-        const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ?, booking_type = ?`, [2, 'Portable Charger']);
-        let respMsg = "Booking Request Submitted! Our team will be in touch with you shortly."; 
-    
+        const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
+        let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will be there at the scheduled time."; 
+        
         if(rsa){
-            const slotDateTime = moment(slot_date).format('YYYY-MM-DD') + ' ' + moment(slot_time, 'HH:mm:ss').format('HH:mm:ss');
-            
+            const slotDateTime = moment(slot_date, 'DD-MM-YYYY').format('YYYY-MM-DD HH:mm:ss');
+
             await insertRecord('portable_charger_booking_assign', 
-                ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider.rider_id, slotDateTime, 0], conn
+                ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider_id, slotDateTime, 0], conn
             );
     
-            await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, 'booking_id', bookingId, conn);
+            await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, ['booking_id'], [bookingId], conn);
     
             const heading1 = 'Portable Charger!';
             const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
-            createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider.rider_id, rsa.rsa_id, href);
+            createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider_id, rsa.rsa_id, href);
             pushNotification(rsa.fcm_token, heading, desc, 'RSAFCM', href);
     
-            respMsg = "You have successfully placed Portable Charger booking. You will be notified soon."
+            // respMsg = "You have successfully placed Portable Charger booking. You will be notified soon."
         }
 
         await commitTransaction(conn);
@@ -179,7 +179,7 @@ export const chargerBooking = async (req, resp) => {
             status:1, 
             code: 200,
             booking_id: bookingId,
-            message: respMsg 
+            message: [respMsg] 
         });
 
     }catch(err){
@@ -228,18 +228,18 @@ export const chargerBookingDetail = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const booking = await queryDB(`SELECT * FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
-
+    
     booking.invoice_url = '';
-    if (booking.order_status == 'ES') {
-        const invoice_id = booking.request_id.replace('CS', 'INVCS');
-        booking.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+    if (booking.status == 'PU') {
+        const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
+        booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
     }
 
     const [history] = await db.execute(`SELECT * FROM portable_charger_booking WHERE booking_id = ?`, [booking_id]);
 
     return resp.json({
         message: ["Charging Installation Service fetched successfully!"],
-        service_data: booking,
+        data: booking,
         service_history: history,
         status: 1,
         code: 200,
