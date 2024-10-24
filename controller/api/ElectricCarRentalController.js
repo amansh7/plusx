@@ -1,6 +1,6 @@
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
-import { mergeParam } from '../../utils.js';
+import { formatDateTimeInQuery, mergeParam } from '../../utils.js';
 import db from "../../config/db.js";
 
 
@@ -15,7 +15,7 @@ export const carList = async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'electric_car_rental',
-        columns: 'rental_id, car_name, available_on, car_type, image, price, contract',
+        columns: `rental_id, car_name, available_on, car_type, image, price, contract, ${formatDateTimeInQuery(['created_at', 'updated_at'])}`,
         searchField: 'car_name',
         searchText: search_text,
         sortColumn: 'id',
@@ -45,7 +45,7 @@ export const carDetail = async (req, resp) => {
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const rentalData = await queryDB(`SELECT * FROM electric_car_rental WHERE status = ? AND rental_id= ? LIMIT 1`, [1, rental_id]);
+    const rentalData = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM electric_car_rental WHERE status = ? AND rental_id= ? LIMIT 1`, [1, rental_id]);
     [gallery] = await db.execute(`SELECT * FROM electric_car_rental_gallery WHERE rental_id = ? ORDER BY id DESC LIMIT 5`, [rental_id]);
     const imgName = gallery.map(row => row.image_name);
     

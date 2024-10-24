@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import moment from "moment";
 import generateUniqueId from 'generate-unique-id';
-import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import { createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
 export const addInsurance = async (req, resp) => {
@@ -120,7 +120,8 @@ export const insuranceList = async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'ev_insurance',
-        columns: `insurance_id, owner_name, date_of_birth, country, country_code, mobile_no, vehicle, car_brand, emirates_id, created_at,
+        columns: `insurance_id, owner_name, country, country_code, mobile_no, vehicle, car_brand, emirates_id,
+            ${formatDateTimeInQuery(['created_at'])}, ${formatDateInQuery(['date_of_birth'])},
             (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = ev_insurance.vehicle) 
             AS vehicle_data`,
         sortColumn: 'id',
@@ -150,10 +151,10 @@ export const insuranceDetails = async (req, resp) => {
 
     const insurance = await queryDB(`
         SELECT 
-            ev_insurance.*,
-            (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = ev_insurance.vehicle) as vehicle_data
+            ev.*, ${formatDateTimeInQuery(['ev.created_at', 'ev.updated_at'])}, ${formatDateInQuery(['ev.insurance_expiry', 'ev.date_of_birth'])},
+            (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = ev.vehicle) as vehicle_data
         FROM 
-            ev_insurance
+            ev_insurance AS ev
         WHERE
             rider_id = ? AND insurance_id = ?
         LIMIT 1
@@ -266,7 +267,8 @@ export const evPreSaleList = async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'ev_pre_sale_testing',
-        columns: `booking_id, owner_name, date_of_birth, country, country_code, mobile_no, vehicle, slot_date, created_at,
+        columns: `booking_id, owner_name, country, country_code, mobile_no, vehicle,
+            ${formatDateTimeInQuery(['created_at'])}, ${formatDateInQuery(['date_of_birth', 'slot_date'])},
             (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = ev_pre_sale_testing.vehicle) AS vehicle_data,
             (select concat(start_time, "-", end_time) from ev_pre_sale_testing_slot as slt where slt.slot_id = ev_pre_sale_testing.slot_time_id) AS slot_time
             `,
@@ -290,17 +292,17 @@ export const evPreSaleList = async (req, resp) => {
 };
 
 export const evPreSaleDetails = async (req, resp) => {
-    const {rider_id, booking_id } = mergeparam(req);
-    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], booking_id: ["required"]});
+    const {rider_id, booking_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const sale = await queryDB(`
         SELECT 
-            ev_pre_sale_testing.*,
-            (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = ev_pre_sale_testing.vehicle) as vehicle_data,
-            (select concat(start_time, "-", end_time) from ev_pre_sale_testing_slot as slt where slt.slot_id = ev_pre_sale_testing.slot_time_id) AS slot_time
+            evpst.*, ${formatDateTimeInQuery(['evpst.created_at', 'evpst.updated_at'])}, ${formatDateInQuery(['evpst.date_of_birth', 'evpst.slot_date'])},
+            (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = evpst.vehicle) as vehicle_data,
+            (select concat(start_time, "-", end_time) from ev_pre_sale_testing_slot as slt where slt.slot_id = evpst.slot_time_id) AS slot_time
         FROM 
-            ev_pre_sale_testing
+            ev_pre_sale_testing AS evpst
         WHERE
             rider_id = ? AND booking_id = ?
         LIMIT 1

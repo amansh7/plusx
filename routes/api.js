@@ -4,16 +4,17 @@ import multer from "multer";
 import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
 import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
 import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
-import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
-import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
-import { redeemCoupon, createIntent } from '../controller/PaymentController.js';
-import { offerList, offerDetail } from '../controller/api/OfferController.js';
-import { shopList, shopDetail } from '../controller/api/ShopController.js';
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
-import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
+import { shopList, shopDetail } from '../controller/api/ShopController.js';
+import { offerList, offerDetail } from '../controller/api/OfferController.js';
+import { redeemCoupon, createIntent } from '../controller/PaymentController.js';
+import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
+import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
-import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList } from '../controller/api/EvInsuranceController.js';
+import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
 import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
+import { rsaLogin, rsaUpdatePassword, rsaForgotPassword, rsaLogout, rsaLogutAll, rsaUpdateProfile, rsaStatusChange, rsaHome } from '../controller/api/RsaController.js';
+import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList } from '../controller/api/EvInsuranceController.js';
 import { 
     login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, notificationList, 
     addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount, addRiderVehicle ,editRiderVehicle, riderVehicleList, deleteRiderVehicle
@@ -45,6 +46,11 @@ const authzRoutes = [
     {method: 'post', path: '/rider-forgot_password', handler: forgotPassword},
     {method: 'post', path: '/create-otp', handler: createOTP},
     {method: 'post', path: '/verify-otp', handler: verifyOTP},
+    
+    /* RSA */
+    {method: 'post', path: '/rsa-login', handler: rsaLogin},
+    {method: 'get', path: '/rsa-logout-all', handler: rsaLogutAll},
+    {method: 'post', path: '/rsa-forgot-password', handler: rsaForgotPassword},
     
     /* Dynamic List */
     {method: 'get', path: '/location-list', handler: locationList},
@@ -209,9 +215,16 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
     router[method](path, ...middlewares, handler);
 });
 
-
 /* -- Api Auth & Api RSA Authz Middleware -- */
 const authzRsaAndAuthRoutes = [
+    /* RSA */
+    { method: 'get', path: '/rsa-home', handler: rsaHome },
+    { method: 'get', path: '/rsa-logout', handler: rsaLogout },
+    { method: 'get', path: '/rsa-profile-change', handler: rsaUpdateProfile },
+    { method: 'get', path: '/rsa-status-change', handler: rsaStatusChange },
+    { method: 'get', path: '/rsa-change-password', handler: rsaUpdatePassword },
+
+
     /* Road Assitance with RSA */
     { method: 'get', path: '/rsa-order-stage', handler: getRsaOrderStage },
     { method: 'get', path: '/order-action', handler: orderAction },

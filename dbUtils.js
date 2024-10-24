@@ -1,3 +1,4 @@
+import moment from "moment";
 import db from "./config/db.js";
 
 /**
@@ -9,6 +10,12 @@ import db from "./config/db.js";
  * @returns {Promise<Object>} - The result of the insert operation.
  */
 export const insertRecord = async (table, columns, values, connection = null) => {
+  if (!columns.includes('created_at')) {
+    columns.push('created_at');
+    values.push(moment().format('YYYY-MM-DD HH:mm:ss'));
+    columns.push('updated_at');
+    values.push(moment().format('YYYY-MM-DD HH:mm:ss'));
+  }
   const placeholders = columns.map(() => "?").join(", ");
   const sql = `INSERT INTO ${table} (${columns.join( ", " )}) VALUES (${placeholders})`;
   try {
@@ -36,6 +43,10 @@ export const insertRecord = async (table, columns, values, connection = null) =>
  * @returns {Promise<Object>} - The result of the update operation.
  */
 export const updateRecord = async (table, updates, whereColumns, whereValues, connection = null) => {
+  if (!updates.updated_at) {
+    updates.updated_at = moment().format('YYYY-MM-DD HH:mm:ss');
+  }
+
   const setClause = Object.keys(updates).map((col) => `${col} = ?`).join(", ");
   
   const whereClause = whereColumns.map(col => `${col} = ?`).join(" AND ");
