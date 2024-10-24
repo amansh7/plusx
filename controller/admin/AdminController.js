@@ -1,8 +1,6 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
-import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
-import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
-import validateFields from "../../validation.js";
+import {  getPaginatedData } from '../../dbUtils.js';
 dotenv.config();
 
 
@@ -59,11 +57,11 @@ export const getDashboardData = async (req, resp) => {
 };
 
 export const riderList = async (req, resp) => {
-    let { pageNo, sortBy, riderName, riderEmail, riderMobile, addedFrom } = req.body;
+    let { page_no, sortBy, riderName, riderEmail, riderMobile, addedFrom } = req.body;
 
-    pageNo = parseInt(pageNo, 10);
-    if (isNaN(pageNo) || pageNo < 1) {
-        pageNo = 1;
+    page_no = parseInt(page_no, 10);
+    if (isNaN(page_no) || page_no < 1) {
+        page_no = 1;
     }
 
     const sortOrder = sortBy === 'd' ? 'DESC' : 'ASC';
@@ -72,9 +70,9 @@ export const riderList = async (req, resp) => {
         const result = await getPaginatedData({
             tableName: 'riders',
             columns: 'rider_id, rider_name, rider_email, country_code, rider_mobile, emirates, profile_img, vehicle_type, status, created_at, updated_at',
-            sortColumn: 'created_at', 
-            sortOrder,
-            page_no : pageNo,
+            sortColumn: 'id', 
+            sortOrder : "DESC",
+            page_no : page_no,
             limit: 10,
             searchFields: ['rider_name', 'rider_email', 'rider_mobile', 'added_from'],
             searchTexts: [riderName, riderEmail, riderMobile, addedFrom],
@@ -99,7 +97,7 @@ export const riderList = async (req, resp) => {
 };
 
 export const riderDetails = async (req, resp) => {
-    const { riderId } = req.body; 
+    const { riderId } = req.body;
 
     if (!riderId) {
         return resp.status(400).json({
@@ -112,8 +110,9 @@ export const riderDetails = async (req, resp) => {
     try {
         const [rows] = await db.execute(
             `SELECT r.*, 
-                    ra.*, 
-                    rv.*
+                    ra.address_id, ra.street_name, ra.emirate, ra.area, ra.building_name, ra.unit_no, ra.landmark, ra.nick_name, ra.latitude, ra.longitude, 
+                    rv.vehicle_id, rv.vehicle_type, rv.vehicle_number, rv.vehicle_code, rv.year_manufacture, rv.vehicle_model, rv.vehicle_make, rv.leased_from,
+                    rv.owner, rv.owner_type, rv.vehicle_specification, rv.emirates
              FROM riders r
              LEFT JOIN rider_address ra ON r.rider_id = ra.rider_id
              LEFT JOIN riders_vehicles rv ON r.rider_id = rv.rider_id
@@ -129,10 +128,101 @@ export const riderDetails = async (req, resp) => {
             });
         }
 
+        const [chargerRows] = await db.execute(
+            `SELECT pcb.booking_id, pcb.rsa_id, pcb.charger_id, pcb.service_name, pcb.service_price, pcb.service_type, pcb.service_feature, pcb.status, pcb.created_at
+             FROM portable_charger_booking pcb
+             WHERE pcb.rider_id = ?
+             ORDER BY pcb.created_at DESC
+             LIMIT 5`, 
+            [riderId]
+        );
+
+        const [chargingServiceRows] = await db.execute(
+            `SELECT cs.request_id, cs.rsa_id, cs.vehicle_id, cs.price, cs.order_status, cs.created_at
+             FROM charging_service cs
+             WHERE cs.rider_id = ?
+             ORDER BY cs.created_at DESC
+             LIMIT 5`,
+            [riderId]
+        );
+
+        const rider = {
+            rider_id: rows[0].rider_id,
+            rider_name: rows[0].rider_name,
+            rider_email: rows[0].rider_email,
+            rider_mobile: rows[0].rider_mobile,
+            country_code: rows[0].country_code,
+            date_of_birth: rows[0].date_of_birth,
+            area: rows[0].area,
+            emirates: rows[0].emirates,
+            country: rows[0].country,
+            vehicle_type: rows[0].vehicle_type,
+            riderAddress: [],
+            riderVehicles: [],
+            portableChargerBookings: chargerRows.map(row => ({
+                booking_id: row.booking_id,
+                rsa_id: row.rsa_id,
+                charger_id: row.charger_id,
+                service_name: row.service_name,
+                service_type: row.service_type,
+                service_price: row.service_price,
+                service_feature: row.service_feature,
+                order_status: row.status,
+                created_at: row.created_at,
+            })),
+            pickAndDropBookings: chargingServiceRows.map(row => ({
+                request_id: row.request_id,
+                rsa_id: row.rsa_id,
+                vehicle_id: row.vehicle_id,
+                price: row.price,
+                order_status: row.order_status,
+                created_at: row.created_at,
+            })),
+        };
+
+        const uniqueAddressIds = new Set();
+        const uniqueVehicleIds = new Set();
+
+        rows.forEach(row => {
+            if (row.address_id && !uniqueAddressIds.has(row.address_id)) {
+                uniqueAddressIds.add(row.address_id);
+                rider.riderAddress.push({
+                    rider_address_id: row.address_id,
+                    street: row.street_name,
+                    emirate: row.emirate,
+                    area: row.area,
+                    building_name: row.building_name,
+                    unit_no: row.unit_no,
+                    landmark: row.landmark,
+                    nick_name: row.nick_name,
+                    latitude: row.latitude,
+                    longitude: row.longitude,
+                });
+            }
+
+            if (row.vehicle_id && !uniqueVehicleIds.has(row.vehicle_id)) {
+                uniqueVehicleIds.add(row.vehicle_id);
+                rider.riderVehicles.push({
+                    vehicle_id: row.vehicle_id,
+                    vehicle_type: row.vehicle_type,
+                    vehicle_number: row.vehicle_number,
+                    vehicle_code: row.vehicle_code,
+                    year_manufacture: row.year_manufacture,
+                    vehicle_model: row.vehicle_model,
+                    vehicle_make: row.vehicle_make,
+                    leased_from: row.leased_from,
+                    owner: row.owner,
+                    owner_type: row.owner_type,
+                    vehicle_specification: row.vehicle_specification,
+                    emirates: row.emirates,
+                });
+            }
+        });
+
         return resp.json({
             status: 1,
             code: 200,
-            data: rows 
+            data: rider
         });
     } catch (error) {
         console.error('Error fetching rider details:', error);

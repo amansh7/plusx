@@ -188,6 +188,7 @@ export const chargerBookingList = async (req, resp) => {
     }
 };
 
+
 export const chargerBookingDetails = async (req, resp) => {
     try {
         const { booking_id } = req.body;
@@ -200,11 +201,11 @@ export const chargerBookingDetails = async (req, resp) => {
             });
         }
 
-        const result = await db.execute(`
+        const [bookingResult] = await db.execute(`
             SELECT 
                 booking_id, rider_id, rsa_id, charger_id, vehicle_id, 
-                service_name, service_price, service_type, user_name, 
-                contact_no, slot_date, slot_time 
+                service_name, service_price, service_type, service_feature, user_name, 
+                contact_no, address,  slot_date, slot_time, status, created_at 
             FROM 
                 portable_charger_booking 
             WHERE 
@@ -212,7 +213,7 @@ export const chargerBookingDetails = async (req, resp) => {
             [booking_id]
         );
 
-        if (result.length === 0) {
+        if (bookingResult.length === 0) {
             return resp.status(404).json({
                 status: 0,
                 code: 404,
@@ -220,11 +221,64 @@ export const chargerBookingDetails = async (req, resp) => {
             });
         }
 
+        const bookingDetails = bookingResult[0];
+
+        const [vehicleResult] = await db.execute(`
+            SELECT 
+                vehicle_id, vehicle_type, vehicle_model
+            FROM 
+                riders_vehicles 
+            WHERE 
+                vehicle_id = ?`, 
+            [bookingDetails.vehicle_id]
+        );
+
+        const vehicleDetails = vehicleResult[0]
+
+        const [riderResult] = await db.execute(`
+            SELECT 
+                rider_id, rider_name, rider_email, rider_mobile, 
+                country_code, date_of_birth 
+            FROM 
+                riders 
+            WHERE 
+                rider_id = ?`, 
+            [bookingDetails.rider_id]
+        );
+
+        if (riderResult.length === 0) {
+            return resp.status(404).json({
+                status: 0,
+                code: 404,
+                message: 'Rider not found.',
+            });
+        }
+
+        const riderDetails = riderResult[0];
+
+        const [driverResult] = await db.execute(`
+            SELECT 
+                rsa_id, rsa_name, email, country_code, 
+                mobile, booking_type 
+            FROM 
+                rsa 
+            WHERE 
+                rsa_id = ?`, 
+            [bookingDetails.rsa_id]
+        );
+        const driverDetails = driverResult[0];
+
+
         return resp.json({
             status: 1,
             code: 200,
             message: ["Booking details fetched successfully!"],
-            data: result[0], 
+            data: {
+                booking: bookingDetails,
+                rider: riderDetails,
+                driver: driverDetails,
+                vehicle: vehicleDetails
+            }, 
         });
     } catch (error) {
         console.error('Error fetching booking details:', error);
@@ -235,6 +289,8 @@ export const chargerBookingDetails = async (req, resp) => {
         });
     }
 };
+
+
 
 /* Invoice */
 export const invoiceList = async (req, resp) => {
@@ -343,12 +399,19 @@ export const slotList = async (req, resp) => {
         });
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
-
+        const formattedData = result.data.map((item) => ({
+            slot_id: item.slot_id,
+            booking_limit: item.booking_limit,
+            status: item.status,
+            created_at: item.created_at,
+             timing: `${item.start_time} - ${item.end_time}`
+        }));
         return resp.json({
             status: 1,
             code: 200,
             message: ["Portable Charger Slot List fetched successfully!"],
-            data: result.data,
+            // data: result.data,
+            data: formattedData,
             total_page: result.totalPage,
             total: result.total,
             // base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
@@ -358,6 +421,7 @@ export const slotList = async (req, resp) => {
         return resp.status(500).json({ status: 0, message: 'Error fetching charger lists' });
     }
 };
+
 
 export const addSlot = async (req, resp) => {
     try {

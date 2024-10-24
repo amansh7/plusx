@@ -24,8 +24,8 @@ const adminRoutes = [
     { method: 'post', path: '/forgot-password', handler: forgotPassword },
     { method: 'put', path: '/change-password', handler: updatePassword },
     { method: 'get', path: '/dashboard', handler: getDashboardData },
-    { method: 'get', path: '/rider-list', handler: riderList },
-    { method: 'get', path: '/rider-details', handler: riderDetails },
+    { method: 'post', path: '/rider-list', handler: riderList },
+    { method: 'post', path: '/rider-details', handler: riderDetails },
     { method: 'post', path: '/delete-rider', handler: deleteRider },
 
     //Portable Charger 
@@ -49,28 +49,28 @@ const adminRoutes = [
     { method: 'post', path: '/charger-delete-time-slot', handler: deleteSlot },
 
      //Pick & Drop Booking
-     { method: 'get', path: '/pick-and-drop-booking-list', handler: bookingList },
+     { method: 'post', path: '/pick-and-drop-booking-list', handler: bookingList },
      { method: 'get', path: '/pick-and-drop-booking-details', handler: bookingDetails },
-     { method: 'get', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
+     { method: 'post', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
      { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
      { method: 'get', path: '/pick-and-drop-assign', handler: assignBooking },
 
       //Pick & Drop  Slot List
-     { method: 'get', path: '/pick-and-drop-slot-list', handler: pdSlotList },
+     { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
      { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
      { method: 'put', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
      { method: 'delete', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
 
 
      //Public Charger
-     { method: 'get', path: '/public-charger-station-list', handler: stationList },
+     { method: 'post', path: '/public-charger-station-list', handler: stationList },
      { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
      { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
      { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
 
      //Charger Installation
-     { method: 'get', path: '/charger-installation-list', handler: chargerInstallationList },
+     { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
      { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
 ];

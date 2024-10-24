@@ -14,8 +14,8 @@ export const bookingList = async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'charging_service',
-        columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price',
-        sortColumn: 'created_at',
+        columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
+        sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
@@ -198,12 +198,19 @@ export const pdSlotList = async (req, resp) => {
         });
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
-
+        const formattedData = result.data.map((item) => ({
+            slot_id: item.slot_id,
+            booking_limit: item.booking_limit,
+            status: item.status,
+            created_at: item.created_at,
+             timing: `${item.start_time} - ${item.end_time}`
+        }));
         return resp.json({
             status: 1,
             code: 200,
             message: ["Pick & Drop Slot List fetched successfully!"],
-            data: result.data,
+            // data: result.data,
+            data : formattedData,
             total_page: result.totalPage,
             total: result.total,
             // base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
