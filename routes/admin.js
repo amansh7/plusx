@@ -6,7 +6,7 @@ import { getDashboardData, riderList, riderDetails,deleteRider } from "../contro
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, 
     invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot, assignBooking} from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
-import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking } from "../controller/admin/PickAndDropController.js";
+import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking as pdAssignBooking } from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 
@@ -50,10 +50,10 @@ const adminRoutes = [
 
      //Pick & Drop Booking
      { method: 'post', path: '/pick-and-drop-booking-list', handler: bookingList },
-     { method: 'get', path: '/pick-and-drop-booking-details', handler: bookingDetails },
+     { method: 'post', path: '/pick-and-drop-booking-details', handler: bookingDetails },
      { method: 'post', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
      { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
-     { method: 'get', path: '/pick-and-drop-assign', handler: assignBooking },
+     { method: 'get', path: '/pick-and-drop-assign', handler: pdAssignBooking },
 
       //Pick & Drop  Slot List
      { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
