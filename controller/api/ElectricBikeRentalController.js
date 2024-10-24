@@ -1,6 +1,6 @@
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
-import { mergeParam } from '../../utils.js';
+import { formatDateTimeInQuery, mergeParam } from '../../utils.js';
 
 export const bikeList = async (req, resp) => {
     const {rider_id, page_no, search_text, sort_by } = mergeParam(req);
@@ -13,7 +13,7 @@ export const bikeList = async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'electric_bike_rental',
-        columns: 'rental_id, bike_name, available_on, bike_type, image, price, contract',
+        columns: `rental_id, bike_name, available_on, bike_type, image, price, contract, ${formatDateTimeInQuery(['created_at', 'updated_at'])}`,
         searchField: 'bike_name',
         searchText: search_text,
         sortColumn: 'id',
@@ -42,7 +42,7 @@ export const bikeDetail = async (req, resp) => {
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const rentalData = await queryDB(`SELECT * FROM electric_bike_rental WHERE status = ? AND rental_id= ? LIMIT 1`, [1, rental_id]);
+    const rentalData = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM electric_bike_rental WHERE status = ? AND rental_id= ? LIMIT 1`, [1, rental_id]);
     const galleryData = await queryDB(`SELECT * FROM electric_bike_rental_gallery WHERE rental_id = ? ORDER BY id DESC LIMIT 5`, [rental_id]);
     const imgName = galleryData.map(row => row.image_name);
     

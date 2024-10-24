@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import path from "path";
 import fs from 'fs';
 import validateFields from "../../validation.js";
-import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp } from '../../utils.js';
+import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery } from '../../utils.js';
 import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
@@ -149,7 +149,7 @@ export const forgotPassword = async (req, resp) => {
     }
     const password = generateRandomPassword(6);
     const hashedPswd = await bcrypt.hash(generateRandomPassword(6), 10);
-    await db.execute('UPDATE riders SET password=? WHERE rider_email=?', [hashedPswd, email])
+    await db.execute('UPDATE riders SET password=? WHERE rider_email=?', [hashedPswd, email]);
     try {
         const html = `<html>
           <body>
@@ -244,9 +244,9 @@ export const logout = async (req, resp) => {
     const update = await updateRecord('riders', {status:0, access_token: ""},['rider_id'], [rider_id]);
     
     if(update.affectedRows > 0){
-        return resp.json({status: 1, code: 200, message: ['Logged out sucessfully']});
+        return resp.json({status: 1, code: 200, message: 'Logged out sucessfully'});
     }else{
-        return resp.json({status: 0, code: 405, message: ['Oops! There is something went wrong! Please Try Again']});
+        return resp.json({status: 0, code: 405, message: 'Oops! There is something went wrong! Please Try Again'});
     }
 
 };
@@ -337,7 +337,7 @@ export const getRiderData = async(req, resp) => {
     const {rider_id} = mergeParam(req);
     if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
     
-    const rider = await queryDB(`SELECT * FROM riders WHERE rider_id=?`, [rider_id]);
+    const rider = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['date_of_birth'])} FROM riders WHERE rider_id=?`, [rider_id]);
     rider.image_url = `${req.protocol}://${req.get('host')}/uploads/rider_profile/`;
 
     return resp.json({status: 1, code: 200, message: ['Rider Data fetch successfully!'], data: rider, roadside_assitance_price: 15, portable_price: 15, pick_drop_price: 15});
@@ -370,7 +370,7 @@ export const updateProfile = async (req, resp) => {
                 }
             });
         }
-        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth};        
+        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth: moment(date_of_birth).format("YYYY-MM-DD")};        
         await updateRecord('riders', updates, ['rider_id'], [riderId]);
         
         return resp.json({status: 1, code: 200, message: ["Rider profile updated successfully"]});
@@ -480,15 +480,15 @@ export const notificationList = async (req, resp) => {
     const totalRows = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = ? AND receive_id = ?`, ['Rider', rider_id]);
     const total_page = Math.ceil(totalRows.total / limit) || 1; 
     
-    const [rows] = await db.execute(`SELECT id, heading, description, module_name, panel_to, panel_from, receive_id, status, created_at, href_url
+    const [rows] = await db.execute(`SELECT id, heading, description, module_name, panel_to, panel_from, receive_id, status, ${formatDateTimeInQuery(['created_at'])}, href_url
         FROM notifications WHERE panel_to = 'Rider' AND receive_id = ? ORDER BY id DESC LIMIT ${start}, ${parseInt(limit)} 
-    `, [rider_id, start, limit]);
-
+    `, [rider_id]);
+    
     const notifications = rows;
     
     await db.execute(`UPDATE notifications SET status=? WHERE status=? AND panel_to=? AND receive_id=?`, ['1', '0', 'Rider', rider_id]);
     
-    return resp.json({status:1, code: 200, message: ["Notification list fetch successfully"], data: notifications, total_page: total_page, totalRows: totalRows.total});
+    return resp.json({status:1, code: 200, message: "Notification list fetch successfully", data: notifications, total_page: total_page, totalRows: totalRows.total});
 };
 
 /* Rider Address */
@@ -496,7 +496,7 @@ export const riderAddressList = async (req, resp) => {
     try{
         const { rider_id, address_type, booking_for } = mergeParam(req);
 
-        let query = `SELECT * FROM rider_address WHERE rider_id = ?`;
+        let query = `SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM rider_address WHERE rider_id = ?`;
         let queryParams = [rider_id];
 
         if (address_type) {

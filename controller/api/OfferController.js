@@ -1,7 +1,7 @@
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
 import moment from "moment";
-import { mergeParam } from '../../utils.js';
+import { formatDateTimeInQuery, mergeParam } from '../../utils.js';
 
 export const offerList = async (req, resp) => {
     const {rider_id, page_no } = mergeParam(req);
@@ -39,7 +39,7 @@ export const offerDetail = async (req, resp) => {
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const offer = await queryDB(`SELECT * FROM offer WHERE offer_id= ? LIMIT 1`, [offer_id]);
+    const offer = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at', 'offer_exp_date'])} FROM offer WHERE offer_id= ? LIMIT 1`, [offer_id]);
     
     return resp.json({
         status: 1,

@@ -1,16 +1,16 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
-import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import { createNotification, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
 export const serviceRequest = async (req, resp) => {
     const {
         rider_id, name, email, country_code, contact_no, service_type, address, latitude, longitude, charger_for, no_of_charger, description,
         company_name='', resident_type='', vehicle_model='', region_specification=''
-    } = req.body;
+    } = mergeParam(req);
 
-    const { isValid, errors } = validateFields(req.body, {
+    const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], name: ["required"], email: ["required"], country_code: ["required"], contact_no: ["required"], service_type: ["required"], address: ["required"], 
         latitude: ["required"], longitude: ["required"], charger_for: ["required"], no_of_charger: ["required"], description: ["required"],
     });
@@ -89,11 +89,14 @@ export const requestList = async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'charging_installation_service',
-        columns: 'request_id, name, email, country_code, contact_no, service_type, company_name, address, charger_for, vehicle_model, latitude, longitude, order_status, created_at',
+        columns: `request_id, name, email, country_code, contact_no, service_type, company_name, address, charger_for, vehicle_model, latitude, longitude, 
+            order_status,  ${formatDateTimeInQuery(['created_at'])}`,
         sortColumn: 'id',
         sortOrder,
         page_no,
         limit: 10,
+        whereField: ['rider_id'],
+        whereValue: [rider_id]
     });
 
     return resp.json({

@@ -3,7 +3,7 @@ import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
-import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import { createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
 export const chargerList = async (req, resp) => {
@@ -206,7 +206,8 @@ export const chargerBookingList = async (req, resp) => {
     const total = totalRows[0].total;
     const totalPage = Math.max(Math.ceil(total / limit), 1);
 
-    const bookingsQuery = `SELECT booking_id, service_name, service_price, service_type, user_name, country_code, contact_no, slot_date, slot_time, status, created_at 
+    const bookingsQuery = `SELECT booking_id, service_name, service_price, service_type, user_name, country_code, contact_no, slot_time, status, 
+        ${formatDateTimeInQuery(['created_at'])}, ${formatDateInQuery(['slot_date'])}
         FROM portable_charger_booking WHERE rider_id = ? AND status NOT IN (?, ?) ORDER BY id DESC LIMIT ${start}, ${parseInt(limit, 10)}
     `;
 
@@ -227,9 +228,8 @@ export const chargerBookingDetail = async (req, resp) => {
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const booking = await queryDB(`SELECT * FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
+    const booking = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
     
-    booking.invoice_url = '';
     if (booking.status == 'PU') {
         const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
         booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
