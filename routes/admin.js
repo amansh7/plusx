@@ -10,6 +10,7 @@ import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInv
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete } from "../controller/admin/ShopController.js";
+import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange,  } from "../controller/admin/RsaController.js";
 
 const router = Router();
 
@@ -78,6 +79,14 @@ const adminRoutes = [
     { method: 'get', path: '/shop-view', handler: storeView },
     { method: 'get', path: '/shop-update', handler: storeUpdate },
     { method: 'get', path: '/shop-delete', handler: storeDelete },
+
+    //RSA Routes
+    { method: 'get', path: '/rsa-list', handler: rsaList },
+    { method: 'get', path: '/rsa-data', handler: rsaData },
+    { method: 'post', path: '/rsa-add', handler: rsaAdd },
+    { method: 'post', path: '/rsa-update', handler: rsaUpdate },
+    { method: 'get', path: '/rsa-delete', handler: rsaDelete },
+    { method: 'get', path: '/rsa-status-change', handler: rsaStatusChange },
 ];
 
 adminRoutes.forEach(({ method, path, handler }) => {

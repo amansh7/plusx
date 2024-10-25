@@ -5,6 +5,7 @@ import { mergeParam, formatNumber } from '../utils.js';
 import moment from "moment";
 import Stripe from "stripe";
 import dotenv from 'dotenv';
+import generateUniqueId from "generate-unique-id";
 dotenv.config();
 
 
@@ -124,3 +125,95 @@ export const redeemCoupon = async (req, resp) => {
     });
 };
 
+export const createPortableChargerSubscription = async (req, resp) => {
+    const {rider_id, request_id, payment_intent_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    const currDate = moment().format('YYYY-MM-DD');
+    const endDate = moment().add(30, 'days').format('YYYY-MM-DD');
+    const count = await queryDB(`SELECT COUNT(*) as count FROM portable_charger_subscriptions WHERE rider_id=? AND total_booking < 10 AND expiry_date > ?`,[rider_id, currDate]);
+    if(count > 0) return resp.json({status:1, code:200, message: ["You have alredy Subscription plan"]});
+    
+    const subscriptionId = `PCS-${generateUniqueId({length:12})}`;
+    
+    const createObj = {
+        subscription_id: subscriptionId,
+        rider_id: rider_id,
+        amount: 0,
+        expiry_date: endDate,
+        booking_limit: 10,
+        total_booking: 0,
+        status: 1,
+        payment_date: moment().format('YYYY-MM-DD HH:mm:ss'),
+    }
+
+    if(payment_intent_id && payment_intent_id.trim() != '' ){
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
+        const cardData = {
+            brand:     charge.payment_method_details.card.brand,
+            country:   charge.payment_method_details.card.country,
+            exp_month: charge.payment_method_details.card.exp_month,
+            exp_year:  charge.payment_method_details.card.exp_year,
+            last_four: charge.payment_method_details.card.last4,
+        };
+
+        createObj.amount = charge.amount;  
+        createObj.payment_intent_id = charge.payment_intent;  
+        createObj.payment_method_id = charge.payment_method;  
+        createObj.payment_cust_id = charge.customer;  
+        createObj.charge_id = charge.id;  
+        createObj.transaction_id = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
+        createObj.payment_type = charge.payment_method_details.type;  
+        createObj.payment_status = charge.status;  
+        createObj.currency = charge.currency;  
+        createObj.invoice_date = moment(charge.created).format('YYYY-MM-DD HH:mm:ss');
+        createObj.receipt_url = charge.receipt_url;
+        createObj.card_data = cardData;
+    }
+
+    const columns = Object.keys(createObj);
+    const values = Object.values(createObj);
+    const insert = await insertRecord('portable_charger_subscriptions', columns, values);
+
+    const data = await queryDB(`
+        SELECT 
+            rider_email, rider_name
+        FROM 
+            portable_charger_subscriptions AS pcs
+        LEFT JOIN
+            riders AS r
+        ON 
+            r.rider_id = portable_charger_subscriptions.rider_id
+        WHERE 
+            pcs.subscription_id = ?
+        LIMIT 1
+    `, [subscriptionId]);
+    const html = `<html>
+        <body>
+            <h4>Dear ${data.rider_name},</h4>
+            <p>Thank you for subscribing to our EV Charging Plan with PlusX Electric App! We're excited to support your electric vehicle needs.</p>
+
+            <p>Subscription Details: </p>
+
+            <p>Plan: 10 EV Charging Sessions </p>
+            <p>Duration: 30 days  </p>
+            <p>Total Cost: 750 AED </p>
+
+            <p>Important Information:</p>
+
+            <p>Subscription Start Date: ${currDate}</p>
+            <p>Subscription End Date: ${endDate}</p>
+
+            <p>You can use your 10 charging sessions any time within the 30-day period. If you have any questions or need assistance, please do not hesitate to contact our support team.</p>
+
+            <p>Thank you for choosing PlusX. We're committed to providing you with top-notch service and support.</p>
+
+            <p> Best regards,<br/> PlusX Electric App Team </p>
+        </body>
+    </html>`;
+
+    emailQueue.addEmail(data.rider_email, 'PlusX Electric App: Charging Subscription Confirmation', html);
+    
+    return resp.json({status:1, code:200, message: ["Your PlusX subscription is active! Start booking chargers for your EV now."]});
+};

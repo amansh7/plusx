@@ -451,11 +451,11 @@ export const deleteAccount = async (req, resp) => {
         
         await connection.commit();
 
-        return resp.json({status: 1, code: 200, error: false, message: ['Rider Account deleted successfully!']});
+        return resp.json({status: 1, code: 200, error: false, message: 'Rider Account deleted successfully!'});
     }catch(err){
         await connection.rollback();
         console.error('Error deleting rider account:', err.message);
-        return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
+        return resp.json({status: 1, code: 200, error: true, message: 'Something went wrong. Please try again!'});
     }finally{
         connection.release();
     }
@@ -464,6 +464,25 @@ export const deleteAccount = async (req, resp) => {
 export const locationList = async (req, resp) => {
     const [list] = await db.execute(`SELECT location_id, location_name, latitude, longitude FROM locations ORDER BY location_name ASC`);
     return resp.json({status: 1, code: 200, message: '', data: list});
+};
+
+export const locationAdd = async (req, resp) => {
+    const { location_name, latitude, longitude, status } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), { location_name: ["required"], latitude: ["required"], longitude: ["required"], status: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
+
+    const {last_index} = await queryDB(`SELECT MAX(id) AS last_index FROM locations`);
+    const nextId = (!last_index) ? 0 : last_index + 1;
+    const locId = 'Loc' + String(nextId).padStart(4, '0');
+
+    const insert = await insertRecord('locations', ['location_id', 'location_name', 'latitude', 'longitude', 'status'], [locId, location_name, latitude, longitude, status]);
+
+    return resp.json({
+        message: insert.affectedRows > 0 ? ['Location added successfully!'] : ['Oops! Something went wrong. Please try again.'],
+        status: insert.affectedRows > 0 ? 1 : 0,
+        code: 200,
+    });
 };
 
 export const notificationList = async (req, resp) => {
