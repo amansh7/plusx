@@ -80,7 +80,7 @@ export const rsaForgotPassword = async (req, resp) => {
     if(!rsa) return resp.json({status: 0, code: 400, message: ['Oops! Invalid Email Address']});
 
     const password = generateRandomPassword(6);
-    const hashedPswd = await bcrypt.hash(generateRandomPassword(6), 10);
+    const hashedPswd = await bcrypt.hash(password, 10);
     await db.execute('UPDATE rsa SET password=? WHERE rider_email=?', [hashedPswd, email]);
     const html = `<html>
         <body> 

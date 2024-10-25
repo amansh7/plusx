@@ -28,7 +28,6 @@ export const login = async (req, resp) => {
     );
 
     if(!rider) return resp.json({ status: 0, code: 422, message: ["Mobile number is not matching with our records"] });
-
     const isMatch = await bcrypt.compare(password, rider.password);
     if (!isMatch) return resp.json({ status:0, code:405, error:true, message: ["Password is incorrect"] });
     if (rider.status == 2) return resp.json({ status:0, code:405, error:true, message: ["You can not login as your status is inactive. Kindly contact to customer care"] });
@@ -140,7 +139,7 @@ export const register = async (req, resp) => {
 };
 
 export const forgotPassword = async (req, resp) => {
-    const { email } = req.body;
+    const { email } = mergeParam(req);
     if (!email) return resp.status(400).json({ status: 0, code: 405, error: true, message: 'Email is required' });
     const [[rider]] = await db.execute('SELECT rider_name FROM riders WHERE rider_email=?', [email]);
     
@@ -148,8 +147,10 @@ export const forgotPassword = async (req, resp) => {
         return resp.json({status: 0, code: 400, message: 'Oops! Invalid Email Address'});
     }
     const password = generateRandomPassword(6);
-    const hashedPswd = await bcrypt.hash(generateRandomPassword(6), 10);
+    const hashedPswd = await bcrypt.hash(password, 10);
+    console.log(hashedPswd);
     await db.execute('UPDATE riders SET password=? WHERE rider_email=?', [hashedPswd, email]);
+    // await updateRecord
     try {
         const html = `<html>
           <body>
@@ -370,7 +371,7 @@ export const updateProfile = async (req, resp) => {
                 }
             });
         }
-        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth: moment(date_of_birth).format("YYYY-MM-DD")};        
+        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth: moment(date_of_birth, "DD-MM-YYYY").format("YYYY-MM-DD")};        
         await updateRecord('riders', updates, ['rider_id'], [riderId]);
         
         return resp.json({status: 1, code: 200, message: ["Rider profile updated successfully"]});

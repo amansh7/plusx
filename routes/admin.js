@@ -9,6 +9,7 @@ import { handleFileUpload } from "../fileUpload.js";
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking as pdAssignBooking } from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
+import { storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete } from "../controller/admin/ShopController.js";
 
 const router = Router();
 
@@ -41,38 +42,42 @@ const adminRoutes = [
     { method: 'post', path: '/charger-booking-invoice-details', handler: invoiceDetails },
     { method: 'post', path: '/charger-booking-assign', handler: assignBooking },
     
-    
     //Portable Charger Slot List
     { method: 'post', path: '/charger-slot-list', handler: slotList },
     { method: 'post', path: '/charger-add-time-slot', handler: addSlot },
     { method: 'post', path: '/charger-edit-time-slot', handler: editSlot },
     { method: 'post', path: '/charger-delete-time-slot', handler: deleteSlot },
 
-     //Pick & Drop Booking
-     { method: 'post', path: '/pick-and-drop-booking-list', handler: bookingList },
-     { method: 'post', path: '/pick-and-drop-booking-details', handler: bookingDetails },
-     { method: 'post', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
-     { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
-     { method: 'get', path: '/pick-and-drop-assign', handler: pdAssignBooking },
+    //Pick & Drop Booking
+    { method: 'post', path: '/pick-and-drop-booking-list', handler: bookingList },
+    { method: 'post', path: '/pick-and-drop-booking-details', handler: bookingDetails },
+    { method: 'post', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
+    { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
+    { method: 'get', path: '/pick-and-drop-assign', handler: pdAssignBooking },
 
-      //Pick & Drop  Slot List
-     { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
-     { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
-     { method: 'put', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
-     { method: 'delete', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
+    //Pick & Drop  Slot List
+    { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
+    { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
+    { method: 'put', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
+    { method: 'delete', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
 
+    //Public Charger
+    { method: 'post', path: '/public-charger-station-list', handler: stationList },
+    { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
+    { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
+    { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
-     //Public Charger
-     { method: 'post', path: '/public-charger-station-list', handler: stationList },
-     { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
-     { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
-     { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
-
-
-     //Charger Installation
-     { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
-     { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
+    //Charger Installation
+    { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
+    { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
+    // Service Shops
+    { method: 'get', path: '/shop-list', handler: storeList },
+    { method: 'get', path: '/shop-data', handler: storeData },
+    { method: 'get', path: '/shop-add', handler: storeAdd },
+    { method: 'get', path: '/shop-view', handler: storeView },
+    { method: 'get', path: '/shop-update', handler: storeUpdate },
+    { method: 'get', path: '/shop-delete', handler: storeDelete },
 ];
 
 adminRoutes.forEach(({ method, path, handler }) => {
