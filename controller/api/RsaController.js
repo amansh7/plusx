@@ -27,7 +27,7 @@ export const rsaLogin = async (req, resp) => {
 
     if(update.affectedRows > 0){
         const result = {
-            rsa_id: rsa.rider_id,
+            rsa_id: rsa.rsa_id,
             rsa_name: rsa.rsa_name,
             email: rsa.email,
             mobile: rsa.mobile,
@@ -40,7 +40,7 @@ export const rsaLogin = async (req, resp) => {
             access_token: access_token,
         };
     
-        return resp.json({status:1, code:200, message: ["RSA Login successful"], result: result});
+        return resp.json({status:1, code:200, message: ["RSA Login successfully"], data: result});
     }else{
         return resp.json({status:0, code:405, message: ["Oops! There is something went wrong! Please Try Again"], error: true});
     }
@@ -107,9 +107,9 @@ export const rsaLogout = async (req, resp) => {
     const update = await updateRecord('rsa', {status:0, access_token: ""},['rsa_id'], [rsa_id]);
     
     if(update.affectedRows > 0){
-        return resp.json({status: 1, code: 200, message: 'Logged out sucessfully'});
+        return resp.json({status: 1, code: 200, message: ['Logged out sucessfully']});
     }else{
-        return resp.json({status: 0, code: 405, message: 'Oops! There is something went wrong! Please Try Again'});
+        return resp.json({status: 0, code: 405, message: ['Oops! There is something went wrong! Please Try Again']});
     }
 };
 
@@ -161,9 +161,10 @@ export const rsaStatusChange = async (req, resp) => {
     const { rsa_id, status } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), { rsa_id: ["required"], status: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
+    const parsedStatus = parseInt(status, 10);
+    if (![0, 1, 2, 3, 4].includes(parsedStatus)) return resp.json({status:0, code:422, message:"Status should be 0, 1, 2, 3 and 4"});
     const rsa = await queryDB(`SELECT running_order FROM rsa WHERE rsa_id=? LIMIT 1`, [rsa_id]);
-
+    
     if(!rsa){
         return resp.json({status:0, code:405, message: ["RSA ID invalid"], error: true});
     }
@@ -171,7 +172,7 @@ export const rsaStatusChange = async (req, resp) => {
         return resp.json({status:0, code:405, message: ["Please complete your pending order first"], error: true});
     }
     else{
-        const update = await updateRecord('rsa', status, ['rsa_id'], [rsa_id]);
+        const update = await updateRecord('rsa', {status: parsedStatus}, ['rsa_id'], [rsa_id]);
         return resp.json({
             status: update.affectedRows > 0 ? 1 : 0, 
             code: update.affectedRows > 0 ? 200 : 422, 
@@ -182,14 +183,79 @@ export const rsaStatusChange = async (req, resp) => {
 };
 
 export const rsaHome = async (req, resp) => {
+    const { rsa_id } = mergeParam(req);
     
+    const rsaData = await queryDB(`
+        SELECT 
+         status, booking_type, running_order,
+         (SELECT COUNT(id) FROM charging_service_assign WHERE rsa_id = ? AND status = 0) AS valet_count,
+         (SELECT COUNT(id) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 0) AS pod_count,
+         (SELECT COUNT(id) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
+         (SELECT COUNT(id) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
+         (SELECT COUNT(id) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
+         (SELECT COUNT(id) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed
+        FROM rsa 
+        WHERE rsa_id = ? LIMIT 1
+    `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
+
+    if (rsaData.length === 0) return resp.json({ message: "RSA data not found", status: 0 });
+
+    const assignValet = await queryDB(`
+        SELECT 
+           charging_service_assign.status AS assign_status,
+           cs.request_id, cs.pickup_address, cs.pickup_latitude, cs.pickup_longitude,
+           cs.order_status, cs.parking_number, cs.parking_floor,
+           CONCAT(cs.name, ",", cs.country_code, "-", cs.contact_no) AS riderDetails,
+           ${formatDateTimeInQuery(['cs.created_at'])}, charging_service_assign.slot_date_time
+        FROM charging_service_assign
+        LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
+        WHERE charging_service_assign.rsa_id = ?
+        ORDER BY charging_service_assign.slot_date_time ASC
+    `,[rsa_id]);
+
+    const [podAssign] = await db.execute(`
+        SELECT 
+           portable_charger_booking_assign.status AS assign_status,
+           pb.booking_id, pb.address, pb.latitude, pb.longitude, pb.status,
+           CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
+           ${formatDateTimeInQuery(['pb.created_at'])}, 
+           (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
+           portable_charger_booking_assign.slot_date_time
+        FROM portable_charger_booking_assign
+        LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
+        WHERE portable_charger_booking_assign.rsa_id = ?
+        ORDER BY portable_charger_booking_assign.slot_date_time ASC
+    `,[rsa_id]);
+   
+    const { status, running_order, booking_type, valet_count, pod_count, valet_rej, pod_rejected, valet_completed, pod_completed } = rsaData;
+    const rsaStatus = (status === 1) ? 'Login' : (status === 2 || running_order > 0) ? 'Available' : 'Logout';
+
+    const result = {
+        rsa_status: rsaStatus,
+        service_type: booking_type,
+        valet_count,
+        pod_count,
+        valet_rejected_count: valet_rej,
+        pod_rejected_count: pod_rejected,
+        valet_completed_count: valet_completed,
+        pod_completed_count: pod_completed,
+        assign_orders: [assignValet],
+        pod_assign: podAssign
+    };
+
+    return resp.json({
+        message: ["RSA Home Page Data"],
+        data: result,
+        status: 1,
+        code: 200
+    });
 };
 
 export const rsaBookingHistory = async (req, resp) => {
     const { rsa_id, booking_type } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_type: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    let result = [];
+    let result = {};
 
     if(booking_type != 'R'){
         const [valetCompleted] = await db.execute(`
@@ -206,15 +272,15 @@ export const rsaBookingHistory = async (req, resp) => {
                 booking_id, address, latitude, longitude, status, ${formatDateTimeInQuery(['created_at'])},
                 CONCAT(user_name, ",", country_code, "-", contact_no) AS riderDetails,
                 (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles AS rv WHERE rv.vehicle_id = pcb.vehicle_id) AS vehicle_data,
-                CONCAT(${formatDateInQuery(['slot_date'])}, " ", slot_time) AS slot_date_time
+                CONCAT(slot_date, " ", slot_time) AS slot_date_time
             FROM portable_charger_booking AS pcb
             WHERE rsa_id = ? 
             AND status IN ('PU', 'C')
             ORDER BY slot_date_time DESC
         `, [rsa_id]);
 
-        result['valet_completed'] = valetCompleted
-        result['pod_completed'] = podCompleted
+        result.valet_completed = valetCompleted
+        result.pod_completed = podCompleted
     }else{
         const [valetRejected] = await db.execute(`
             SELECT 
@@ -230,15 +296,15 @@ export const rsaBookingHistory = async (req, resp) => {
             WHERE 
                 csr.rsa_id = ? 
             ORDER BY 
-                ${formatDateTimeInQuery(['csr.created_at'])} DESC
+                cs.created_at DESC
         `, [rsa_id]);
 
         const [podRejected] = await db.execute(`
             SELECT 
-                pb.booking_id, pb.address, pb.latitude, pb.longitude, pb.status, ${formatDateTimeInQuery(['pb.created_at'])}
+                pb.booking_id, pb.address, pb.latitude, pb.longitude, pb.status, ${formatDateTimeInQuery(['pb.created_at'])},
                 CONCAT(pb.user_name, ", ", pb.country_code, "-", pb.contact_no) AS riderDetails, 
                 (SELECT CONCAT(rv.vehicle_make, "-", rv.vehicle_model) FROM riders_vehicles AS rv WHERE rv.vehicle_id = pb.vehicle_id) AS vehicle_data,  
-                CONCAT(${formatDateInQuery(['pb.slot_date'])}, " ", pb.slot_time) AS slot_date_time, 
+                CONCAT(pb.slot_date, " ", pb.slot_time) AS slot_date_time, 
                 pbr.reason 
             FROM 
                 portable_charger_booking_rejected AS pbr
@@ -249,11 +315,11 @@ export const rsaBookingHistory = async (req, resp) => {
             WHERE 
                 pbr.rsa_id = ? 
             ORDER BY 
-                ${formatDateTimeInQuery(['pbr.created_at'])} DESC
+                pbr.created_at DESC
         `, [rsa_id]);
 
-        result['valet_rejected'] = valetRejected;
-        result['pod_rejected'] = podRejected;
+        result.valet_rejected = valetRejected;
+        result.pod_rejected = podRejected;
     }
 
     return resp.json({

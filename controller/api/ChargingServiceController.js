@@ -18,7 +18,7 @@ export const getChargingServiceSlotList = async (req, resp) => {
 
 export const requestService = async (req, resp) => {
     const { rider_id, name, country_code, contact_no, slot_id, pickup_address, pickup_latitude, pickup_longitude,vehicle_id, parking_number, parking_floor, 
-        slot_date_time, coupan_code, price = '', order_status = ''
+        slot_date_time, coupan_code, price = '', order_status = 'CNF'
     } = mergeParam(req);
 
     const { isValid, errors } = validateFields(mergeParam(req), {

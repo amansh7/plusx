@@ -55,9 +55,7 @@ export const storeData = async (req, resp) => {
 //img upload pending
 export const storeAdd = async (req, resp) => {
     const { shop_name, contact_no ,address=[], store_website='', store_email='', always_open='', description='', brands='', services='' } = req.body;
-    const { isValid, errors } = validateFields(req.body, {
-        shop_name: ["required"], contact_no: ["required"], address: ["required"],
-    });
+    const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     if (always_open) {
