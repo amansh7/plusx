@@ -209,7 +209,7 @@ export const rsaHome = async (req, resp) => {
            ${formatDateTimeInQuery(['cs.created_at'])}, charging_service_assign.slot_date_time
         FROM charging_service_assign
         LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
-        WHERE charging_service_assign.rsa_id = ?
+        WHERE charging_service_assign.rsa_id = ? AND cs.request_id IS NOT NULL
         ORDER BY charging_service_assign.slot_date_time ASC
     `,[rsa_id]);
 
