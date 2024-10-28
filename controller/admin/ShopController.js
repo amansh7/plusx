@@ -12,7 +12,7 @@ export const storeList = async (req, resp) => {
         `,
         searchFields: ['shop_name'],
         searchTexts: [search],
-        sortColumn: 'created_at',
+        sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
@@ -242,4 +242,136 @@ export const storeDelete = async (req, resp) => {
     await queryDB(`DELETE FROM shops WHERE shop_id = ?`, [shop_id]);
 
     return resp.json({ status: 1, msg: "Shop deleted successfully!" });
+};
+
+/* Shop Service */
+export const serviceList = async (req, resp) => {
+    const { search, page_no } = req.body;
+    const result = await getPaginatedData({
+        tableName: 'store_services',
+        columns: `service_id, service_name`,
+        searchFields: ['service_name'],
+        searchTexts: [search],
+        sortColumn: 'id',
+        sortOrder: 'DESC',
+        page_no,
+        limit: 10,
+    });
+
+    return resp.json({
+        status: 1,
+        code: 200,
+        message: ["Shop Service List fetch successfully!"],
+        data: result.data,
+        total_page: result.totalPage,
+        total: result.total,
+    });
+};
+export const serviceCreate = async (req, resp) => {
+    const { service_name } = req.body;
+    const { isValid, errors } = validateFields(req.body, { service_name: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if(service_name.length > 250) return resp.json({ status: 0, code: 422, message: "Max 250 character allowed." });
+
+    const insert = await insertRecord('store_services', ['service_id', 'service_name'], [`STRC${generateUniqueId({length:12})}`, service_name]);
+
+    return resp.json({
+        status: insert.affectedRows > 0 ? 1 : 0 ,
+        code: 200 ,
+        message: insert.affectedRows > 0 ? "Store Service Added successfully." : "Failed to insert, Please Try Again." ,
+    });
+
+};
+export const serviceUpdate = async (req, resp) => {
+    const { service_name, service_id } = req.body;
+    const { isValid, errors } = validateFields(req.body, { service_name: ["required"], service_id: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if(service_name.length > 250) return resp.json({ status: 0, code: 422, message: "Max 250 character allowed." });
+
+    const update = await updateRecord('store_services', {service_name}, ['service_id'], [service_id]);
+
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0 ,
+        code: 200 ,
+        message: update.affectedRows > 0 ? "Store Service Updated successfully." : "Failed to update, Please Try Again." ,
+    });
+};
+export const serviceDelete = async (req, resp) => {
+    const { service_id } = req.body;
+    const { isValid, errors } = validateFields(req.body, { service_id: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const [del] = await db.execute(`DELETE FROM store_services WHERE service_id = ?`, [service_id]);
+
+    return resp.json({
+        status: del.affectedRows > 0 ? 1 : 0 ,
+        code: 200 ,
+        message: del.affectedRows > 0 ? "Store Service Deleted successfully." : "Failed to delete, Please Try Again." ,
+    });
+};
+
+/* Shop Brand */
+export const brandList = async (req, resp) => {
+    const { search, page_no } = req.body;
+    const result = await getPaginatedData({
+        tableName: 'store_brands',
+        columns: `brand_id, brand_name`,
+        searchFields: ['brand_name'],
+        searchTexts: [search],
+        sortColumn: 'id',
+        sortOrder: 'DESC',
+        page_no,
+        limit: 10,
+    });
+
+    return resp.json({
+        status: 1,
+        code: 200,
+        message: ["Shop Brand List fetch successfully!"],
+        data: result.data,
+        total_page: result.totalPage,
+        total: result.total,
+    });
+};
+export const brandCreate = async (req, resp) => {
+    const { brand_name } = req.body;
+    const { isValid, errors } = validateFields(req.body, { brand_name: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if(brand_name.length > 250) return resp.json({ status: 0, code: 422, message: "Max 250 character allowed." });
+
+    const insert = await insertRecord('store_brands', ['brand_id', 'brand_name'], [`STB${generateUniqueId({length:12})}`, brand_name]);
+
+    return resp.json({
+        status: insert.affectedRows > 0 ? 1 : 0 ,
+        code: 200 ,
+        message: insert.affectedRows > 0 ? "Store Brand Added successfully." : "Failed to insert, Please Try Again." ,
+    });
+
+};
+export const brandUpdate = async (req, resp) => {
+    const { brand_name, brand_id } = req.body;
+    const { isValid, errors } = validateFields(req.body, { brand_name: ["required"], brand_id: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if(brand_name.length > 250) return resp.json({ status: 0, code: 422, message: "Max 250 character allowed." });
+
+    const update = await updateRecord('store_brands', {brand_name}, ['brand_id'], [brand_id]);
+
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0 ,
+        code: 200 ,
+        message: update.affectedRows > 0 ? "Store Brand Updated successfully." : "Failed to update, Please Try Again." ,
+    });
+};
+export const brandDelete = async (req, resp) => {
+    const { brand_id } = req.body;
+    const { isValid, errors } = validateFields(req.body, { brand_id: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const [del] = await db.execute(`DELETE FROM store_brands WHERE brand_id = ?`, [brand_id]);
+
+    return resp.json({
+        status: del.affectedRows > 0 ? 1 : 0 ,
+        code: 200 ,
+        message: del.affectedRows > 0 ? "Store Brand Deleted successfully." : "Failed to delete, Please Try Again." ,
+    });
 };
