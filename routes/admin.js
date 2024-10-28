@@ -10,7 +10,9 @@ import { handleFileUpload } from "../fileUpload.js";
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
-import { storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete } from "../controller/admin/ShopController.js";
+import { 
+    storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete,serviceList, serviceCreate, serviceUpdate, serviceDelete, brandList, brandCreate, brandUpdate, brandDelete
+ } from "../controller/admin/ShopController.js";
 import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange,  } from "../controller/admin/RsaController.js";
 
 const router = Router();
@@ -58,12 +60,12 @@ const adminRoutes = [
     { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
     { method: 'get', path: '/pick-and-drop-assign', handler: pdAssignBooking },
 
-      //Pick & Drop  Slot List
-     { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
-     { method: 'post', path: '/pick-and-drop-slot-details', handler: pdSlotDetails },
-     { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
-     { method: 'put', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
-     { method: 'delete', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
+    //Pick & Drop  Slot List
+    { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
+    { method: 'post', path: '/pick-and-drop-slot-details', handler: pdSlotDetails },
+    { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
+    { method: 'put', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
+    { method: 'delete', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
 
     //Public Charger
     { method: 'post', path: '/public-charger-station-list', handler: stationList },
@@ -71,35 +73,43 @@ const adminRoutes = [
     { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
     { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
-     //Public Charger
-     { method: 'post', path: '/public-charger-station-list', handler: stationList },
-     { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
-     { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
-     { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
+    //Public Charger
+    { method: 'post', path: '/public-charger-station-list', handler: stationList },
+    { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
+    { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
+    { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
 
-     //Charger Installation
-     { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
-     { method: 'post', path: '/charger-installation-details', handler: chargerInstallationDetails },
+    //Charger Installation
+    { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
+    { method: 'post', path: '/charger-installation-details', handler: chargerInstallationDetails },
     //Charger Installation
     { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
     { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
-    // Service Shops
-    { method: 'get', path: '/shop-list', handler: storeList },
-    { method: 'get', path: '/shop-data', handler: storeData },
-    { method: 'get', path: '/shop-add', handler: storeAdd },
-    { method: 'get', path: '/shop-view', handler: storeView },
-    { method: 'get', path: '/shop-update', handler: storeUpdate },
-    { method: 'get', path: '/shop-delete', handler: storeDelete },
+    /* Service Shops */
+    { method: 'get',    path: '/shop-list',           handler: storeList },
+    { method: 'get',    path: '/shop-data',           handler: storeData },
+    { method: 'post',   path: '/shop-add',            handler: storeAdd },
+    { method: 'get',    path: '/shop-view',           handler: storeView },
+    { method: 'post',   path: '/shop-update',         handler: storeUpdate },
+    { method: 'delete', path: '/shop-delete',         handler: storeDelete },
+    { method: 'get',    path: '/shop-service-list',   handler: serviceList },
+    { method: 'post',   path: '/shop-service-create', handler: serviceCreate },
+    { method: 'post',   path: '/shop-service-update', handler: serviceUpdate },
+    { method: 'delete', path: '/shop-service-delete', handler: serviceDelete },
+    { method: 'get',    path: '/shop-brand-list',     handler: brandList },
+    { method: 'post',   path: '/shop-brand-create',   handler: brandCreate },
+    { method: 'post',   path: '/shop-brand-update',   handler: brandUpdate },
+    { method: 'delete', path: '/shop-brand-delete',   handler: brandDelete },
 
     //RSA Routes
-    { method: 'get', path: '/rsa-list', handler: rsaList },
-    { method: 'get', path: '/rsa-data', handler: rsaData },
-    { method: 'post', path: '/rsa-add', handler: rsaAdd },
-    { method: 'post', path: '/rsa-update', handler: rsaUpdate },
-    { method: 'get', path: '/rsa-delete', handler: rsaDelete },
-    { method: 'get', path: '/rsa-status-change', handler: rsaStatusChange },
+    { method: 'get',  path: '/rsa-list',          handler: rsaList },
+    { method: 'get',  path: '/rsa-data',          handler: rsaData },
+    { method: 'post', path: '/rsa-add',           handler: rsaAdd },
+    { method: 'post', path: '/rsa-update',        handler: rsaUpdate },
+    { method: 'get',  path: '/rsa-delete',        handler: rsaDelete },
+    { method: 'get',  path: '/rsa-status-change', handler: rsaStatusChange },
 ];
 
 adminRoutes.forEach(({ method, path, handler }) => {
