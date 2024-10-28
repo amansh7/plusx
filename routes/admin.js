@@ -138,9 +138,9 @@ adminRoutes.forEach(({ method, path, handler }) => {
     if (path === '/shop-add' || path === '/shop-update') {
         middlewares.push(handleFileUpload('shop-images', ['cover_image', 'shop_gallery'], 5));
     }
-    // if (path === '/add-club' || path === '/edit-club') {
-    //     middlewares.push(handleFileUpload('club-images', ['cover_image', 'shop_gallery'], 5));
-    // }
+    if (path === '/add-club' || path === '/edit-club') {
+        middlewares.push(handleFileUpload('club-images', ['cover_image', 'shop_gallery'], 5));
+    }
 
     middlewares.push(authenticateAdmin);
 
