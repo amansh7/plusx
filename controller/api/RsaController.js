@@ -200,7 +200,7 @@ export const rsaHome = async (req, resp) => {
 
     if (rsaData.length === 0) return resp.json({ message: "RSA data not found", status: 0 });
 
-    const assignValet = await queryDB(`
+    const [assignValet] = await db.execute(`
         SELECT 
            charging_service_assign.status AS assign_status,
            cs.request_id, cs.pickup_address, cs.pickup_latitude, cs.pickup_longitude,
@@ -209,7 +209,7 @@ export const rsaHome = async (req, resp) => {
            ${formatDateTimeInQuery(['cs.created_at'])}, charging_service_assign.slot_date_time
         FROM charging_service_assign
         LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
-        WHERE charging_service_assign.rsa_id = ?
+        WHERE charging_service_assign.rsa_id = ? AND cs.request_id IS NOT NULL
         ORDER BY charging_service_assign.slot_date_time ASC
     `,[rsa_id]);
 
@@ -239,7 +239,7 @@ export const rsaHome = async (req, resp) => {
         pod_rejected_count: pod_rejected,
         valet_completed_count: valet_completed,
         pod_completed_count: pod_completed,
-        assign_orders: [assignValet],
+        assign_orders: assignValet,
         pod_assign: podAssign
     };
 

@@ -12,8 +12,9 @@ import { addPublicCharger, editPublicCharger, stationDetail, stationList } from 
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { 
     storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete,serviceList, serviceCreate, serviceUpdate, serviceDelete, brandList, brandCreate, brandUpdate, brandDelete
- } from "../controller/admin/ShopController.js";
+} from "../controller/admin/ShopController.js";
 import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange,  } from "../controller/admin/RsaController.js";
+import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg } from "../controller/admin/RiderClubController.js"
 
 const router = Router();
 
@@ -110,6 +111,14 @@ const adminRoutes = [
     { method: 'post', path: '/rsa-update',        handler: rsaUpdate },
     { method: 'get',  path: '/rsa-delete',        handler: rsaDelete },
     { method: 'get',  path: '/rsa-status-change', handler: rsaStatusChange },
+
+    /* Rider Clubs */
+    { method: 'get',    path: '/club-list',       handler: clubList },
+    { method: 'get',    path: '/club-data',       handler: clubData },
+    { method: 'post',   path: '/add-club',        handler: clubCreate },
+    { method: 'post',   path: '/edit-club',       handler: clubUpdate },
+    { method: 'delete', path: '/club-delete',     handler: clubDelete },
+    { method: 'delete', path: '/club-delete-img', handler: clubDeleteImg },
 ];
 
 adminRoutes.forEach(({ method, path, handler }) => {
@@ -125,6 +134,12 @@ adminRoutes.forEach(({ method, path, handler }) => {
 
     if (path === '/add-charger' || path === '/edit-charger') {
         middlewares.push(handleFileUpload('charger-images', ['charger_image'], 1));
+    }
+    if (path === '/shop-add' || path === '/shop-update') {
+        middlewares.push(handleFileUpload('shop-images', ['cover_image', 'shop_gallery'], 5));
+    }
+    if (path === '/add-club' || path === '/edit-club') {
+        middlewares.push(handleFileUpload('club-images', ['cover_image', 'shop_gallery'], 5));
     }
 
     middlewares.push(authenticateAdmin);
