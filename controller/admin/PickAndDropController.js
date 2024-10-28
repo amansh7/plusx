@@ -284,6 +284,7 @@ export const pdAddSlot = async (req, resp) => {
         ]);
     
         return resp.json({
+            code: 200,
             message: insert.affectedRows > 0 ? ['Slot added successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: insert.affectedRows > 0 ? 1 : 0
         });

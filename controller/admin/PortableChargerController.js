@@ -497,6 +497,7 @@ export const addSlot = async (req, resp) => {
         ]);
     
         return resp.json({
+            code: 200,
             message: insert.affectedRows > 0 ? ['Slot added successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: insert.affectedRows > 0 ? 1 : 0
         });
@@ -560,6 +561,7 @@ export const deleteSlot = async (req, resp) => {
         const [del] = await db.execute(`DELETE FROM portable_charger_slot WHERE slot_id = ?`, [slot_id]);
 
         return resp.json({
+            code: 200,
             message: del.affectedRows > 0 ? ['Time Slot deleted successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: del.affectedRows > 0 ? 1 : 0
         });
