@@ -221,6 +221,39 @@ export const pdSlotList = async (req, resp) => {
     }
 };
 
+export const pdSlotDetails = async (req, resp) => {
+    try {
+        const { slot_id, } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            slot_id: ["required"]
+        });
+
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const [slotDetails] = await db.execute(`
+            SELECT 
+                slot_id, start_time, end_time, booking_limit, status, created_at
+            FROM 
+                pick_drop_slot 
+            WHERE 
+                slot_id = ?`, 
+            [slot_id]
+        );
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: ["Portable And Drop Slot Details fetched successfully!"],
+            data: slotDetails[0],
+            
+        });
+    } catch (error) {
+        console.error('Error fetching slot list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger lists' });
+    }
+};
+
 export const pdAddSlot = async (req, resp) => {
     try {
         const { start_time, end_time, booking_limit, status = 1 } = req.body;

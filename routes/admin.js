@@ -4,9 +4,10 @@ import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
 import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, 
-    invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot, assignBooking} from "../controller/admin/PortableChargerController.js";
+    invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot, assignBooking,
+    slotDetails} from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
-import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking as pdAssignBooking } from "../controller/admin/PickAndDropController.js";
+import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 
@@ -44,6 +45,7 @@ const adminRoutes = [
     
     //Portable Charger Slot List
     { method: 'post', path: '/charger-slot-list', handler: slotList },
+    { method: 'post', path: '/charger-slot-details', handler: slotDetails },
     { method: 'post', path: '/charger-add-time-slot', handler: addSlot },
     { method: 'post', path: '/charger-edit-time-slot', handler: editSlot },
     { method: 'post', path: '/charger-delete-time-slot', handler: deleteSlot },
@@ -57,6 +59,7 @@ const adminRoutes = [
 
       //Pick & Drop  Slot List
      { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
+     { method: 'post', path: '/pick-and-drop-slot-details', handler: pdSlotDetails },
      { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
      { method: 'put', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
      { method: 'delete', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
@@ -71,7 +74,7 @@ const adminRoutes = [
 
      //Charger Installation
      { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
-     { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
+     { method: 'post', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
 ];
 

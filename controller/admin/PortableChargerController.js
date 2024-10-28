@@ -422,6 +422,39 @@ export const slotList = async (req, resp) => {
     }
 };
 
+export const slotDetails = async (req, resp) => {
+    try {
+        const { slot_id, } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            slot_id: ["required"]
+        });
+
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const [slotDetails] = await db.execute(`
+            SELECT 
+                slot_id, start_time, end_time, booking_limit, status, created_at
+            FROM 
+                portable_charger_slot 
+            WHERE 
+                slot_id = ?`, 
+            [slot_id]
+        );
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: ["Portable Charger Slot Details fetched successfully!"],
+            data: slotDetails[0],
+            
+        });
+    } catch (error) {
+        console.error('Error fetching slot list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger lists' });
+    }
+};
+
 
 export const addSlot = async (req, resp) => {
     try {
@@ -441,10 +474,15 @@ export const addSlot = async (req, resp) => {
         const startTime24 = convertTo24HourFormat(start_time);
         const endTime24 = convertTo24HourFormat(end_time);
 
+        // const generateSlotId = () => {
+        //     const prefix = 'PTS'; 
+        //     const uniqueString = crypto.randomBytes(6).toString('hex').slice(0, 12);
+        //     return `${prefix}${uniqueString}`; 
+        // };
         const generateSlotId = () => {
-            const prefix = 'PTS'; 
-            const uniqueString = crypto.randomBytes(6).toString('hex').slice(0, 12);
-            return `${prefix}${uniqueString}`; 
+            const prefix = 'PTS';
+            const uniqueNumber = Math.floor(1000 + Math.random() * 9000); 
+            return `${prefix}${uniqueNumber}`;
         };
         
 
@@ -510,6 +548,8 @@ export const editSlot = async (req, resp) => {
 export const deleteSlot = async (req, resp) => {
     try {
         const { slot_id } = req.body; 
+        console.log('slotId',req.body.slot_id);
+        
 
         const { isValid, errors } = validateFields(req.body, {
             slot_id: ["required"]
