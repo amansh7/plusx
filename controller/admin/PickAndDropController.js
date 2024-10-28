@@ -1,7 +1,7 @@
-import db from '../../config/db.js';
+import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
@@ -9,30 +9,30 @@ dotenv.config();
 export const bookingList = async (req, resp) => {
     try {
         const { page_no, request_id, name, contact_no, order_status  } = req.body;
-    const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+        const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const result = await getPaginatedData({
-        tableName: 'charging_service',
-        columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
-        sortColumn: 'id',
-        sortOrder: 'DESC',
-        page_no,
-        limit: 10,
-        searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
-        searchTexts: [request_id, name, contact_no, order_status],
-    });
+        const result = await getPaginatedData({
+            tableName: 'charging_service',
+            columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
+            sortColumn: 'id',
+            sortOrder: 'DESC',
+            page_no,
+            limit: 10,
+            searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
+            searchTexts: [request_id, name, contact_no, order_status],
+        });
 
-    return resp.json({
-        status: 1,
-        code: 200,
-        message: ["Pick & Drop  Booking List fetch successfully!"],
-        data: result.data,
-        // slot_data: slotData,
-        total_page: result.totalPage,
-        total: result.total,
-        // base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
-    });
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: ["Pick & Drop  Booking List fetch successfully!"],
+            data: result.data,
+            // slot_data: slotData,
+            total_page: result.totalPage,
+            total: result.total,
+            // base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
+        });
     } catch (error) {
         console.error('Error fetching p & d booking list:', error);
         resp.status(500).json({ message: 'Error fetching p & d booking list' });
@@ -51,13 +51,10 @@ export const bookingDetails = async (req, resp) => {
             });
         }
 
-        const result = await db.execute(`
-            SELECT 
-                cs.request_id, cs.rider_id, cs.rsa_id, cs.name, cs.country_code, 
-                cs.contact_no, cs.vehicle_id, cs.order_status, cs.slot_date_time, 
-                cs.pickup_address, cs.price, cs.parking_number, cs.parking_floor, 
-                cs.pickup_latitude, cs.pickup_longitude, cs.created_at,
-                rv.vehicle_make, rv.vehicle_model, rv.vehicle_type
+        const result = await db.execute(`SELECT 
+                cs.request_id, cs.rider_id, cs.rsa_id, cs.name, cs.country_code, cs.contact_no, cs.vehicle_id, cs.order_status, cs.pickup_address, cs.price, 
+                cs.parking_number, cs.parking_floor, cs.pickup_latitude, cs.pickup_longitude, rv.vehicle_make, rv.vehicle_model, rv.vehicle_type,
+                ${formatDateTimeInQuery(['cs.slot_date_time', 'cs.created_at'])}
             FROM 
                 charging_service cs
             LEFT JOIN 

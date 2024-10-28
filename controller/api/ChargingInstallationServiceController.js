@@ -115,7 +115,9 @@ export const requestDetails = async (req, resp) => {
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const [orderData] = await db.execute(`SELECT * FROM charging_installation_service WHERE request_id = ? LIMIT 1`, [request_id]);
+    const [orderData] = await db.execute(`
+        SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM charging_installation_service WHERE request_id = ? LIMIT 1
+    `, [request_id]);
 
     orderData[0].invoice_url = '';
     if (orderData[0].order_status == 'ES') {
@@ -123,7 +125,9 @@ export const requestDetails = async (req, resp) => {
         orderData[0].invoice_url = `${req.protocol}://${req.get('host')}/public/charger-installation-invoice/${invoice_id}-invoice.pdf`;
     }
 
-    const [history] = await db.execute(`SELECT * FROM charging_installation_service_history WHERE service_id = ?`, [request_id]);
+    const [history] = await db.execute(`
+        SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM charging_installation_service_history WHERE service_id = ?
+    `, [request_id]);
 
     return resp.json({
         message: ["Charging Installation Service fetched successfully!"],

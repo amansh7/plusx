@@ -1,7 +1,7 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
@@ -352,8 +352,8 @@ export const invoiceDetails = async (req, resp) => {
             pcb.address, 
             pcb.booking_id, 
             cs.start_time, 
-            pcb.slot_time, 
-            pcb.slot_date, 
+            pcb.slot_time,  
+            ${formatDateInQuery(['pcb.slot_date'])},
             (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email
         FROM 
             portable_charger_invoice AS pci

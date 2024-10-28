@@ -7,16 +7,16 @@ import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddlewa
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
 import { shopList, shopDetail } from '../controller/api/ShopController.js';
 import { offerList, offerDetail } from '../controller/api/OfferController.js';
-import { redeemCoupon, createIntent } from '../controller/PaymentController.js';
+import { redeemCoupon, createIntent, createPortableChargerSubscription } from '../controller/PaymentController.js';
 import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
 import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
 import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
-import { rsaLogin, rsaUpdatePassword, rsaForgotPassword, rsaLogout, rsaLogutAll, rsaUpdateProfile, rsaStatusChange, rsaHome } from '../controller/api/RsaController.js';
+import { rsaLogin, rsaUpdatePassword, rsaForgotPassword, rsaLogout, rsaLogutAll, rsaUpdateProfile, rsaStatusChange, rsaHome, rsaBookingHistory } from '../controller/api/RsaController.js';
 import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList } from '../controller/api/EvInsuranceController.js';
 import { 
-    login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, notificationList, 
+    login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, locationAdd, notificationList, 
     addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount, addRiderVehicle ,editRiderVehicle, riderVehicleList, deleteRiderVehicle
 } from "../controller/api/RiderController.js";
 import {
@@ -54,6 +54,7 @@ const authzRoutes = [
     
     /* Dynamic List */
     {method: 'get', path: '/location-list', handler: locationList},
+    {method: 'get', path: '/location-add', handler: locationAdd},
     
     /* Vehicle Routes */
     { method: 'get', path: '/location-area-list', handler: areaList },
@@ -125,7 +126,7 @@ const authzAndAuthRoutes = [
     { method: 'post', path: '/sell-vehicle', handler: sellVehicle },
     { method: 'get', path: '/all-sell-vehicle-list', handler: allSellVehicleList },
     { method: 'get', path: '/sell-vehicle-list', handler: sellVehicleList },
-    { method: 'get', path: '/sell-vehicle-detail', handler: sellVehicleDetail },
+    { method: 'get', path: '/sell-vehicle-details', handler: sellVehicleDetail },
     { method: 'post', path: '/edit-sell-vehicle', handler: updateSellVehicle },
     { method: 'get', path: '/delete-sell-vehicle', handler: deleteSellVehicle },
     { method: 'get', path: '/sold-sell-vehicle', handler: soldSellVehicle },
@@ -163,7 +164,7 @@ const authzAndAuthRoutes = [
     { method: 'post', path: '/portable-charger-booking', handler: chargerBooking },
     { method: 'get', path: '/portable-charger-booking-list', handler: chargerBookingList },
     { method: 'get', path: '/portable-charger-booking-detail', handler: chargerBookingDetail },
-    { method: 'get', path: '/portable-charger-booking-detail', handler: invoiceList },
+    // { method: 'get', path: '/portable-charger-booking-detail', handler: invoiceList },
     { method: 'get', path: '/portable-charger-slot-list', handler: getPcSlotList },
     { method: 'get', path: '/portable-charger-subscription', handler: getPcSubscriptionList },
 
@@ -186,6 +187,7 @@ const authzAndAuthRoutes = [
 
     /* Payment */
     { method: 'post', path: '/payment-intent', handler: createIntent },
+    { method: 'post', path: '/create-portable-charger-subscription', handler: createPortableChargerSubscription },
 
     /* Invoice */
     { method: 'post', path: '/create-rsa-invoice', handler: rsaInvoice },
@@ -221,9 +223,9 @@ const authzRsaAndAuthRoutes = [
     { method: 'get', path: '/rsa-home', handler: rsaHome },
     { method: 'get', path: '/rsa-logout', handler: rsaLogout },
     { method: 'get', path: '/rsa-profile-change', handler: rsaUpdateProfile },
-    { method: 'get', path: '/rsa-status-change', handler: rsaStatusChange },
+    { method: 'post', path: '/rsa-status-change', handler: rsaStatusChange },
     { method: 'get', path: '/rsa-change-password', handler: rsaUpdatePassword },
-
+    { method: 'get', path: '/rsa-booking-history', handler: rsaBookingHistory },
 
     /* Road Assitance with RSA */
     { method: 'get', path: '/rsa-order-stage', handler: getRsaOrderStage },

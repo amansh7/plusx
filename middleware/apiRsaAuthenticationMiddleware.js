@@ -1,10 +1,12 @@
 import db from "../config/db.js";
+import { mergeParam } from "../utils.js";
 
 export const apiRsaAuthentication = async (req, resp, next) => {
   try{
-    const rsaId = req.body.rsa_id;
-    const token = req.headers["access_token"];
-  
+    const {rsa_id} = mergeParam(req);
+    const token = req.headers["accesstoken"];
+    const rsaId = rsa_id;
+    
     if (!token) {
       return resp.status(401).json({ message: 'Access token is missing', code: 400, data: {}, status:0 });
     }

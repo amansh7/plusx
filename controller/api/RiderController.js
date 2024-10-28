@@ -28,7 +28,6 @@ export const login = async (req, resp) => {
     );
 
     if(!rider) return resp.json({ status: 0, code: 422, message: ["Mobile number is not matching with our records"] });
-
     const isMatch = await bcrypt.compare(password, rider.password);
     if (!isMatch) return resp.json({ status:0, code:405, error:true, message: ["Password is incorrect"] });
     if (rider.status == 2) return resp.json({ status:0, code:405, error:true, message: ["You can not login as your status is inactive. Kindly contact to customer care"] });
@@ -140,7 +139,7 @@ export const register = async (req, resp) => {
 };
 
 export const forgotPassword = async (req, resp) => {
-    const { email } = req.body;
+    const { email } = mergeParam(req);
     if (!email) return resp.status(400).json({ status: 0, code: 405, error: true, message: 'Email is required' });
     const [[rider]] = await db.execute('SELECT rider_name FROM riders WHERE rider_email=?', [email]);
     
@@ -148,8 +147,10 @@ export const forgotPassword = async (req, resp) => {
         return resp.json({status: 0, code: 400, message: 'Oops! Invalid Email Address'});
     }
     const password = generateRandomPassword(6);
-    const hashedPswd = await bcrypt.hash(generateRandomPassword(6), 10);
+    const hashedPswd = await bcrypt.hash(password, 10);
+    console.log(hashedPswd);
     await db.execute('UPDATE riders SET password=? WHERE rider_email=?', [hashedPswd, email]);
+    // await updateRecord
     try {
         const html = `<html>
           <body>
@@ -370,7 +371,7 @@ export const updateProfile = async (req, resp) => {
                 }
             });
         }
-        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth: moment(date_of_birth).format("YYYY-MM-DD")};        
+        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth: moment(date_of_birth, "DD-MM-YYYY").format("YYYY-MM-DD")};        
         await updateRecord('riders', updates, ['rider_id'], [riderId]);
         
         return resp.json({status: 1, code: 200, message: ["Rider profile updated successfully"]});
@@ -450,11 +451,11 @@ export const deleteAccount = async (req, resp) => {
         
         await connection.commit();
 
-        return resp.json({status: 1, code: 200, error: false, message: ['Rider Account deleted successfully!']});
+        return resp.json({status: 1, code: 200, error: false, message: 'Rider Account deleted successfully!'});
     }catch(err){
         await connection.rollback();
         console.error('Error deleting rider account:', err.message);
-        return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
+        return resp.json({status: 1, code: 200, error: true, message: 'Something went wrong. Please try again!'});
     }finally{
         connection.release();
     }
@@ -463,6 +464,25 @@ export const deleteAccount = async (req, resp) => {
 export const locationList = async (req, resp) => {
     const [list] = await db.execute(`SELECT location_id, location_name, latitude, longitude FROM locations ORDER BY location_name ASC`);
     return resp.json({status: 1, code: 200, message: '', data: list});
+};
+
+export const locationAdd = async (req, resp) => {
+    const { location_name, latitude, longitude, status } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), { location_name: ["required"], latitude: ["required"], longitude: ["required"], status: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
+
+    const {last_index} = await queryDB(`SELECT MAX(id) AS last_index FROM locations`);
+    const nextId = (!last_index) ? 0 : last_index + 1;
+    const locId = 'Loc' + String(nextId).padStart(4, '0');
+
+    const insert = await insertRecord('locations', ['location_id', 'location_name', 'latitude', 'longitude', 'status'], [locId, location_name, latitude, longitude, status]);
+
+    return resp.json({
+        message: insert.affectedRows > 0 ? ['Location added successfully!'] : ['Oops! Something went wrong. Please try again.'],
+        status: insert.affectedRows > 0 ? 1 : 0,
+        code: 200,
+    });
 };
 
 export const notificationList = async (req, resp) => {
