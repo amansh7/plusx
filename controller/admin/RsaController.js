@@ -2,6 +2,12 @@ import generateUniqueId from 'generate-unique-id';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const rsaList = async (req, resp) => {
     const{ rsa_id, rsa_name, rsa_email, rsa_mobile, page = 1, list  } = req.body;
@@ -48,27 +54,66 @@ export const rsaList = async (req, resp) => {
 
 };
 
+// export const rsaData = async (req, resp) => {
+//     const{ rsa_id } = req.body; 
+//     const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
+//     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging', ];
+
+//     return resp.json({
+//         status: 0,
+//         code: 200,
+//         message: "Rsa data fetch successfully",
+//         rsaData,
+//         bookingType
+//     });
+    
+// };
+
 export const rsaData = async (req, resp) => {
-    const{ rsa_id } = req.body; 
-    const rsaData = queryDB(`SELECT * FROM rsa LIMIT 1`);
-    const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging', ];
+    const { rsa_id } = req.body; 
+    const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
+    const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging'];
+
+    const bookingHistory = [];
+
+    if (rsaData.length > 0) {
+        const bookingTypeValue = rsaData.booking_type;
+
+        if (bookingTypeValue === 'Valet Charging') {
+            const chargingServiceData = await queryDB(`SELECT * FROM charging_service WHERE rsa_id = ?`, [rsa_id]);
+            bookingHistory.push(...chargingServiceData);
+        } else if (bookingTypeValue === 'Portable Charger') {
+            const portableChargerData = await queryDB(`SELECT * FROM portable_charger_booking WHERE rsa_id = ?`, [rsa_id]);
+            bookingHistory.push(...portableChargerData); 
+        } 
+        // else if (bookingTypeValue === 'Charger Installation') {
+        //     const chargerInstallationData = await queryDB(`SELECT * FROM charging_installation_service WHERE rsa_id = ?`, [rsa_id]);
+        //     bookingHistory.push(...chargerInstallationData); 
+        // } else if (bookingTypeValue === 'EV Pre-Sale') {
+        //     const chargerInstallationData = await queryDB(`SELECT * FROM charging_installation_service WHERE rsa_id = ?`, [rsa_id]);
+        //     bookingHistory.push(...chargerInstallationData); 
+        // } 
+    }
 
     return resp.json({
         status: 0,
         code: 200,
-        message: "Rsa data fetch successfully",
+        message: "RSA data fetched successfully",
         rsaData,
-        bookingType
+        bookingType,
+        bookingHistory 
     });
-    
 };
 
+
+
+
+
 export const rsaAdd = async (req, resp) => {
-    const{ rsa_id, rsa_name, email, mobile, service_type, password, confirm_password } = req.body;
+    const{ rsa_name, rsa_email, mobile, service_type, password, confirm_password } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
-        rsa_id: ["required"],
         rsa_name: ["required"],
-        email: ["required"],
+        rsa_email: ["required"],
         mobile: ["required"],
         service_type: ["required"],
         password: ["required"],
@@ -88,7 +133,7 @@ export const rsaAdd = async (req, resp) => {
         const insert = await insertRecord('rsa', [
             'rsa_id', 'rsa_name', 'email', 'country_code', 'mobile', 'booking_type', 'password', 'status', 'running_order', 'profile_img'
         ], [
-            `RSA-${generateUniqueId({length:12})}`, rsa_name, email, '+971', mobile, service_type, 0, 0, profile_image
+            `RSA-${generateUniqueId({length:8})}`, rsa_name, rsa_email, '+971', mobile, service_type, password, 0, 0, profile_image
         ]);
     
         return resp.json({
@@ -97,37 +142,39 @@ export const rsaAdd = async (req, resp) => {
             message: insert.affectedRows > 0 ? "RSA created successfully" : "Failed to create, Please Try Again!", 
         });
     }catch(err){
+        console.log(err);
+        
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 };
 
 export const rsaUpdate = async (req, resp) => {
-    const{ rsa_id, rsa_name, email, mobile, service_type, password, confirm_password } = req.body;
+    const{ rsa_id, rsa_name, rsa_email, mobile, service_type, password, confirm_password } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         rsa_id: ["required"],
         rsa_name: ["required"],
-        email: ["required"],
+        rsa_email: ["required"],
         mobile: ["required"],
         service_type: ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    if(password.length <= 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
+    if(password && password?.length < 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
     
-    const emailCheck = await queryDB(`SELECT rsa_id FROM rsa WHERE email = ? AND rsa_id != ? UNION SELECT rider_id FROM riders WHERE rider_email = ?`,[email, rsa_id, email]);
+    const emailCheck = await queryDB(`SELECT rsa_id FROM rsa WHERE email = ? AND rsa_id != ? UNION SELECT rider_id FROM riders WHERE rider_email = ?`,[rsa_email, rsa_id, rsa_email]);
     const mobileCheck = await queryDB(`SELECT rsa_id FROM rsa WHERE mobile = ? AND rsa_id != ? UNION SELECT rider_id FROM riders WHERE rider_mobile = ?`, [mobile, rsa_id, mobile]);
-    if (emailCheck.length > 0) return resp.json({status:1, code: 200, message:["Email already exists"]});
-    if (mobileCheck.length > 0) return resp.json({status:1, code: 200, message:["Mobile number already exists"]});
+    if (emailCheck?.length > 0) return resp.json({status:1, code: 200, message:["Email already exists"]});
+    if (mobileCheck?.length > 0) return resp.json({status:1, code: 200, message:["Mobile number already exists"]});
     
     try{
-        const rsaData = await queryDB(`SELECT profile_img FROM rsa LIMIT 1 WHERE rsa_id = ?`, [rsa_id]);
+        const rsaData = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id = ?`, [rsa_id]);
     
-        let profile_image = '';
+        let profile_image = rsaData.profile_img;
         if(req.files && req.files['profile_image']){
             const files = req.files;
             profile_image = files ? files['profile_image'][0].filename : '';
         }
     
-        const updates = {rsa_name, email, mobile, booking_type: service_type, profile_img: profile_image};
+        const updates = {rsa_name, email: rsa_email, mobile, booking_type: service_type, profile_img: profile_image};
         if(password){
             const hashedPswd = await bcrypt.hash(password, 10);
             updates.password = hashedPswd;
@@ -148,13 +195,15 @@ export const rsaUpdate = async (req, resp) => {
         });
 
     }catch(err){
+        console.log('err',err);
+        
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 };
 
 export const rsaDelete = async (req, resp) => {
     const { rsa_id } = req.body;    
-    const rsaData = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id LIMIT 1`, [rsa_id]);
+    const rsaData = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     if(!rsaData) return resp.json({status:0, message: "RSA Data can not delete, or invalid "});
     const conn = await startTransaction();
     

@@ -107,11 +107,11 @@ const adminRoutes = [
     { method: 'delete', path: '/shop-brand-delete',   handler: brandDelete },
 
     //RSA Routes
-    { method: 'get',  path: '/rsa-list',          handler: rsaList },
-    { method: 'get',  path: '/rsa-data',          handler: rsaData },
+    { method: 'post',  path: '/rsa-list',          handler: rsaList },
+    { method: 'post',  path: '/rsa-data',          handler: rsaData },
     { method: 'post', path: '/rsa-add',           handler: rsaAdd },
     { method: 'post', path: '/rsa-update',        handler: rsaUpdate },
-    { method: 'get',  path: '/rsa-delete',        handler: rsaDelete },
+    { method: 'post',  path: '/rsa-delete',        handler: rsaDelete },
     { method: 'get',  path: '/rsa-status-change', handler: rsaStatusChange },
 
     /* Rider Clubs */
@@ -126,16 +126,11 @@ const adminRoutes = [
 adminRoutes.forEach(({ method, path, handler }) => {
     const middlewares = [adminAuthorization];
 
-    // For /login and /logout, only use adminAuthorization
-    // if (path === '/login' || path === '/logout') {
-    //     middlewares.push(adminAuthorization);
-    // } else {
-    //     // For all other routes, add both adminAuthorization and authenticateAdmin
-    //     middlewares.push(adminAuthorization, authenticateAdmin);
-    // }
-
     if (path === '/add-charger' || path === '/edit-charger') {
         middlewares.push(handleFileUpload('charger-images', ['charger_image'], 1));
+    }
+    if (path === '/rsa-add' || path === '/rsa-update') {
+        middlewares.push(handleFileUpload('rsa_images', ['profile_image'], 1));
     }
     if (path === '/shop-add' || path === '/shop-update') {
         middlewares.push(handleFileUpload('shop-images', ['cover_image', 'shop_gallery'], 5));
