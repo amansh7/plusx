@@ -269,10 +269,15 @@ export const pdAddSlot = async (req, resp) => {
         const startTime24 = convertTo24HourFormat(start_time);
         const endTime24 = convertTo24HourFormat(end_time);
 
+        // const generateSlotId = () => {
+        //     const prefix = 'PDS'; 
+        //     const uniqueString = crypto.randomBytes(6).toString('hex').slice(0, 12);
+        //     return `${prefix}${uniqueString}`; 
+        // };
         const generateSlotId = () => {
-            const prefix = 'PDS'; 
-            const uniqueString = crypto.randomBytes(6).toString('hex').slice(0, 12);
-            return `${prefix}${uniqueString}`; 
+            const prefix = 'PDS';
+            const uniqueNumber = Math.floor(1000 + Math.random() * 9000); 
+            return `${prefix}${uniqueNumber}`;
         };
 
     const slot_id = generateSlotId();
@@ -296,6 +301,8 @@ export const pdAddSlot = async (req, resp) => {
 
 export const pdEditSlot = async (req, resp) => {
     try {
+        console.log(req.body);
+        
         const { slot_id, start_time, end_time, booking_limit, status } = req.body;
 
         const { isValid, errors } = validateFields({ 
@@ -321,7 +328,7 @@ export const pdEditSlot = async (req, resp) => {
         };
     
         const update = await updateRecord('pick_drop_slot', updates, ['slot_id'], [slot_id]);
-
+        console.log("update", update);
         return resp.json({
             status: update.affectedRows > 0 ? 1 : 0,
             code: 200,
@@ -346,6 +353,7 @@ export const pdDeleteSlot = async (req, resp) => {
         const [del] = await db.execute(`DELETE FROM pick_drop_slot WHERE slot_id = ?`, [slot_id]);
 
         return resp.json({
+            code: 200,
             message: del.affectedRows > 0 ? ['Time Slot deleted successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: del.affectedRows > 0 ? 1 : 0
         });

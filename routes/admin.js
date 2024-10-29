@@ -5,7 +5,8 @@ import { login, logout, forgotPassword, updatePassword } from "../controller/adm
 import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, 
     invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot, assignBooking,
-    slotDetails} from "../controller/admin/PortableChargerController.js";
+    slotDetails,
+    chargerDetails} from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
@@ -36,6 +37,7 @@ const adminRoutes = [
 
     //Portable Charger 
     { method: 'post', path: '/charger-list', handler: chargerList },
+    { method: 'post', path: '/charger-details', handler: chargerDetails },
     { method: 'post', path: '/add-charger', handler: addCharger },
     { method: 'post', path: '/edit-charger', handler: editCharger },
     { method: 'post', path: '/delete-charger', handler: deleteCharger },
@@ -65,8 +67,8 @@ const adminRoutes = [
     { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
     { method: 'post', path: '/pick-and-drop-slot-details', handler: pdSlotDetails },
     { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
-    { method: 'put', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
-    { method: 'delete', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
+    { method: 'post', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
+    { method: 'post', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
 
     //Public Charger
     { method: 'post', path: '/public-charger-station-list', handler: stationList },

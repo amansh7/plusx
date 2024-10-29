@@ -42,6 +42,39 @@ export const chargerList = async (req, resp) => {
     }
 };
 
+export const chargerDetails = async (req, resp) => {
+    try {
+        const { charger_id, } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            charger_id: ["required"]
+        });
+
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const [chargerDetails] = await db.execute(`
+            SELECT 
+                charger_id, charger_name, charger_price, charger_feature, image, charger_type, status
+            FROM 
+                portable_charger 
+            WHERE 
+                charger_id = ?`, 
+            [charger_id]
+        );
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: ["Portable Charger Details fetched successfully!"],
+            data: chargerDetails[0],
+            
+        });
+    } catch (error) {
+        console.error('Error fetching charger details:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger details' });
+    }
+};
+
 export const addCharger = async (req, resp) => {
     try {
         const { charger_name, charger_price, charger_feature, charger_type, status = 1 } = req.body;
@@ -64,7 +97,6 @@ export const addCharger = async (req, resp) => {
         const start = last ? last.id : 0;
         const nextId = start + 1;
         const chargerId = 'PCGR' + String(nextId).padStart(4, '0');
-    console.log(req.body, status, chargerId, charger_image);
     
         const insert = await insertRecord('portable_charger', [
             'charger_id', 'charger_name', 'charger_price', 'charger_feature', 'image', 'charger_type', 'status'
@@ -73,6 +105,7 @@ export const addCharger = async (req, resp) => {
         ]);
     
         return resp.json({
+            code: 200,
             message: insert.affectedRows > 0 ? ['Charger added successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: insert.affectedRows > 0 ? 1 : 0
         });
@@ -87,24 +120,38 @@ export const editCharger = async (req, resp) => {
         const { charger_id, charger_name, charger_price, charger_feature, charger_type, status } = req.body;
         const charger_image = req.files && req.files['charger_image'] ? req.files['charger_image'][0].filename : null;
 
+        const [currentCharger] = await db.execute(`
+            SELECT 
+                charger_id, charger_name, charger_price, charger_feature, image, charger_type, status
+            FROM 
+                portable_charger 
+            WHERE 
+                charger_id = ?`, 
+            [charger_id]
+        );
+
         const { isValid, errors } = validateFields({ 
-            charger_id, charger_name, charger_price, charger_feature, charger_type, status, charger_image
+            charger_id, charger_name, charger_price, charger_feature, charger_type, status
         }, {
             charger_id: ["required"],
             charger_name: ["required"],
             charger_price: ["required"],
             charger_feature: ["required"],
-            charger_type: ["required"], 
-            charger_image: ["required"], 
-            status : ["required"]
+            charger_type: ["required"],
+            status: ["required"]
         });
+
+        if (!charger_image && !currentCharger[0].image) {
+            errors.charger_image = "Image is required.";
+            isValid = false;
+        }
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
         const updates = {
-            charger_name, 
-            charger_price, 
-            charger_feature, 
+            charger_name,
+            charger_price,
+            charger_feature,
             charger_type,
             status
         };
@@ -140,6 +187,7 @@ export const deleteCharger = async (req, resp) => {
         const [del] = await db.execute(`DELETE FROM portable_charger WHERE charger_id = ?`, [charger_id]);
 
         return resp.json({
+            code:200,
             message: del.affectedRows > 0 ? ['Charger deleted successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: del.affectedRows > 0 ? 1 : 0
         });
@@ -487,8 +535,6 @@ export const addSlot = async (req, resp) => {
         
 
         const slot_id = generateSlotId();
-        console.log(slot_id, status, startTime24, endTime24, req.body);
-    
     
         const insert = await insertRecord('portable_charger_slot', [
             'slot_id', 'start_time', 'end_time', 'booking_limit', 'status'
