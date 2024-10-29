@@ -5,6 +5,7 @@ import validateFields from "../../validation.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import bcrypt from "bcryptjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,20 +55,6 @@ export const rsaList = async (req, resp) => {
 
 };
 
-// export const rsaData = async (req, resp) => {
-//     const{ rsa_id } = req.body; 
-//     const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
-//     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging', ];
-
-//     return resp.json({
-//         status: 0,
-//         code: 200,
-//         message: "Rsa data fetch successfully",
-//         rsaData,
-//         bookingType
-//     });
-    
-// };
 
 export const rsaData = async (req, resp) => {
     const { rsa_id } = req.body; 
@@ -104,9 +91,6 @@ export const rsaData = async (req, resp) => {
         bookingHistory 
     });
 };
-
-
-
 
 
 export const rsaAdd = async (req, resp) => {
@@ -180,7 +164,7 @@ export const rsaUpdate = async (req, resp) => {
             updates.password = hashedPswd;
         } 
         const update = await updateRecord('rsa', updates, ['rsa_id'], [rsa_id]);
-        const profileImgPath = path.join(__dirname, 'public/uploads/rsa_images', rsaData.profile_img);
+        const profileImgPath = path.join(__dirname, `public/uploads/rsa_images/${rsaData.profile_img}`, rsaData.profile_img);
         if (req.file) {
             fs.unlink(profileImgPath, (err) => {
                 if (err) {

@@ -70,15 +70,10 @@ const adminRoutes = [
     { method: 'post', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
     { method: 'post', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
 
-    //Public Charger
-    { method: 'post', path: '/public-charger-station-list', handler: stationList },
-    { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
-    { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
-    { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
     //Public Charger
     { method: 'post', path: '/public-charger-station-list', handler: stationList },
-    { method: 'get', path: '/public-charger-station-details', handler: stationDetail },
+    { method: 'post', path: '/public-charger-station-details', handler: stationDetail },
     { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
     { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
@@ -91,17 +86,17 @@ const adminRoutes = [
     { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
     /* Service Shops */
-    { method: 'get',    path: '/shop-list',           handler: storeList },
+    { method: 'post',    path: '/shop-list',           handler: storeList },
     { method: 'get',    path: '/shop-data',           handler: storeData },
     { method: 'post',   path: '/shop-add',            handler: storeAdd },
     { method: 'get',    path: '/shop-view',           handler: storeView },
     { method: 'post',   path: '/shop-update',         handler: storeUpdate },
     { method: 'delete', path: '/shop-delete',         handler: storeDelete },
-    { method: 'get',    path: '/shop-service-list',   handler: serviceList },
+    { method: 'post',   path: '/shop-service-list',   handler: serviceList },
     { method: 'post',   path: '/shop-service-create', handler: serviceCreate },
     { method: 'post',   path: '/shop-service-update', handler: serviceUpdate },
     { method: 'delete', path: '/shop-service-delete', handler: serviceDelete },
-    { method: 'get',    path: '/shop-brand-list',     handler: brandList },
+    { method: 'post',    path: '/shop-brand-list',     handler: brandList },
     { method: 'post',   path: '/shop-brand-create',   handler: brandCreate },
     { method: 'post',   path: '/shop-brand-update',   handler: brandUpdate },
     { method: 'delete', path: '/shop-brand-delete',   handler: brandDelete },

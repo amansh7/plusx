@@ -1,6 +1,9 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import {  getPaginatedData } from '../../dbUtils.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 dotenv.config();
 
 
@@ -235,28 +238,25 @@ export const riderDetails = async (req, resp) => {
 };
 
 export const deleteRider = async (req, resp) => {
-    const riderId = req.body 
-    if (!riderId) return resp.json({ status: 0, code: 422, message: "Rider ID is required" });
+    const {rider_id} = req.body 
+    if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider ID is required" });
 
     const connection = await db.getConnection();
 
     try {
         await connection.beginTransaction();
         
-        // Fetch the rider's profile image
-        // const [rider] = await connection.execute('SELECT profile_img FROM riders WHERE rider_id = ?', [riderId]);
-        // if (rider.length === 0) return resp.json({ status: 0, message: 'Rider not found.' });
+        const [rider] = await connection.execute('SELECT profile_img FROM riders WHERE rider_id = ?', [rider_id]);
+        if (rider.length === 0) return resp.json({ status: 0, message: 'Rider not found.' });
 
-        // const oldImagePath = path.join('uploads', 'rider_profile', rider[0].profile_img || '');
+        const oldImagePath = path.join('uploads', 'rider_profile', rider[0].profile_img || '');
         
-        // // Delete the rider's old profile image
         // fs.unlink(oldImagePath, (err) => {
         //     if (err) {
         //         console.error(`Failed to delete rider old image: ${oldImagePath}`, err);
         //     }
         // });
 
-        // Array of delete queries
         const deleteQueries = [
             'DELETE FROM notifications                         WHERE receive_id = ?',
             'DELETE FROM road_assistance                       WHERE rider_id   = ?',
@@ -281,7 +281,7 @@ export const deleteRider = async (req, resp) => {
 
         // Execute each delete query
         for (const query of deleteQueries) {
-            await connection.execute(query, [riderId]);
+            await connection.execute(query, [rider_id]);
         }
 
         await connection.commit();

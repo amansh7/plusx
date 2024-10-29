@@ -317,7 +317,7 @@ export const serviceList = async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'store_services',
-        columns: `service_id, service_name`,
+        columns: `service_id, service_name, created_at`,
         searchFields: ['service_name'],
         searchTexts: [search],
         sortColumn: 'id',

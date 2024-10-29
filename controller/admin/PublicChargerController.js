@@ -67,7 +67,7 @@ export const stationDetail = async (req, resp) => {
 
         const [stationDetails] = await db.execute(`
             SELECT station_id, station_name, address, status, station_image, latitude, longitude, 
-                   description, charging_for, charger_type, charging_point, price, always_open, 
+                   description, charging_for, charger_type, charging_point, price, always_open, created_at, 
                    REPLACE(open_days, "_", ", ") AS open_days, 
                    REPLACE(open_timing, "_", ", ") AS open_timing 
             FROM public_charging_station_list 
