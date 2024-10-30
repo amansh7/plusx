@@ -209,7 +209,7 @@ export const chargerBookingList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName: 'portable_charger_booking',
-            columns: 'booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, contact_no, status, slot_date, slot_time, created_at',
+            columns: 'booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, slot_date, slot_time, created_at',
             sortColumn: 'created_at',
             sortOrder: 'DESC',
             page_no,

@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 import db from "../../config/db.js";
 dotenv.config();
 
@@ -52,5 +53,22 @@ export const authenticateAdmin = async (req, resp, next) => {
   } catch (error) {
     console.error('Error in authentication:', error);
     return resp.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const authenticate = (req, res, next) => {
+  console.log('Cookies:', req.cookies);
+  const token = req.cookies.authToken; 
+  console.log('req.cookies.authToken', token);
+  
+  if (!token) {
+      return res.status(401).json({ message: "Unauthorized access" });
+  }
+  try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET); 
+      req.user = decoded; 
+      next(); 
+  } catch (error) {
+      return res.status(401).json({ message: "Invalid token" });
   }
 };

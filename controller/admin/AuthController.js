@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
@@ -27,8 +28,17 @@ export const login = async(req, resp) => {
     }
 
     await db.execute('UPDATE users SET status = 1 WHERE email = ?', [email]);
-    // const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    resp.status(200).json({message:"Login successfull", userDetails: users[0], Token: process.env.CUSTOM_TOKEN})
+
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    
+    resp.cookie('authToken', token, { 
+        httpOnly: true,   
+        // secure: false,
+        secure: process.env.NODE_ENV === 'production', 
+        sameSite: 'None',
+        maxAge: 3600000 
+    });
+    resp.status(200).json({message:"Login successfull",code: 200, userDetails: users[0], Token: process.env.CUSTOM_TOKEN})
 };
 
 export const logout = async (req, resp) => {

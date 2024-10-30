@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateAdmin } from "../middleware/admin/authenticationMiddleware.js";
+import { authenticate, authenticateAdmin } from "../middleware/admin/authenticationMiddleware.js";
 import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
 import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
@@ -110,7 +110,7 @@ const adminRoutes = [
     { method: 'get',  path: '/rsa-status-change', handler: rsaStatusChange },
 
     /* Rider Clubs */
-    { method: 'get',    path: '/club-list',       handler: clubList },
+    { method: 'post',    path: '/club-list',       handler: clubList },
     { method: 'get',    path: '/club-data',       handler: clubData },
     { method: 'post',   path: '/add-club',        handler: clubCreate },
     { method: 'post',   path: '/edit-club',       handler: clubUpdate },
@@ -135,6 +135,7 @@ adminRoutes.forEach(({ method, path, handler }) => {
     }
 
     middlewares.push(authenticateAdmin);
+    // middlewares.push(authenticate);
 
     router[method](path, ...middlewares, handler);
 });
