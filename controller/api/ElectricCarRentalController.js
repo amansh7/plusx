@@ -5,9 +5,9 @@ import db from "../../config/db.js";
 
 
 export const carList = async (req, resp) => {
-    const {rider_id, page_no, search_text, sort_by } = mergeParam(req);
+    const { page_no, search_text, sort_by } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {page_no: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 

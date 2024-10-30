@@ -16,6 +16,11 @@ import {
 } from "../controller/admin/ShopController.js";
 import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange,  } from "../controller/admin/RsaController.js";
 import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg } from "../controller/admin/RiderClubController.js"
+import { carList } from "../controller/api/ElectricCarRentalController.js";
+import { carData } from "../controller/admin/ElectriCarLeasingController.js";
+import { bikeData, bikesList } from "../controller/admin/ElectricBikeRentalController.js";
+import {  vehicleData, vehicleList } from "../controller/admin/EvGuideController.js";
+import {bookingData, bookingList as evRoadAssistanceBooking, invoiceList as evRoadAssistanceInvoice, invoiceData} from '../controller/admin/EvRoadAssistanceController.js'
 
 const router = Router();
 
@@ -116,6 +121,28 @@ const adminRoutes = [
     { method: 'post',   path: '/edit-club',       handler: clubUpdate },
     { method: 'delete', path: '/club-delete',     handler: clubDelete },
     { method: 'delete', path: '/club-delete-img', handler: clubDeleteImg },
+
+    //Electric Cars Leasing
+    { method: 'post',  path: '/electric-cars-list', handler: carList },
+    { method: 'post',  path: '/electric-car-data',  handler: carData },
+
+    //Electric Cars Leasing
+    { method: 'post',  path: '/electric-bikes-list', handler: bikesList },
+    { method: 'post',  path: '/electric-bike-data',  handler: bikeData },
+
+    //EV Guide
+    { method: 'post',  path: '/vehicle-list', handler: vehicleList },
+    { method: 'post',  path: '/vehicle-data',  handler: vehicleData },
+
+    //EV Road Assistance
+    { method: 'post',  path: '/road-assistance-booking-list', handler: evRoadAssistanceBooking },
+    { method: 'post',  path: '/road-assistance-booking-data',  handler: bookingData },
+    { method: 'post',  path: '/road-assistance-invoice-list',  handler: evRoadAssistanceInvoice },
+    { method: 'post',  path: '/road-assistance-invoice-data',  handler: invoiceData },
+
+     //Discussion Board
+    //  { method: 'post',  path: '/discussion-board-list', handler: rsaList },
+    //  { method: 'post',  path: '/discussion-board-data',  handler: rsaData },
 ];
 
 adminRoutes.forEach(({ method, path, handler }) => {
