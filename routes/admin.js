@@ -21,6 +21,9 @@ import { carData } from "../controller/admin/ElectriCarLeasingController.js";
 import { bikeData, bikesList } from "../controller/admin/ElectricBikeRentalController.js";
 import {  vehicleData, vehicleList } from "../controller/admin/EvGuideController.js";
 import {bookingData, bookingList as evRoadAssistanceBooking, invoiceList as evRoadAssistanceInvoice, invoiceData} from '../controller/admin/EvRoadAssistanceController.js'
+import { interestList } from "../controller/admin/RegisterInterestController.js";
+import { couponData, couponList } from "../controller/admin/CouponController.js";
+import { offerData, offerList } from "../controller/admin/OfferController.js";
 
 const router = Router();
 
@@ -139,6 +142,17 @@ const adminRoutes = [
     { method: 'post',  path: '/road-assistance-booking-data',  handler: bookingData },
     { method: 'post',  path: '/road-assistance-invoice-list',  handler: evRoadAssistanceInvoice },
     { method: 'post',  path: '/road-assistance-invoice-data',  handler: invoiceData },
+
+    //Interest List
+    { method: 'post',  path: '/interest-list', handler: interestList },
+
+     //Coupon
+     { method: 'post',  path: '/coupon-list', handler: couponList },
+     { method: 'post',  path: '/coupon-data', handler: couponData },
+
+     //Offer
+     { method: 'post',  path: '/offer-list', handler: offerList },
+     { method: 'post',  path: '/offer-data', handler: offerData },
 
      //Discussion Board
     //  { method: 'post',  path: '/discussion-board-list', handler: rsaList },
