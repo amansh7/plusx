@@ -365,7 +365,7 @@ export const pdDeleteSlot = async (req, resp) => {
 /* Slot */
 
 // Assign Booking
-export const assignBooking = async (req, resp) => {
+export const PodAssignBooking = async (req, resp) => {
     const {  rsa_id, booking_id  } = mergeParam(req);
     const { isValid, errors }      = validateFields(mergeParam(req), {
         rsa_id     : ["required"],

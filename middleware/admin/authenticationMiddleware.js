@@ -27,7 +27,7 @@ dotenv.config();
 
 
 export const authenticateAdmin = async (req, resp, next) => {
-  console.log(req.body);
+  // console.log(req.body);
   
   const userId = req.body.userId;
   const email  = req.body.email

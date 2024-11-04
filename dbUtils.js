@@ -155,7 +155,7 @@ export const getPaginatedData = async ({
   let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
   // queryParams.push(start, parseInt(limit, 10));
 
-  console.log("Executing Query:", query, "With Params:", queryParams);
+  // console.log("Executing Query:", query, "With Params:", queryParams);
 
   const [rows] = await db.execute(query, queryParams);
 

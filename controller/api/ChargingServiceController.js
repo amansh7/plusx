@@ -1,6 +1,6 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import validateFields from "../../validation.js";
-import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
+import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
 import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery } from "../../utils.js";
@@ -22,18 +22,18 @@ export const requestService = async (req, resp) => {
     } = mergeParam(req);
 
     const { isValid, errors } = validateFields(mergeParam(req), {
-        rider_id: ["required"],
-        name: ["required"],
-        country_code: ["required"],
-        contact_no: ["required"],
-        slot_id: ["required"],
-        pickup_address: ["required"],
-        pickup_latitude: ["required"],
-        pickup_longitude: ["required"],
-        vehicle_id: ["required"],
-        parking_number: ["required"],
-        parking_floor: ["required"],
-        slot_date_time: ["required"],
+        rider_id         : ["required"],
+        name             : ["required"],
+        country_code     : ["required"],
+        contact_no       : ["required"],
+        slot_id          : ["required"],
+        pickup_address   : ["required"],
+        pickup_latitude  : ["required"],
+        pickup_longitude : ["required"],
+        vehicle_id       : ["required"],
+        parking_number   : ["required"],
+        parking_floor    : ["required"],
+        slot_date_time   : ["required"],
     });
 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -41,15 +41,16 @@ export const requestService = async (req, resp) => {
     try{
         const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email,
             (SELECT MAX(id) FROM charging_service) AS last_index,
-            (SELECT booking_limit FROM pick_drop_slot AS pds WHERE pds.slot_id=?) AS booking_limit
-            FROM riders WHERE rider_id=? LIMIT 1
-        `, [slot_id, rider_id]);
-        if(rider.booking_limit === 0) return resp.json({status: 1, code: 405, message: ["Booking Slot Full!, please select another slot"]});
+            (SELECT booking_limit FROM pick_drop_slot AS pds WHERE pds.slot_id=?) AS booking_limit,
+            (select count(id) from charging_service as cs where cs.slot_date_time = ? and order_status NOT IN ("WC", "C") ) as slot_booking_count FROM riders WHERE rider_id=? LIMIT 1
+        `, [slot_id, slot_date_time, rider_id]);
+
+        if(rider.slot_booking_count >= rider.booking_limit) return resp.json({status: 1, code: 405, message: ["Booking Slot Full!, please select another slot"]});
         
-        const nextId = (!rider.last_index) ? 0 : rider.last_index + 1;
-        const requestId = 'CS' + String(nextId).padStart(4, '0');
+        const nextId       = (!rider.last_index) ? 0 : rider.last_index + 1;
+        const requestId    = 'CS' + String(nextId).padStart(4, '0');
         const slotDateTime = moment(slot_date_time).format('YYYY-MM-DD HH:mm:ss');
-        const insert = await insertRecord('charging_service', [
+        const insert       = await insertRecord('charging_service', [
             'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'vehicle_id', 'slot', 'slot_date_time', 'pickup_address', 'parking_number', 'parking_floor', 
             'price', 'order_status', 'pickup_latitude', 'pickup_longitude', 
         ],[
@@ -62,8 +63,7 @@ export const requestService = async (req, resp) => {
         if(coupan_code){
             await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id'], [coupan_code, rider_id, requestId], conn);
         }
-    
-        await conn.execute(`UPDATE pick_drop_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?`, [slot_id]);
+        // await conn.execute(`UPDATE pick_drop_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?`, [slot_id]);
         await insertRecord('charging_service_history', ['service_id', 'rider_id', 'order_status'], [requestId, rider_id, 'CNF'], conn);
     
         const href = 'charging_service/' + requestId;
@@ -93,7 +93,7 @@ export const requestService = async (req, resp) => {
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
-        emailQueue.addEmail('valetbookings@plusxelectric.com', `Portable Charger Booking - ${requestId}`, htmlAdmin);
+        emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Charging Service Booking Received - ${requestId}`, htmlAdmin);
         
         const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
         let responseMsg = 'Booking Request Submitted! Our team will be in touch with you shortly.';
@@ -131,7 +131,7 @@ export const listServices = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
-    const start = (page_no * limit) - limit;
+    const start = (page_no[0] * limit) - limit;
     const statusCondition = (history && history == 1) ? `order_status IN (?, ?)` : `order_status NOT IN (?, ?)`;
     const statusParams = ['WC', 'C'];
 
@@ -172,7 +172,7 @@ export const getServiceOrderDetail = async (req, resp) => {
     order.slot = 'Schedule';
     if (order.order_status == 'WC') {
         const invoiceId = order.request_id.replace('CS', 'INVCS');
-        order.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoiceId}-invoice.pdf`;
+        order.invoice_url = `${req.protocol}://${req.get('host')}/public/pick-drop-invoice/${invoiceId}-invoice.pdf`;
     }
 
     return resp.json({
@@ -238,7 +238,7 @@ export const getInvoiceDetail = async (req, resp) => {
             csi.invoice_id = ?
     `, [invoice_id]);
 
-    invoice.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+    invoice.invoice_url = `${req.protocol}://${req.get('host')}/public/pick-drop-invoice/${invoice_id}-invoice.pdf`;
 
     return resp.json({
         message: ["Pick & Drop Invoice Details fetch successfully!"],
@@ -255,9 +255,9 @@ export const getRsaBookingStage = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const booking = await queryDB(`SELECT order_status, created_at, updated_at FROM charging_service WHERE request_id=?`, [booking_id]);
-    if(!booking) return resp.json({status:0, code:200, message: "Sorry no data found with given order id: " + booking_id});
+    if(!booking) return resp.json({status:0, code:200, message: "Sorry no data found with given order id: " + booking_id}); 
 
-    const orderStatus = ['CNF','A', 'VP', 'RS','CC','DO','WC', 'C'];
+    const orderStatus = ['CNF','A', 'VP', 'RS','CC','DO','WC', 'C']; //order_status 
     const placeholders = orderStatus.map(() => '?').join(', ');
 
     const [bookingTracking] = await db.execute(`SELECT order_status, remarks, image, cancel_reason, cancel_by, longitude, latitude FROM charging_service_history 
@@ -268,23 +268,41 @@ export const getRsaBookingStage = async (req, resp) => {
     const humanReadableDuration = moment.duration(seconds, 'seconds').format('h [hours], m [minutes]');
     
     return resp.json({
-        status: 1,
-        code: 200,
-        message: ["Booking stage fetch successfully."],
-        booking_status: booking.status,
-        execution_time: humanReadableDuration,
-        booking_history: bookingTracking,
-        image_path: `${req.protocol}://${req.get('host')}/uploads/pick-drop-images/`
+        status          : 1,
+        code            : 200,
+        message         : ["Booking stage fetch successfully."],
+        booking_status  : booking.order_status,
+        execution_time  : humanReadableDuration,
+        booking_history : bookingTracking,
+        image_path      : `${req.protocol}://${req.get('host')}/uploads/pick-drop-images/`
     });
 };
 
 export const handleBookingAction = async (req, resp) => {
+    console.log(req.file)
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"], reason: ["required"], latitude: ["required"], longitude: ["required"], booking_status: ["required"]});
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
+    let validationRules = {
+        rsa_id         : ["required"], 
+        booking_id     : ["required"], 
+        latitude       : ["required"], 
+        longitude      : ["required"], 
+        booking_status : ["required"],
+    };
+    if (booking_status == "C") {
+        validationRules = {
+            ...validationRules,
+            reason  : ["required"], 
+        };
+    }
+    // const { isValid, errors } = validateFields(mergeParam(req), validationRules);
+    const { isValid, errors } = validateFields(req.body, validationRules);
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    // console.log(req.file)
+    
     switch (booking_status) {
         case 'A': return await acceptBooking(req, resp);
+        case 'ER': return await driverEnroute(req, resp);
         case 'VP': return await vehiclePickUp(req, resp);
         case 'RS': return await reachedLocation(req, resp);
         case 'CC': return await chargingComplete(req, resp);
@@ -295,7 +313,7 @@ export const handleBookingAction = async (req, resp) => {
 };
 
 export const handleRejectBooking = async (req, resp) => {
-    const {rsa_id, booking_id, reason } = req.body;
+    const {rsa_id, booking_id, reason, latitude, longitude } = req.body;
     const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"], reason: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -307,7 +325,7 @@ export const handleRejectBooking = async (req, resp) => {
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 0
         LIMIT 1
-    `,[rsa_id, booking_id, rsa_id]);
+    `,[booking_id, rsa_id]);
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -320,7 +338,7 @@ export const handleRejectBooking = async (req, resp) => {
 
     if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-    await insertRecord('charging_service_rejected', [booking_id, rsa_id, rider_id, reason],[booking_id, rsa_id, checkOrder.rider_id, reason]);
+    await insertRecord('charging_service_rejected', ['booking_id', 'rsa_id', 'rider_id', 'reason'],[booking_id, rsa_id, checkOrder.rider_id, reason]);
     await db.execute(`DELETE FROM charging_service_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
 
     const href = `charging_service/${booking_id}`;
@@ -344,7 +362,7 @@ export const handleRejectBooking = async (req, resp) => {
 
 // cs booking action helper
 const acceptBooking = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    const { booking_id, rsa_id, latitude, longitude, booking_status } = req.body;
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -360,17 +378,14 @@ const acceptBooking = async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-
     if (checkOrder.count > 0) {
         return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
     }
-
     const ordHistoryCount = await queryDB(
         `SELECT COUNT(*) as count FROM charging_service_history WHERE rsa_id = ? AND order_status = "A" AND service_id = ?`,[rsa_id, booking_id]
     );
-
     if (ordHistoryCount.count === 0) {
-        await updateRecord('charging_service', {status: 'A', rsa_id}, 'request_id', booking_id);
+        await updateRecord('charging_service', {order_status: 'A', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
         const title = 'Booking Accepted';
@@ -393,7 +408,45 @@ const acceptBooking = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
+const driverEnroute = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token 
+        FROM 
+            charging_service_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 1
+        LIMIT 1
+    `,[booking_id, rsa_id]);
+    // console.log('asdasd', checkOrder)
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+    const ordHistoryCount = await queryDB(
+        `SELECT COUNT(*) as count FROM charging_service_history WHERE rsa_id = ? AND order_status = "ER" AND service_id = ?`,[rsa_id, booking_id]
+    );
+    if (ordHistoryCount.count === 0) {
+        await updateRecord('charging_service', {order_status: 'ER'}, ['request_id'], [booking_id]);
 
+        const href    = `charging_service/${booking_id}`;
+        const title   = 'PlusX team is on the way!';
+        const message = `PlusX team is on the way! Please have your EV ready for charging.`;
+        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        const insert = await db.execute(
+            `INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "ER", ?, ?, ?)`,
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+        );
+        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        return resp.json({ message: ['Booking Status changed successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
 const vehiclePickUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
@@ -405,7 +458,7 @@ const vehiclePickUp = async (req, resp) => {
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
-    `,[rsa_id, booking_id, rsa_id]);
+    `,[ booking_id, rsa_id]);
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -423,12 +476,12 @@ const vehiclePickUp = async (req, resp) => {
 
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('charging_service', {status: 'VP', rsa_id}, 'request_id', booking_id);
+        await updateRecord('charging_service', {order_status: 'VP', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
         const title = 'Vehicle Pickup';
         const message = `Your vehicle picked-up for charging`;
-        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle picked-up successfully!'], status: 1, code: 200 });
@@ -448,7 +501,7 @@ const reachedLocation = async (req, resp) => {
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
-    `,[rsa_id, booking_id, rsa_id]);
+    `,[booking_id, rsa_id]);
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -466,9 +519,9 @@ const reachedLocation = async (req, resp) => {
 
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('charging_service', {status: 'RS', rsa_id}, 'request_id', booking_id);
+        await updateRecord('charging_service', {order_status: 'RS', rsa_id}, ['request_id'], [booking_id]);
 
-        const href = `portable_charger_booking/${booking_id}`;
+        const href = `charging_service/${booking_id}`;
         const title = 'Reached Charging Spot';
         const message = `Your vehicle reached at charging spot`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
@@ -491,7 +544,7 @@ const chargingComplete = async (req, resp) => {
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
-    `,[rsa_id, booking_id, rsa_id]);
+    `,[booking_id, rsa_id]);
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -509,12 +562,12 @@ const chargingComplete = async (req, resp) => {
 
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('charging_service', {status: 'CC', rsa_id}, 'request_id', booking_id);
+        await updateRecord('charging_service', {order_status: 'CC', rsa_id}, ['request_id'], [booking_id]);
 
-        const href = `portable_charger_booking/${booking_id}`;
+        const href = `charging_service/${booking_id}`;
         const title = 'Charging Completed!';
         const message = `Your Vehicle Charging Completed!`;
-        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle charging completed! successfully!'], status: 1, code: 200 });
@@ -534,7 +587,7 @@ const vehicleDrop = async (req, resp) => {
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
-    `,[rsa_id, booking_id, rsa_id]);
+    `,[booking_id, rsa_id]);
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -552,12 +605,12 @@ const vehicleDrop = async (req, resp) => {
 
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('charging_service', {status: 'DO', rsa_id}, 'request_id', booking_id);
+        await updateRecord('charging_service', {order_status: 'DO', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
         const title = 'Vehicle Drop Off';
         const message = 'Your vehicle drop-off completed!';
-        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle drop-off successfully!'], status: 1, code: 200 });
@@ -569,23 +622,22 @@ const vehicleDrop = async (req, resp) => {
 const workComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
-    if (!req.file) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-
+    // if (!req.file) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token,
-            (select slot from charging_service as pb where cs.booking_id = charging_service_assign.order_id ) as slot_id
+            (select slot from charging_service as cs where cs.request_id = charging_service_assign.order_id ) as slot_id
         FROM 
             charging_service_assign
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
-    `,[rsa_id, booking_id, rsa_id]);
+    `,[booking_id, rsa_id]);
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM charging_service_history WHERE rsa_id = ? AND order_status = "WC" AND service_id = ?',[rsa_id, booking_id]
     );
@@ -599,19 +651,105 @@ const workComplete = async (req, resp) => {
 
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('charging_service', {status: 'WC', rsa_id}, 'request_id', booking_id);
+        await updateRecord('charging_service', {order_status: 'WC', rsa_id}, ['request_id'], [booking_id]);
         await db.execute(`DELETE FROM charging_service_assign WHERE rsa_id=? AND order_id = ?`, [rsa_id, booking_id]);
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
-        await db.execute('UPDATE pick_drop_slot SET booking_limit = booking_limit + 1 WHERE slot_id = ?', [checkOrder.slot_id]);
+        // await db.execute('UPDATE pick_drop_slot SET booking_limit = booking_limit + 1 WHERE slot_id = ?', [checkOrder.slot_id]);
 
-        const href = `charging_service/${booking_id}`;
-        const title = 'Work Complete';
+        const href    = `charging_service/${booking_id}`;
+        const title   = 'Work Complete';
         const message = `Driver has successfully completed your charging service booking with booking id : ${booking_id}`;
-        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Work completed! successfully!'], status: 1, code: 200 });
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
+};
+
+const userCancelBooking = async (req, resp) => {
+    const { booking_id, rider_id, reason } = req.body;
+    
+    const checkOrder = await queryDB(`
+        SELECT 
+            name, rsa_id, slot_date_time, pickup_address, 
+            concat( country_code, "-", contact_no) as contact_no, 
+            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = charging_service_assign.rider_id) AS rider_email,
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token,
+            (select fcm_token from rsa where rsa.rsa_id = charging_service_assign.rsa_id ) as rsa_fcm_token
+        FROM 
+            charging_service
+        WHERE 
+            request_id = ? AND rider_id = ? AND order_status IN ('CNF','A','ER') 
+        LIMIT 1
+    `,[booking_id, rider_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+    /* handle file upload */
+    const insert = await db.execute(
+        'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, cancel_by, cancel_reason) VALUES (?, ?, "C", ?, "User", ?)',
+        [booking_id, rider_id, checkOrder.rsa_id, reason]
+    );
+    if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+    await updateRecord('charging_service', {order_status: 'C'}, ['request_id'], [booking_id]);
+    const href    = `charging_service/${booking_id}`;
+    const title   = 'Valet Service Cancel!';
+    const message = `You have canceled the Valet Service booking with booking id : ${booking_id}`;
+    await createNotification(title, message, 'Charging Service', 'Rider', 'Rider', rider_id, rider_id, href);
+    await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+    if( checkOrder.rsa_id) {
+        await db.execute(`DELETE FROM charging_service_assign WHERE rider_id=? AND order_id = ?`, [rider_id, booking_id]);
+        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+
+        const message1 = `A Booking of the Valet Service booking has been cancelled by user with booking id : ${booking_id}`;
+        await createNotification(title, message1, 'Charging Service', 'RSA', 'Rider', rider_id, checkOrder.rsa_id,  href);
+        await pushNotification(checkOrder.rsa_fcm_token, title, message1, 'RSAFCM', href);
+    }
+    const html = `<html>
+        <body>
+            <h4>Dear ${checkOrder.user_name},</h4>
+            <p>We're writing to confirm that your recent booking for our Valet Service with PlusX Electric has been successfully cancelled.</p> <br />
+
+            <p>Booking Details:</p><br />
+
+            <p>Booking ID    : ${booking_id}</p>
+            <p>Date and Time : ${checkOrder.slot_date_time}</p>
+            <p>Location      : ${checkOrder.pickup_address}</p> <br />
+
+            <p>If you have any questions or wish to reschedule your booking, please don't hesitate to reach out to us through the PlusX Electric app or by contacting our support team.</p>
+            <p>Thank you for choosing PlusX Electric. We look forward to serving you again in the future.</p><br />
+
+            <p>Best regards,<br/> The PlusX Electric Team </p>
+        </body>
+    </html>`;
+
+    emailQueue.addEmail(checkOrder.rider_email, `Booking Cancellation Confirmation - PlusX Electric Valet Service (Booking ID : ${booking_id} )`, html);
+
+    const adminHtml = `<html>
+        <body>
+            <h4>Dear Admin,</h4>
+            <p>This is to inform you that a user has cancelled their booking for the Valet Service. Please see the details below for record-keeping and any necessary follow-up.</p> <br />
+
+            <p>Booking Details:</p><br />
+
+            <p>User Name    : ${checkOrder.name}</p>
+            <p>User Contact    : ${checkOrder.contact_no}</p>
+
+            <p>Booking ID    : ${booking_id}</p>
+            <p>Scheduled Date and Time : ${checkOrder.slot_date_time}</p> 
+            <p>Location      : ${checkOrder.pickup_address}</p> <br />
+
+            <p>Thank you for your attention to this update.</p><br />
+
+            <p>Best regards,<br/> The PlusX Electric Team </p>
+        </body>
+    </html>`;
+    emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
+
+    return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 };

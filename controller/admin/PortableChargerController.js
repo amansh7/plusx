@@ -97,6 +97,7 @@ export const addCharger = async (req, resp) => {
         const start = last ? last.id : 0;
         const nextId = start + 1;
         const chargerId = 'PCGR' + String(nextId).padStart(4, '0');
+        // console.log(req.body, status, chargerId, charger_image);
     
         const insert = await insertRecord('portable_charger', [
             'charger_id', 'charger_name', 'charger_price', 'charger_feature', 'image', 'charger_type', 'status'
@@ -532,10 +533,7 @@ export const addSlot = async (req, resp) => {
             const uniqueNumber = Math.floor(1000 + Math.random() * 9000); 
             return `${prefix}${uniqueNumber}`;
         };
-        
-
         const slot_id = generateSlotId();
-    
         const insert = await insertRecord('portable_charger_slot', [
             'slot_id', 'start_time', 'end_time', 'booking_limit', 'status'
         ],[

@@ -242,10 +242,20 @@ const authzRsaAndAuthRoutes = [
     { method: 'post', path: '/portable-charger-reject', handler: rejectBooking }
 ];
 authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
-    router[method](path, apiAuthorization, apiRsaAuthentication, handler);
+
+    const middlewares = [];
+    const upload      = multer();
+    middlewares.push( upload.array() ); 
+    
+    middlewares.push(apiAuthorization);
+    middlewares.push(apiRsaAuthentication);
+    
+    if (path === '/charger-service-action' || path === '/portable-charger-action') {
+        middlewares.push(handleFileUpload('pick-drop-images', ['image'], 1));
+    }
+    router[method](path, ...middlewares, handler);
+    // router[method](path,  upload.array(), apiAuthorization, apiRsaAuthentication, handler);
 });
-
-
 router.post('/validate-coupon', redeemCoupon);
 
 

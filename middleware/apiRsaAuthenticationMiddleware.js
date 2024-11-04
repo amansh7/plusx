@@ -6,7 +6,7 @@ export const apiRsaAuthentication = async (req, resp, next) => {
     const {rsa_id} = mergeParam(req);
     const token = req.headers["accesstoken"];
     const rsaId = rsa_id;
-    
+    // console.log(req.body, 'Ravv')
     if (!token) {
       return resp.status(401).json({ message: 'Access token is missing', code: 400, data: {}, status:0 });
     }

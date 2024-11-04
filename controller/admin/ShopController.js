@@ -53,11 +53,12 @@ export const storeData = async (req, resp) => {
 };
 
 export const storeAdd = async (req, resp) => {
+
     try{
         const uploadedFiles = req.files;
-        let cover_image = '';
-        let timing = '';
-        const data = req.body;
+        let cover_image     = '';
+        let timing          = '';
+        const data          = req.body;
 
         if(req.files && req.files['cover_image']){
             cover_image = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
@@ -69,9 +70,9 @@ export const storeAdd = async (req, resp) => {
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
         if (always_open) {
-            const days = data.days.join('_');
-            const timeArr = data.days.map(day => {
-                const openTime = data[`${day}_open_time`];
+            const days          = data.days.join('_');
+            const timeArr       = data.days.map(day => {
+                const openTime  = data[`${day}_open_time`];
                 const closeTime = data[`${day}_close_time`];
                 if (openTime && closeTime) {
                     const formattedOpenTime = new Date(`1970-01-01T${openTime}`).toTimeString().slice(0, 8);
@@ -81,12 +82,10 @@ export const storeAdd = async (req, resp) => {
                     return 'Closed';
                 }
             });
-        
             timing = timeArr.join('_');
         }
-    
-        const storeId = `STOR${generateUniqueId({length:12})}`;
-        const brandsArr = (brands && brands.trim !== '') ? brands.join(",") : '';
+        const storeId     = `STOR${generateUniqueId({length:12})}`;
+        const brandsArr   = (brands && brands.trim !== '') ? brands.join(",") : '';
         const servicesArr = (services && services.trim !== '') ? services.join(",") : '';
     
         const insert = await insertRecord('service_shops', [
@@ -95,7 +94,6 @@ export const storeAdd = async (req, resp) => {
         ], [
             storeId, shop_name, contact_no, store_website, store_email, cover_image, 1, always_open ? 1 : 0, days, timing, description, brandsArr, servicesArr
         ]);
-        
         if(insert.affectedRows == 0) return resp.json({status:0, message: "Something went wrong! Please try again after some time."});
     
         if(shop_gallery.length > 0){
@@ -103,7 +101,6 @@ export const storeAdd = async (req, resp) => {
             const placeholders = values.map(() => '(?, ?)').join(', ');
             await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
         }
-
         /* if(address && address.length > 0){
             const allAddress = data.address.filter(Boolean);
             const values = [];
@@ -120,17 +117,19 @@ export const storeAdd = async (req, resp) => {
                     placeholders.push('(?, ?, ?, ?, ?, ?)');
                 }
             }
-    
             await db.execute(`INSERT INTO store_address (store_id, address, area_name, location, latitude, longitude) VALUES ${placeholders.join(', ')}`, [values]);
         } */
-    
         return resp.json({
-            status: 1, 
-            message: "Store added successfully."
+            status  : 1, 
+            message : "Store added successfully."
         });
-    }catch(err){
-        console.log(err);
-        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    } catch(err) {
+        
+        return resp.status(500).json({
+            status  : 0, 
+            code    : 500, 
+            message : "Oops! There is something went wrong! Please Try Again" 
+        });
     }
 };
 

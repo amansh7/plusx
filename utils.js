@@ -347,7 +347,7 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
                 'Content-Type': 'application/json',
             },
         });
-        console.log('Notification sent successfully:', response.data);
+        // console.log('Notification sent successfully:', response.data);
     } catch (error) {
         console.error('Error sending notification:', error.response ? error.response.data : error.message);
     }

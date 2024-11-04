@@ -5,10 +5,11 @@ import { login, logout, forgotPassword, updatePassword } from "../controller/adm
 import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, 
     invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot, assignBooking,
-    slotDetails,
-    chargerDetails} from "../controller/admin/PortableChargerController.js";
+    slotDetails, chargerDetails} from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
-import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, assignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
+
+import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, PodAssignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
+
 import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { 
@@ -19,14 +20,15 @@ import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg }
 import { carList } from "../controller/api/ElectricCarRentalController.js";
 import { carData } from "../controller/admin/ElectriCarLeasingController.js";
 import { bikeData, bikesList } from "../controller/admin/ElectricBikeRentalController.js";
-import {  vehicleData, vehicleList } from "../controller/admin/EvGuideController.js";
+// import {  vehicleData, vehicleList } from "../controller/admin/EvGuideController.js";
 import {bookingData, bookingList as evRoadAssistanceBooking, invoiceList as evRoadAssistanceInvoice, invoiceData} from '../controller/admin/EvRoadAssistanceController.js'
 import { interestList } from "../controller/admin/RegisterInterestController.js";
 import { couponData, couponList } from "../controller/admin/CouponController.js";
 import { offerData, offerList } from "../controller/admin/OfferController.js";
 
-const router = Router();
+import {guideList, addGuide, guideDetail, editGuide, deleteGuide} from "../controller/admin/EvGuideController.js";
 
+const router = Router();
 const adminAuthRoutes = [
     { method: 'post', path: '/login', handler: login },
 ]
@@ -56,7 +58,7 @@ const adminRoutes = [
     { method: 'post', path: '/charger-booking-invoice-list', handler: invoiceList },
     { method: 'post', path: '/charger-booking-invoice-details', handler: invoiceDetails },
     { method: 'post', path: '/charger-booking-assign', handler: assignBooking },
-    
+   
     //Portable Charger Slot List
     { method: 'post', path: '/charger-slot-list', handler: slotList },
     { method: 'post', path: '/charger-slot-details', handler: slotDetails },
@@ -78,20 +80,15 @@ const adminRoutes = [
     { method: 'post', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
     { method: 'post', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
 
-
     //Public Charger
     { method: 'post', path: '/public-charger-station-list', handler: stationList },
     { method: 'post', path: '/public-charger-station-details', handler: stationDetail },
     { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
     { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
 
-
     //Charger Installation
     { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
     { method: 'post', path: '/charger-installation-details', handler: chargerInstallationDetails },
-    //Charger Installation
-    { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
-    { method: 'get', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
     /* Service Shops */
     { method: 'post',    path: '/shop-list',           handler: storeList },
@@ -133,10 +130,6 @@ const adminRoutes = [
     { method: 'post',  path: '/electric-bikes-list', handler: bikesList },
     { method: 'post',  path: '/electric-bike-data',  handler: bikeData },
 
-    //EV Guide
-    { method: 'post',  path: '/vehicle-list', handler: vehicleList },
-    { method: 'post',  path: '/vehicle-data',  handler: vehicleData },
-
     //EV Road Assistance
     { method: 'post',  path: '/road-assistance-booking-list', handler: evRoadAssistanceBooking },
     { method: 'post',  path: '/road-assistance-booking-data',  handler: bookingData },
@@ -146,18 +139,25 @@ const adminRoutes = [
     //Interest List
     { method: 'post',  path: '/interest-list', handler: interestList },
 
-     //Coupon
-     { method: 'post',  path: '/coupon-list', handler: couponList },
-     { method: 'post',  path: '/coupon-data', handler: couponData },
+    //Coupon
+    { method: 'post',  path: '/coupon-list', handler: couponList },
+    { method: 'post',  path: '/coupon-data', handler: couponData },
 
-     //Offer
-     { method: 'post',  path: '/offer-list', handler: offerList },
-     { method: 'post',  path: '/offer-data', handler: offerData },
+    //Offer
+    { method: 'post',  path: '/offer-list', handler: offerList },
+    { method: 'post',  path: '/offer-data', handler: offerData },
 
-     //Discussion Board
+    //Discussion Board
     //  { method: 'post',  path: '/discussion-board-list', handler: rsaList },
     //  { method: 'post',  path: '/discussion-board-data',  handler: rsaData },
-];
+
+    //Ev Guide Routes
+    { method: 'get',  path: '/ev-guide-list',    handler: guideList },
+    { method: 'get',  path: '/ev-guide-add',     handler: addGuide },
+    { method: 'post', path: '/ev-guide-details', handler: guideDetail },
+    { method: 'post', path: '/ev-guide-update',  handler: editGuide },
+    { method: 'get',  path: '/ev-guide-delete',  handler: deleteGuide },
+]; 
 
 adminRoutes.forEach(({ method, path, handler }) => {
     const middlewares = [adminAuthorization];
@@ -174,7 +174,9 @@ adminRoutes.forEach(({ method, path, handler }) => {
     if (path === '/add-club' || path === '/edit-club') {
         middlewares.push(handleFileUpload('club-images', ['cover_image', 'shop_gallery'], 5));
     }
-
+    if (path === '/ev-guide-add' || path === '/ev-guide-update') {
+        middlewares.push(handleFileUpload('vehicle-image', ['cover_image', 'vehicle_gallery'], 5));
+    }
     middlewares.push(authenticateAdmin);
     // middlewares.push(authenticate);
 

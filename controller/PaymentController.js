@@ -113,8 +113,8 @@ export const redeemCoupon = async (req, resp) => {
 
     const disAmount = (amount * coupon.coupan_percentage)/100;
     const finalAmount = amount - disAmount;
-    console.log(`Discount Amount: ${disAmount.toFixed(2)}`); // Log the discount amount
-    console.log(`Final Amount: ${finalAmount.toFixed(2)}`);
+    // console.log(`Discount Amount: ${disAmount.toFixed(2)}`); // Log the discount amount
+    // console.log(`Final Amount: ${finalAmount.toFixed(2)}`);
 
     return resp.json({
         message: [""],

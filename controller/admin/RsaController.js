@@ -113,13 +113,11 @@ export const rsaAdd = async (req, resp) => {
             const files = req.files;
             profile_image = files ? files['profile_image'][0].filename : '';
         }
-    
         const insert = await insertRecord('rsa', [
             'rsa_id', 'rsa_name', 'email', 'country_code', 'mobile', 'booking_type', 'password', 'status', 'running_order', 'profile_img'
         ], [
             `RSA-${generateUniqueId({length:8})}`, rsa_name, rsa_email, '+971', mobile, service_type, password, 0, 0, profile_image
         ]);
-    
         return resp.json({
             status: insert.affectedRows > 0 ? 1 : 0, 
             code: 200, 

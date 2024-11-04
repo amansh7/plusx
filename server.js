@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3333;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -17,14 +17,15 @@ const __dirname = path.dirname(__filename);
 
 const corsOptions = {
     origin: [
-      'http://192.168.1.87:3000',
-      'http://192.168.1.87:3333',
-      'http://localhost:3000',
+        'http://192.168.1.87:3000',
+        'http://192.168.1.87:3333',
+        'http://localhost:3000',
+        // 'http://192.168.1.21:3434/admin/driver-list'
     ],
     // origin : "*",
     methods: 'GET, POST, PUT, DELETE',
     credentials: true
-  };
+};
 
 app.use(cors(corsOptions));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -308,14 +308,14 @@ export const home = async (req, resp) => {
     
     const pickDropData = await queryDB(
         `SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = charging_service.rsa_id) AS rsaDetails, created_at 
-        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status NOT IN ('WC', 'C') ORDER BY id DESC LIMIT 1
+        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status = 'ER' ORDER BY id DESC LIMIT 1
     `, [rider_id]);
     
     if (pickDropData) pickDropData.eta_time = '11 Min.';
     
     const podBookingData = await queryDB(
         `SELECT booking_id AS request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = portable_charger_booking.rsa_id) AS rsaDetails, created_at 
-        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status NOT IN ('WC', 'C') ORDER BY id DESC LIMIT 1
+        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status = 'ER' ORDER BY id DESC LIMIT 1
     `, [rider_id]);
 
     if (podBookingData) podBookingData.eta_time = '11 Min.';
@@ -327,8 +327,8 @@ export const home = async (req, resp) => {
         pick_drop_order: pickDropData || null,
         pod_booking: podBookingData || null,
         roadside_assistance_price: 15,
-        portable_price: 15,
-        pick_drop_price: 15,
+        portable_price: 90,
+        pick_drop_price: 49,
         status: 1,
         code: 200
     });
@@ -341,7 +341,15 @@ export const getRiderData = async(req, resp) => {
     const rider = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['date_of_birth'])} FROM riders WHERE rider_id=?`, [rider_id]);
     rider.image_url = `${req.protocol}://${req.get('host')}/uploads/rider_profile/`;
 
-    return resp.json({status: 1, code: 200, message: ['Rider Data fetch successfully!'], data: rider, roadside_assitance_price: 15, portable_price: 15, pick_drop_price: 15});
+    return resp.json({
+        status: 1, 
+        code: 200, 
+        message: ['Rider Data fetch successfully!'], 
+        data: rider, 
+        roadside_assitance_price: 15, 
+        portable_price: 90, 
+        pick_drop_price: 49
+    });
 };
 
 export const updateProfile = async (req, resp) => {
@@ -376,7 +384,7 @@ export const updateProfile = async (req, resp) => {
         
         return resp.json({status: 1, code: 200, message: ["Rider profile updated successfully"]});
     }catch(err){
-        console.log(err);
+        // console.log(err);
         return resp.status(500).json({status: 0, code: 500, message:[ "Oops! There is something went wrong! Please Try Again" ]});
     }
 };
@@ -571,7 +579,7 @@ export const addRiderAddress = async (req, resp) => {
 export const deleteRiderAddress = async (req, resp) => {
     try{
         const {rider_id, address_id} = mergeParam(req);
-        console.log(rider_id, address_id);
+        // console.log(rider_id, address_id);
         const { isValid, errors } = validateFields(mergeParam(req), {
             rider_id: ["required"], address_id: ["required"]
         });
@@ -585,7 +593,7 @@ export const deleteRiderAddress = async (req, resp) => {
             status: del.affectedRows > 0 ? 1 : 0
         });
     }catch(err){
-        console.log('Error deleting record', err);
+        // console.log('Error deleting record', err);
         return resp.json({status:0, message: 'Error deleting record'});
     }
 };

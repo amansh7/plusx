@@ -92,7 +92,7 @@ export const addInsurance = async (req, resp) => {
         });
 
     }catch(err){
-        console.log('Error : ', err);
+        // console.log('Error : ', err);
         const error = JSON.parse(err.message);
         if (error.code === 422){
             return resp.status(422).json({status: 0, code: 422, message: error.message });
