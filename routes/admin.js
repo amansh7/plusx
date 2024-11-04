@@ -25,7 +25,9 @@ import { interestList } from "../controller/admin/RegisterInterestController.js"
 import { couponData, couponList } from "../controller/admin/CouponController.js";
 import { offerData, offerList } from "../controller/admin/OfferController.js";
 import {guideList, addGuide, guideDetail, editGuide, deleteGuide} from "../controller/admin/EvGuideController.js";
-import { evInsuranceList, evInsuranceDetail } from "../controller/admin/EvInsuranceController.js";
+import { 
+    evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete 
+} from "../controller/admin/EvInsuranceController.js";
 
 const router = Router();
 const adminAuthRoutes = [
@@ -80,10 +82,10 @@ const adminRoutes = [
     { method: 'post', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
 
     //Public Charger
-    { method: 'post', path: '/public-charger-station-list', handler: stationList },
+    { method: 'post', path: '/public-charger-station-list',    handler: stationList },
     { method: 'post', path: '/public-charger-station-details', handler: stationDetail },
-    { method: 'post', path: '/public-charger-add-station', handler: addPublicCharger },
-    { method: 'put', path: '/public-charger-edit-station', handler: editPublicCharger },
+    { method: 'post', path: '/public-charger-add-station',     handler: addPublicCharger },
+    { method: 'post', path: '/public-charger-edit-station',    handler: editPublicCharger },
 
     //Charger Installation
     { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
@@ -146,10 +148,6 @@ const adminRoutes = [
     { method: 'post',  path: '/offer-list', handler: offerList },
     { method: 'post',  path: '/offer-data', handler: offerData },
 
-    /* EV Insurance */
-    { method: 'get',  path: '/ev-insurance-list', handler: evInsuranceList },
-    { method: 'get',  path: '/ev-insurance-detail', handler: evInsuranceDetail },
-
     //Discussion Board
     //  { method: 'post',  path: '/discussion-board-list', handler: rsaList },
     //  { method: 'post',  path: '/discussion-board-data',  handler: rsaData },
@@ -160,6 +158,16 @@ const adminRoutes = [
     { method: 'post', path: '/ev-guide-details', handler: guideDetail },
     { method: 'post', path: '/ev-guide-update',  handler: editGuide },
     { method: 'get',  path: '/ev-guide-delete',  handler: deleteGuide },
+
+    /* EV Insurance */
+    { method: 'post',  path: '/ev-insurance-list',                 handler: evInsuranceList },
+    { method: 'post',  path: '/ev-insurance-detail',               handler: evInsuranceDetail },
+    { method: 'post',  path: '/ev-pre-sale-list',                  handler: evPreSaleList },
+    { method: 'post',  path: '/ev-pre-sale-detail',                handler: evPreSaleDetail },
+    { method: 'post',  path: '/ev-pre-sale-time-slot-list',        handler: evPreSaleTimeSlot },
+    { method: 'post',  path: '/ev-pre-sale-add-time-slot-list',    handler: evPreSaleTimeSlotAdd },
+    { method: 'post',  path: '/ev-pre-sale-edit-time-slot-list',   handler: evPreSaleTimeSlotEdit },
+    { method: 'post',  path: '/ev-pre-sale-delete-time-slot-list', handler: evPreSaleTimeSlotDelete },
 ]; 
 
 adminRoutes.forEach(({ method, path, handler }) => {
@@ -173,6 +181,9 @@ adminRoutes.forEach(({ method, path, handler }) => {
     }
     if (path === '/shop-add' || path === '/shop-update') {
         middlewares.push(handleFileUpload('shop-images', ['cover_image', 'shop_gallery'], 5));
+    }
+    if (path === '/public-charger-add-station' || path === '/public-charger-edit-station') {
+        middlewares.push(handleFileUpload('charging-station-images', ['cover_image', 'shop_gallery'], 5));
     }
     if (path === '/add-club' || path === '/edit-club') {
         middlewares.push(handleFileUpload('club-images', ['cover_image', 'shop_gallery'], 5));

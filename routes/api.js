@@ -244,7 +244,9 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
     const middlewares = [];   
     
-    if (path === '/portable-charger-action' || path === '/charger-service-action') {
+    if (path === '/portable-charger-action') {
+        middlewares.push(handleFileUpload('portable-charger', ['image'], 1));
+    } else if (path === '/charger-service-action') {
         middlewares.push(handleFileUpload('pick-drop-images', ['image'], 1));
     }
 

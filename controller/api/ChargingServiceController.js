@@ -279,7 +279,6 @@ export const getRsaBookingStage = async (req, resp) => {
 };
 
 export const handleBookingAction = async (req, resp) => {
-    console.log(req.file)
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
 
     let validationRules = {
@@ -298,7 +297,6 @@ export const handleBookingAction = async (req, resp) => {
     // const { isValid, errors } = validateFields(mergeParam(req), validationRules);
     const { isValid, errors } = validateFields(req.body, validationRules);
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    // console.log(req.file)
     
     switch (booking_status) {
         case 'A': return await acceptBooking(req, resp);
