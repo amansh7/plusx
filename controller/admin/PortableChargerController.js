@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import moment from 'moment';
 dotenv.config();
 
 
@@ -200,13 +201,16 @@ export const deleteCharger = async (req, resp) => {
 
 export const chargerBookingList = async (req, resp) => {
     try {
-        const { page_no, booking_id, name, contact, status } = req.body;
+        const { page_no, booking_id, name, contact, status, filter_date } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const start = moment(start_date, "YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD");
 
         const result = await getPaginatedData({
             tableName: 'portable_charger_booking',
@@ -217,6 +221,9 @@ export const chargerBookingList = async (req, resp) => {
             limit: 10,
             searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
             searchTexts: [booking_id, name, contact, status],
+            whereField: ['created_at', 'created_at'],
+            whereValue: [start, end],
+            whereOperator: ['>=', '<=']
         });
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);

@@ -164,7 +164,6 @@ const authzAndAuthRoutes = [
     { method: 'post', path: '/portable-charger-booking', handler: chargerBooking },
     { method: 'get', path: '/portable-charger-booking-list', handler: chargerBookingList },
     { method: 'get', path: '/portable-charger-booking-detail', handler: chargerBookingDetail },
-    // { method: 'get', path: '/portable-charger-booking-detail', handler: invoiceList },
     { method: 'get', path: '/portable-charger-slot-list', handler: getPcSlotList },
     { method: 'get', path: '/portable-charger-subscription', handler: getPcSubscriptionList },
     { method: 'get', path: '/portable-charger-cancel', handler: userCancelBooking },
@@ -244,18 +243,18 @@ const authzRsaAndAuthRoutes = [
 ];
 authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
-    const middlewares = [];
-    const upload      = multer();
-    middlewares.push( upload.array() ); 
-    
+    const middlewares = [];   
+
+    if (path === '/portable-charger-action') {
+        middlewares.push(handleFileUpload('portable-charger', ['image'], 1));
+    } else if (path === '/charger-service-action') {
+        middlewares.push(handleFileUpload('pick-drop-images', ['image'], 1));
+    }
+
     middlewares.push(apiAuthorization);
     middlewares.push(apiRsaAuthentication);
 
-    // if (path === '/charger-service-action' || path === '/portable-charger-action') {
-    //     middlewares.push(handleFileUpload('pick-drop-images', ['image'], 1));
-    // }
     router[method](path, ...middlewares, handler);
-    // router[method](path,  upload.array(), apiAuthorization, apiRsaAuthentication, handler);
 });
 router.post('/validate-coupon', redeemCoupon);
 

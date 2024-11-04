@@ -223,7 +223,7 @@ export const chargerBookingDetail = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const booking = await queryDB(`SELECT portable_charger_booking.*, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
-    // console.log(booking);
+
     if (booking.status == 'PU') {
         const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
         booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
@@ -370,13 +370,9 @@ export const bookingAction = async (req, resp) => {
         longitude      : ["required"], 
         booking_status : ["required"],
     };
-    if (booking_status == "C") {
-        validationRules = {
-            ...validationRules,
-            reason  : ["required"], 
-        };
-    }
-    
+
+    if (booking_status == "C") validationRules = { ...validationRules, reason  : ["required"] };
+
     const { isValid, errors } = validateFields(req.body, validationRules);
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -475,10 +471,11 @@ const acceptBooking = async (req, resp) => {
         await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
-        const insert = await db.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "A", ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
-        );
+        const insert = await insertRecord('portable_charger_history', [
+            'booking_id', 'rider_id', 'order_status', 'rsa_id', 'latitude', 'longitude'
+        ],[
+            booking_id, checkOrder.rider_id, "A", rsa_id, latitude, longitude
+        ]);
 
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
@@ -490,7 +487,6 @@ const acceptBooking = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const driverEnroute = async (req, resp) => {
     console.log('asdas')
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
@@ -574,7 +570,6 @@ const reachedLocation = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const chargingStart = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
@@ -606,18 +601,17 @@ const chargingStart = async (req, resp) => {
 
         await updateRecord('portable_charger_booking', {status: 'CS', rsa_id}, ['booking_id'], [booking_id] );
 
-        // const href = `portable_charger_booking/${booking_id}`;
-        // const title = 'Charging Start';
-        // const message = `Your Vehicle Charging Start Successfully!`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `portable_charger_booking/${booking_id}`;
+        const title = 'Charging Start';
+        const message = `Your Vehicle Charging Start Successfully!`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle Charging Start successfully!'], status: 1, code: 200 });
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const chargingComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
@@ -646,23 +640,23 @@ const chargingComplete = async (req, resp) => {
 
         await updateRecord('portable_charger_booking', {status: 'CC', rsa_id}, ['booking_id'], [booking_id] );
 
-        // const href = `portable_charger_booking/${booking_id}`;
-        // const title = 'Charging Completed!';
-        // const message = `Your Vehicle Charging Start Completed!`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        const href = `portable_charger_booking/${booking_id}`;
+        const title = 'Charging Completed!';
+        const message = `Your Vehicle Charging Start Completed!`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Vehicle Charging Completed successfully!'], status: 1, code: 200 });
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const chargerPickedUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
-    // if (!req.file) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-
+    if (!req.files.image) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    const imgName = req.files.image[0].filename; 
+    
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
@@ -683,24 +677,23 @@ const chargerPickedUp = async (req, resp) => {
     );
 
     if (ordHistoryCount.count === 0) {
-        /* handle file upload */
-
         const insert = await db.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "PU", ?, ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, '']
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
         );
-
+        
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id] );
         await db.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
-        // await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
-        // const href = `portable_charger_booking/${booking_id}`;
-        // const title = 'POD Picked Up';
-        // const message = `Portable Charger picked-up successfully! with booking id : ${booking_id}`;
-        // await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
+        
+        const href = `portable_charger_booking/${booking_id}`;
+        const title = 'POD Picked Up';
+        const message = `Portable Charger picked-up successfully! with booking id : ${booking_id}`;
+        await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
     } else {
@@ -708,10 +701,10 @@ const chargerPickedUp = async (req, resp) => {
     }
 };
 
-export const userCancelBooking = async (req, resp) => {
-    // console.log(mergeParam(req))  // rider_id:
-    const { rider_id, booking_id, reason } = mergeParam(req); 
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
+export const userCancelPCBooking = async (req, resp) => {
+    const {rider_id, booking_id, reason } = req.body;
+    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
+
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const checkOrder = await queryDB(`
