@@ -89,7 +89,7 @@ export const clubCreate = async (req, resp) => {
         return resp.json({status: 1, message: "Club added successfully."});
 
     }catch(err){
-        console.log(err);
+        // console.log(err);
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 };

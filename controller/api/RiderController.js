@@ -70,7 +70,7 @@ export const register = async (req, resp) => {
         date_of_birth: ["required"], 
         vehicle_type: ["required"],
     };
-    if (vehicle_type && vehicle_type != "None") {
+    if (vehicle_type && vehicle_type != "None") {  // None
         validationRules = {
             ...validationRules,
             vehicle_make: ["required"],
@@ -116,13 +116,16 @@ export const register = async (req, resp) => {
 
     const riderId = 'ER' + String(rider.insertId).padStart(4, '0');
     await db.execute('UPDATE riders SET rider_id = ? WHERE id = ?', [riderId, rider.insertId]);
-    const vehicle = await insertRecord('riders_vehicles', [
-        'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 'vehicle_specification' 
-    ],[
-        'RDV' + generateUniqueId({length:13}), riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, specification,
-    ]);
 
-    if(vehicle.affectedRows == 0) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
+    if (vehicle_type && vehicle_type != "None") { 
+        const vehicle = await insertRecord('riders_vehicles', [
+            'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 'vehicle_specification' 
+        ],[
+            'RDV' + generateUniqueId({length:13}), riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, specification,
+        ]); 
+        if(vehicle.affectedRows == 0) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
+    }
+    
     const result = {
         image_url: `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
         rider_id: riderId,
@@ -148,7 +151,7 @@ export const forgotPassword = async (req, resp) => {
     }
     const password = generateRandomPassword(6);
     const hashedPswd = await bcrypt.hash(password, 10);
-    console.log(hashedPswd);
+    // console.log(hashedPswd);
     await db.execute('UPDATE riders SET password=? WHERE rider_email=?', [hashedPswd, email]);
     // await updateRecord
     try {
@@ -169,7 +172,7 @@ export const forgotPassword = async (req, resp) => {
     
         resp.status(200).json({ status: 1, code: 200, message: ["An email has been sent to your given email address. Kindly check your email"] });
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         resp.status(500).json({ status: 0, code: 500, message: ["Failed to send email."] });
     }
 };
@@ -321,16 +324,16 @@ export const home = async (req, resp) => {
     if (podBookingData) podBookingData.eta_time = '11 Min.';
     
     return resp.json({
-        message: ["Rider Home Data fetched successfully!"],
-        rider_data: result,
-        order_data: orderData || null,
-        pick_drop_order: pickDropData || null,
-        pod_booking: podBookingData || null,
-        roadside_assistance_price: 15,
-        portable_price: 90,
-        pick_drop_price: 49,
-        status: 1,
-        code: 200
+        message                   : ["Rider Home Data fetched successfully!"],
+        rider_data                : result,
+        order_data                : orderData || null,
+        pick_drop_order           : pickDropData || null,
+        pod_booking               : podBookingData || null,
+        roadside_assistance_price : 15,
+        portable_price            : 90,
+        pick_drop_price           : 49,
+        status                    : 1,
+        code                      : 200
     });
 };
 

@@ -168,7 +168,7 @@ export const rsaStatusChange = async (req, resp) => {
     if(!rsa){
         return resp.json({status:0, code:405, message: ["RSA ID invalid"], error: true});
     }
-    else if(rsa.running_order){
+    else if(rsa.running_order > 0){
         return resp.json({status:0, code:405, message: ["Please complete your pending order first"], error: true});
     }
     else{

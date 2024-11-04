@@ -342,7 +342,7 @@ const acceptOrder = async (req, resp) => {
 
         const href = `road_assistance/${order_id}`;
         const title = 'Request Accepted';
-        const message = `RSA Team has accepted your boking with boking id : ${order_id} and he is enroute now`;
+        const message = `RSA Team has accepted your booking with booking id : ${order_id} and he is enroute now`;
         await createNotification(title, message, 'Roadside Assistance', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
