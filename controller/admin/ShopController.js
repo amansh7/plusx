@@ -2,6 +2,7 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import { formatOpenAndCloseTimings } from '../../utils.js';
 
 export const storeList = async (req, resp) => {
     const { search, page_no } = req.body;
@@ -57,7 +58,6 @@ export const storeAdd = async (req, resp) => {
     try{
         const uploadedFiles = req.files;
         let cover_image     = '';
-        let timing          = '';
         const data          = req.body;
 
         if(req.files && req.files['cover_image']){
@@ -65,25 +65,11 @@ export const storeAdd = async (req, resp) => {
         }
         const shop_gallery = uploadedFiles['shop_gallery']?.map(file => file.filename) || [];
     
-        const { shop_name, contact_no ,address=[], store_website='', store_email='', always_open='', description='', brands=[], services=[], days=[] } = req.body;
+        const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
         const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
-        if (always_open) {
-            const days          = data.days.join('_');
-            const timeArr       = data.days.map(day => {
-                const openTime  = data[`${day}_open_time`];
-                const closeTime = data[`${day}_close_time`];
-                if (openTime && closeTime) {
-                    const formattedOpenTime = new Date(`1970-01-01T${openTime}`).toTimeString().slice(0, 8);
-                    const formattedCloseTime = new Date(`1970-01-01T${closeTime}`).toTimeString().slice(0, 8);
-                    return `${formattedOpenTime}-${formattedCloseTime}`;
-                } else {
-                    return 'Closed';
-                }
-            });
-            timing = timeArr.join('_');
-        }
+        const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
         const storeId     = `STOR${generateUniqueId({length:12})}`;
         const brandsArr   = (brands && brands.trim !== '') ? brands.join(",") : '';
         const servicesArr = (services && services.trim !== '') ? services.join(",") : '';
@@ -92,7 +78,7 @@ export const storeAdd = async (req, resp) => {
             'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 
             'services', 
         ], [
-            storeId, shop_name, contact_no, store_website, store_email, cover_image, 1, always_open ? 1 : 0, days, timing, description, brandsArr, servicesArr
+            storeId, shop_name, contact_no, store_website, store_email, cover_image, 1, always_open ? 1 : 0, fDays, fTiming, description, brandsArr, servicesArr
         ]);
         if(insert.affectedRows == 0) return resp.json({status:0, message: "Something went wrong! Please try again after some time."});
     
@@ -161,14 +147,13 @@ export const storeUpdate = async (req, resp) => {
     try{
         const uploadedFiles = req.files;
         let cover_image = '';
-        let timing = '';
         const data = req.body;
 
         if(req.files && req.files['cover_image']){
             cover_image = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
         }
 
-        const { shop_name, contact_no , address=[], store_website='', store_email='', always_open='', description='', brands=[], services=[], days=[], shop_id } = req.body;
+        const { shop_name, contact_no , address=[], store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
         const { isValid, errors } = validateFields(req.body, {
             shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
         });
@@ -178,26 +163,11 @@ export const storeUpdate = async (req, resp) => {
         if(!shop) return resp.json({status:0, message: "Shop Data can not edit, or invalid shop Id"});
         const galleryData = await queryDB(`SELECT image_name FROM store_gallery WHERE store_id = ?`, [shop_id]);
         
-        let timeArr = '';
         const brandsArr = (brands && brands.trim !== '') ? data.brands.join(",") : '';
         const servicesArr = (services && services.trim !== '') ? data.services.join(",") : '';
 
-        if (always_open) {
-            days = data.days.join('_');
-            timeArr = data.days.map(day => {
-                const openTime = data[`${day}_open_time`];
-                const closeTime = data[`${day}_close_time`];
-                if (openTime && closeTime) {
-                    const formattedOpenTime = new Date(`1970-01-01T${openTime}`).toTimeString().slice(0, 8);
-                    const formattedCloseTime = new Date(`1970-01-01T${closeTime}`).toTimeString().slice(0, 8);
-                    return `${formattedOpenTime}-${formattedCloseTime}`;
-                } else {
-                    return 'Closed';
-                }
-            });
-        
-            timing = timeArr.join('_');
-        }
+        const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
+
         const updates = {
             shop_name, 
             contact_no, 
@@ -205,8 +175,8 @@ export const storeUpdate = async (req, resp) => {
             store_email, 
             status:1, 
             always_open: always_open ? 1 : 0, 
-            open_days: days, 
-            open_timing: timing, 
+            open_days: fDays, 
+            open_timing: fTiming, 
             brands: brandsArr,
             services: servicesArr,
             cover_image

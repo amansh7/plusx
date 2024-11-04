@@ -50,7 +50,7 @@ export const rsaLogin = async (req, resp) => {
 export const rsaUpdatePassword = async (req, resp) => {
     const { rsa_id, old_password, new_password, confirm_password} = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {
-        rider_id: ["required"], old_password: ["required"], new_password: ["required"], confirm_password: ["required"]
+        rsa_id: ["required"], old_password: ["required"], new_password: ["required"], confirm_password: ["required"]
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -58,7 +58,7 @@ export const rsaUpdatePassword = async (req, resp) => {
     
     const rsa = await queryDB(`SELECT password FROM rsa WHERE rsa_id=?`, [rsa_id]);
     
-    const isMatch = await bcrypt.compare(old_password, rider.password);  
+    const isMatch = await bcrypt.compare(old_password, rsa.password);  
     if (!isMatch) return resp.status(401).json({ message: ["Please enter correct current password."] });
 
     const hashedPswd = await bcrypt.hash(new_password, 10);

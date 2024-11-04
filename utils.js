@@ -151,6 +151,29 @@ export const getOpenAndCloseTimings = (data) => {
   }
 };
 
+export const formatOpenAndCloseTimings = (alwaysOpen, data) => {
+  if (!alwaysOpen) return { fDays: '', fTiming: '' };
+
+  const fDays = data.days.join('_');
+
+  const timeArr = data.days.map(day => {
+      const openTime = data[`${day}_open_time`];
+      const closeTime = data[`${day}_close_time`];
+
+      if (openTime && closeTime) {
+          const formattedOpenTime = new Date(`1970-01-01T${openTime}`).toTimeString().slice(0, 8);
+          const formattedCloseTime = new Date(`1970-01-01T${closeTime}`).toTimeString().slice(0, 8);
+          return `${formattedOpenTime}-${formattedCloseTime}`;
+      } else {
+          return 'Closed';
+      }
+  });
+
+  const fTiming = timeArr.join('_');
+
+  return { fDays, fTiming };
+};
+
 /* convert  time */
 export const convertTo24HourFormat = (timeStr) => {
   const [time, modifier] = timeStr.split(' '); 
