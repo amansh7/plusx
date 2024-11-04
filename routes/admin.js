@@ -10,7 +10,7 @@ import { handleFileUpload } from "../fileUpload.js";
 
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, PodAssignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
 
-import { addPublicCharger, editPublicCharger, stationDetail, stationList } from "../controller/admin/PublicChargerController.js";
+import { addPublicCharger, editPublicCharger, stationDetail, stationList, deletePublicCharger, deletePublicChargerGallery, stationData } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { 
     storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete,serviceList, serviceCreate, serviceUpdate, serviceDelete, brandList, brandCreate, brandUpdate, brandDelete
@@ -84,8 +84,11 @@ const adminRoutes = [
     //Public Charger
     { method: 'post', path: '/public-charger-station-list',    handler: stationList },
     { method: 'post', path: '/public-charger-station-details', handler: stationDetail },
+    { method: 'post', path: '/public-charger-station-data',    handler: stationData },
     { method: 'post', path: '/public-charger-add-station',     handler: addPublicCharger },
     { method: 'post', path: '/public-charger-edit-station',    handler: editPublicCharger },
+    { method: 'post', path: '/public-chargers-delete',         handler: deletePublicCharger },
+    { method: 'post', path: '/chargers-gallery-del',           handler: deletePublicChargerGallery },
 
     //Charger Installation
     { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },

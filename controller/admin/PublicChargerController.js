@@ -1,6 +1,6 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat} from '../../utils.js';
+import { getOpenAndCloseTimings, formatOpenAndCloseTimings} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
@@ -45,77 +45,63 @@ export const stationList = async (req, resp) => {
 };
 
 export const stationData = async (req, resp) => {
+    const { station_id } = req.body;
     const chargingFor = ['All EV`s', 'Tesla', 'BYD', 'Polestar', 'GMC', 'Porsche', 'Volvo', 'Audi', 'Chevrolet', 'BMW', 'Mercedes', 'Zeekr', 'Volkswagen', 'HiPhi', 'Kia', 'Hyundai', 'Lotus', 'Ford', 'Rabdan'];
     const chargerType = ['Level 2', 'Fast Charger', 'Super Charger'];
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' ];
-
+    
     const result = {
         chargingFor,
         chargerType,
         days
     };
 
+    if(station_id){
+        const stationData = await queryDB(`SELECT * FROM public_charging_station_list WHERE station_id = ?`, [station_id]); 
+        result.stationData = stationData; 
+    }
+
     return resp.json({status: 1, code: 200, data: result});
 };
 
 export const stationDetail = async (req, resp) => {
-    try {
-        const { station_id } = req.body;
+    const { station_id } = req.body;
+    const { isValid, errors } = validateFields(req.body, { station_id: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const { isValid, errors } = validateFields(req.body, { station_id: ["required"] });
-        if (!isValid) {
-            return resp.json({ status: 0, code: 422, message: errors });
-        }
+    const station = await queryDB(`SELECT * FROM public_charging_station_list WHERE station_id = ?`, [station_id]); 
+    if (!station) return resp.status(404).json({status: 0, code: 404, message: 'Station not found.'});
+    
+    station.schedule = getOpenAndCloseTimings(station);
+    const [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+    const galleryData = {};
 
-        const [stationDetails] = await db.execute(`
-            SELECT station_id, station_name, address, status, station_image, latitude, longitude, 
-                   description, charging_for, charger_type, charging_point, price, always_open, created_at, 
-                   REPLACE(open_days, "_", ", ") AS open_days, 
-                   REPLACE(open_timing, "_", ", ") AS open_timing 
-            FROM public_charging_station_list 
-            WHERE station_id = ?`, 
-            [station_id]
-        );
+    gallery.forEach(row => {
+        galleryData[row.id] = row.image_name;
+    });
 
-        if (!stationDetails.length) {
-            return resp.status(404).json({
-                status: 0,
-                code: 404,
-                message: 'Station not found.',
-            });
-        }
-
-        return resp.json({
-            status: 1,
-            code: 200,
-            message: ["Charging Station Details fetched successfully!"],
-            data: stationDetails[0],
-            base_url: `${req.protocol}://${req.get('host')}/uploads/charging-station-images/`
-        });
-
-    } catch (error) {
-        console.error('Error fetching station details:', error);
-        return resp.status(500).json({
-            status: 0,
-            code: 500,
-            message: 'Error fetching station details'
-        });
-    }
+    return resp.json({
+        status: 1,
+        code: 200,
+        message: ["Charging Station Details fetched successfully!"],
+        data: station,
+        gallery_data: galleryData,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/charging-station-images/`
+    });
 };
 
 export const addPublicCharger = async (req, resp) => {
     try {
         const uploadedFiles = req.files;
-        let station_image     = '';
-        let timing          = '';
+        let stationImg     = '';
         const data          = req.body;
 
         if(req.files && req.files['cover_image']){
-            station_image = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
+            stationImg = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
         }
         const shop_gallery = uploadedFiles['shop_gallery']?.map(file => file.filename) || [];
 
-        const { station_name, charging_for, charger_type, charging_point, description, address, latitude, longitude, always_open=0, days=[], price='' } = req.body;
+        const { station_name, charging_for, charger_type, charging_point, description, address, latitude, longitude, always_open=0, days='', price='' } = req.body;
         const { isValid, errors } = validateFields(req.body, { 
             station_name: ["required"], 
             charging_for: ["required"], 
@@ -128,21 +114,7 @@ export const addPublicCharger = async (req, resp) => {
         });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        if (always_open) {
-            const days          = data.days.join('_');
-            const timeArr       = data.days.map(day => {
-                const openTime  = data[`${day}_open_time`];
-                const closeTime = data[`${day}_close_time`];
-                if (openTime && closeTime) {
-                    const formattedOpenTime = new Date(`1970-01-01T${openTime}`).toTimeString().slice(0, 8);
-                    const formattedCloseTime = new Date(`1970-01-01T${closeTime}`).toTimeString().slice(0, 8);
-                    return `${formattedOpenTime}-${formattedCloseTime}`;
-                } else {
-                    return 'Closed';
-                }
-            });
-            timing = timeArr.join('_');
-        }
+        const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
 
         const stationId = `TRQ${generateUniqueId({ length:12 })}`;
 
@@ -150,15 +122,16 @@ export const addPublicCharger = async (req, resp) => {
             'station_id', 'station_name', 'price', 'description', 'charging_for', 'charger_type', 'charging_point', 'address', 'latitude', 'longitude', 'station_image', 'status', 
             'always_open', 'open_days', 'open_timing', 
         ], [
-            stationId, station_name, price, description, charging_for, charger_type, charging_point, address, latitude, longitude, station_image, 1, always_open ? 1 : 0, days, timing
+            stationId, station_name, price, description, charging_for.join(","), charger_type, charging_point, address, latitude, longitude, stationImg, 1, 
+            always_open ? 1 : 0, fDays, fTiming
         ]);
 
         if(insert.affectedRows == 0) return resp.json({status:0, message: "Failed to add public charger! Please try again after some time."});
 
         if(shop_gallery.length > 0){
-            const values = shop_gallery.map(filename => [storeId, filename]);
+            const values = shop_gallery.map(filename => [station_id, filename]);
             const placeholders = values.map(() => '(?, ?)').join(', ');
-            await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
+            await db.execute(`INSERT INTO public_charging_station_gallery (station_id, image_name) VALUES ${placeholders}`, values.flat());
         }
 
         return resp.json({ status  : 1, message : "Public Charger added successfully." });
@@ -171,9 +144,138 @@ export const addPublicCharger = async (req, resp) => {
 
 export const editPublicCharger = async (req, resp) => {
     try {
-        
-    } catch (error) {
+        const uploadedFiles = req.files;
+        let stationImg = '';
+        const data = req.body;
+
+        if(req.files && req.files['cover_image']){
+            stationImg = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
+        }
+        const shop_gallery = uploadedFiles['shop_gallery']?.map(file => file.filename) || [];
+
+        const { station_id, station_name, charging_for, charger_type, charging_point, description, address, latitude, longitude, always_open=0, days='', price='', status } = req.body;
+        const { isValid, errors } = validateFields(req.body, { 
+            station_id: ["required"], 
+            station_name: ["required"], 
+            charging_for: ["required"], 
+            charger_type: ["required"], 
+            charging_point: ["required"], 
+            description: ["required"], 
+            address: ["required"], 
+            latitude: ["required"], 
+            longitude: ["required"], 
+        });
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const charger = await queryDB(`SELECT station_image FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
+        if(!charger) return resp.json({status:0, message: "Public Charger Data can not edit, or invalid station Id"});
+        const galleryData = await queryDB(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+
+        const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
+
+        const updates = {
+            station_name,
+            price,
+            description,
+            charging_for: charging_for.join(","),
+            charger_type,
+            charging_point,
+            address,
+            latitude,
+            longitude,
+            status: status ? 1 : 0,
+            always_open: always_open ? 1 : 0, 
+            open_days: fDays, 
+            open_timing: fTiming, 
+            station_image: stationImg
+        };
+
+        if(shop_gallery.length > 0){
+            const values = shop_gallery.map(filename => [station_id, filename]);
+            const placeholders = values.map(() => '(?, ?)').join(', ');
+            await db.execute(`INSERT INTO public_charging_station_gallery (station_id, image_name) VALUES ${placeholders}`, values.flat());
+        }
+        if (galleryData.length) {
+            for (const img of galleryData) {
+                if (img.image_name) {
+                    const file_path = path.join(__dirname, '../uploads/charging-station-images', img.image_name);
+                    fs.unlink(file_path, (err) => {
+                        if (err) {
+                            console.error(`Failed to delete image ${img.image_name}:`, err);
+                        }
+                    });
+                }
+            }
+        }
+        if (charger.station_image) {
+            const cover_file_path = path.join(__dirname, '../uploads/charging-station-images', charger.station_image);
+            fs.unlink(cover_file_path, (err) => {
+                if (err) {
+                    console.error(`Failed to delete cover image ${charger.station_image}:`, err);
+                }
+            });
+        }
+
+        const update = await updateRecord('public_charging_station_list', updates, ['station_id'], [station_id]);
+        if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
+
+        return resp.json({ status  : 1, message : "Public Charger updated successfully." });
+
+    }  catch (error) {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
     }
 };
+
+export const deletePublicCharger = async (req, resp) => {
+    const {station_id} = req.body;
+
+    const charger = await queryDB(`SELECT station_image FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
+    if(!charger) return resp.json({status:0, message: "Public Charger Data can not edit, or invalid station Id"});
+    const galleryData = await queryDB(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+
+    if (galleryData.length) {
+        for (const img of galleryData) {
+            if (img.image_name) {
+                const file_path = path.join(__dirname, '../uploads/charging-station-images', img.image_name);
+                fs.unlink(file_path, (err) => {
+                    if (err) {
+                        console.error(`Failed to delete image ${img.image_name}:`, err);
+                    }
+                });
+            }
+        }
+    }
+    if (charger.station_image) {
+        const cover_file_path = path.join(__dirname, '../uploads/charging-station-images', charger.station_image);
+        fs.unlink(cover_file_path, (err) => {
+            if (err) {
+                console.error(`Failed to delete cover image ${charger.station_image}:`, err);
+            }
+        });
+    }
+
+    await queryDB(`DELETE FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+    await queryDB(`DELETE FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
+
+    return resp.json({ status: 1, msg: "Shop deleted successfully!" });
+};
+
+export const deletePublicChargerGallery = async (req, resp) => {
+    const { gallery_id } = req.body;
+    if(!gallery_id) return resp.json({status:0, message: "Gallery Id is required"});
+
+    const galleryData = await queryDB(`SELECT image_name FROM public_charging_station_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
+    
+    if(galleryData){
+        await db.execute(`DELETE FROM public_charging_station_gallery WHERE id = ?`, [gallery_id]);
+        const file_path = path.join(__dirname, '../uploads/charging-station-images', galleryData.image_name);
+        fs.unlink(file_path, (err) => {
+            if (err) {
+                console.error(`Failed to delete cover image ${galleryData.image_name}:`, err);
+            }
+        });
+    }
+
+    return resp.json({status: 1, message: "gallery img delete successfully"});
+}
