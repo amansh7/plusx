@@ -16,8 +16,8 @@ export const carList = async (req, resp) => {
     const result = await getPaginatedData({
         tableName: 'electric_car_rental',
         columns: `rental_id, car_name, available_on, car_type, image, price, contract, ${formatDateTimeInQuery(['created_at', 'updated_at'])}`,
-        searchField: 'car_name',
-        searchText: search_text,
+        searchFields: ['car_name'],
+        searchTexts: [search_text],
         sortColumn: 'id',
         sortOrder,
         page_no,

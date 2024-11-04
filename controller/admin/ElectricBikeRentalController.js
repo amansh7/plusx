@@ -4,12 +4,12 @@ import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbU
 import validateFields from "../../validation.js";
 
 export const bikesList = async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'electric_bike_rental',
         columns: `rental_id, bike_name, available_on, bike_type, price, contract`,
         searchFields: ['bike_name'],
-        searchTexts: [search],
+        searchTexts: [search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
