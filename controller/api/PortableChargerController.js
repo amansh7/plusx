@@ -222,8 +222,12 @@ export const chargerBookingDetail = async (req, resp) => {
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const booking = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
-    console.log(booking);
+    const booking = await queryDB(`
+        SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} 
+        FROM portable_charger_booking 
+        WHERE rider_id = ? AND booking_id = ? LIMIT 1
+    `, [rider_id, booking_id]);
+    
     if (booking.status == 'PU') {
         const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
         booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;

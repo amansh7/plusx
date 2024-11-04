@@ -164,7 +164,6 @@ const authzAndAuthRoutes = [
     { method: 'post', path: '/portable-charger-booking', handler: chargerBooking },
     { method: 'get', path: '/portable-charger-booking-list', handler: chargerBookingList },
     { method: 'get', path: '/portable-charger-booking-detail', handler: chargerBookingDetail },
-    // { method: 'get', path: '/portable-charger-booking-detail', handler: invoiceList },
     { method: 'get', path: '/portable-charger-slot-list', handler: getPcSlotList },
     { method: 'get', path: '/portable-charger-subscription', handler: getPcSubscriptionList },
 
