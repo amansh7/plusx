@@ -252,6 +252,67 @@ export const chargerBookingDetails = async (req, resp) => {
 
         const [bookingResult] = await db.execute(`
             SELECT 
+                portable_charger_booking.*, (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data
+            FROM 
+                portable_charger_booking 
+            WHERE 
+                booking_id = ?`, 
+            [booking_id]
+        );
+        if (bookingResult.length === 0) {
+            return resp.status(404).json({
+                status: 0,
+                code: 404,
+                message: 'Booking not found.',
+            });
+        }
+        const [bookingHistory] = await db.execute(`
+            SELECT 
+                order_status, cancel_by, cancel_reason as reason, rsa_id, created_at, image,   
+                (select rsa.rsa_name from rsa where rsa.rsa_id = portable_charger_history.rsa_id) as rsa_name
+            FROM 
+                portable_charger_history 
+            WHERE 
+                booking_id = ?`, 
+            [booking_id]
+        );
+        const bookingDetails = bookingResult[0];
+
+       
+        return resp.json({
+            status  : 1,
+            code    : 200,
+            message : ["Booking details fetched successfully!"],
+            data : {
+                booking: bookingDetails,
+                rider: riderDetails,
+                driver: driverDetails,
+                vehicle: vehicleDetails
+            }, 
+        });
+    } catch (error) {
+        console.error('Error fetching booking details:', error);
+        return resp.status(500).json({ 
+            status: 0, 
+            code: 500, 
+            message: 'Error fetching booking details' 
+        });
+    }
+};
+export const chargerBookingDetailsOld = async (req, resp) => {
+    try {
+        const { booking_id } = req.body;
+
+        if (!booking_id) {
+            return resp.status(400).json({
+                status: 0,
+                code: 400,
+                message: 'Booking ID is required.',
+            });
+        }
+
+        const [bookingResult] = await db.execute(`
+            SELECT 
                 booking_id, rider_id, rsa_id, charger_id, vehicle_id, 
                 service_name, service_price, service_type, service_feature, user_name, 
                 contact_no, address,  slot_date, slot_time, status, created_at 

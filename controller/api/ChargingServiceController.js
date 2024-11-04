@@ -164,11 +164,11 @@ export const getServiceOrderDetail = async (req, resp) => {
 
     const formatCols = ['slot_date_time', 'created_at', 'updated_at'];
     
-    const order = await queryDB(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service WHERE request_id = ? LIMIT 1`, [service_id]);
+    const order = await queryDB(`SELECT charging_service.*, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = charging_service.vehicle_id) as vehicle_data, ${formatDateTimeInQuery(formatCols)} FROM charging_service WHERE request_id = ? LIMIT 1`, [service_id]);
     formatCols.shift();
     const [history] = await db.execute(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service_history WHERE service_id = ?`, [service_id]);
 
-    order.invoice_url = '';
+    // order.invoice_url = '';
     order.slot = 'Schedule';
     if (order.order_status == 'WC') {
         const invoiceId = order.request_id.replace('CS', 'INVCS');
@@ -279,7 +279,7 @@ export const getRsaBookingStage = async (req, resp) => {
 };
 
 export const handleBookingAction = async (req, resp) => {
-    console.log(req.file)
+    // console.log(req.file)
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
 
     let validationRules = {
@@ -713,43 +713,38 @@ const userCancelBooking = async (req, resp) => {
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
-            <p>We're writing to confirm that your recent booking for our Valet Service with PlusX Electric has been successfully cancelled.</p> <br />
+            <p>We've received your cancellation request for the PlusX Electric Pickup and Drop-Off EV Charging Service. Your booking has been successfully canceled. If you need assistance with rescheduling or have any questions, please feel free to reach out to us.</p> <br />
 
             <p>Booking Details:</p><br />
 
             <p>Booking ID    : ${booking_id}</p>
-            <p>Date and Time : ${checkOrder.slot_date_time}</p>
-            <p>Location      : ${checkOrder.pickup_address}</p> <br />
+            <p>Booking Date : ${checkOrder.slot_date_time}</p>
+            
+            <p>Thank you for choosing PlusX Electric, and we hope to serve you in the future!</p><br />
 
-            <p>If you have any questions or wish to reschedule your booking, please don't hesitate to reach out to us through the PlusX Electric app or by contacting our support team.</p>
-            <p>Thank you for choosing PlusX Electric. We look forward to serving you again in the future.</p><br />
-
-            <p>Best regards,<br/> The PlusX Electric Team </p>
+            <p>Warm regards,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
 
-    emailQueue.addEmail(checkOrder.rider_email, `Booking Cancellation Confirmation - PlusX Electric Valet Service (Booking ID : ${booking_id} )`, html);
+    emailQueue.addEmail(checkOrder.rider_email, `Booking Cancellation Confirmation - PlusX Electric Pickup & Drop-Off Charging Service`, html);
 
     const adminHtml = `<html>
         <body>
             <h4>Dear Admin,</h4>
-            <p>This is to inform you that a user has cancelled their booking for the Valet Service. Please see the details below for record-keeping and any necessary follow-up.</p> <br />
+            <p>This is to notify you that a customer has canceled their PlusX Electric Pickup and Drop-Off EV Charging Service booking. Please find the details below:</p> <br />
 
             <p>Booking Details:</p><br />
 
-            <p>User Name    : ${checkOrder.name}</p>
-            <p>User Contact    : ${checkOrder.contact_no}</p>
+            <p>Name         : ${checkOrder.name}</p>
+            <p>Contact      : ${checkOrder.contact_no}</p>
+            <p>Booking ID   : ${booking_id}</p>
+            <p>Booking Date : ${checkOrder.slot_date_time}</p> 
+            <p>Reason       : ${checkOrder.pickup_address}</p> <br />
 
-            <p>Booking ID    : ${booking_id}</p>
-            <p>Scheduled Date and Time : ${checkOrder.slot_date_time}</p> 
-            <p>Location      : ${checkOrder.pickup_address}</p> <br />
-
-            <p>Thank you for your attention to this update.</p><br />
-
-            <p>Best regards,<br/> The PlusX Electric Team </p>
+            <p>Thank you,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
+    emailQueue.addEmail('valetbookings@plusxelectric.com', `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 };

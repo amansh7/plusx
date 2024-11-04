@@ -124,7 +124,7 @@ export const rsaAdd = async (req, resp) => {
             message: insert.affectedRows > 0 ? "RSA created successfully" : "Failed to create, Please Try Again!", 
         });
     }catch(err){
-        console.log(err);
+        // console.log(err);
         
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
@@ -177,7 +177,7 @@ export const rsaUpdate = async (req, resp) => {
         });
 
     }catch(err){
-        console.log('err',err);
+        // console.log('err',err);
         
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
