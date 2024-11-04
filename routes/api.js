@@ -30,7 +30,7 @@ import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, all
     deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
 } from '../controller/api/VehicleController.js';
 import { 
-    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelBooking
+    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking
 } from '../controller/api/PortableChargerController.js';
 import { 
     getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking 
@@ -166,7 +166,7 @@ const authzAndAuthRoutes = [
     { method: 'get', path: '/portable-charger-booking-detail', handler: chargerBookingDetail },
     { method: 'get', path: '/portable-charger-slot-list', handler: getPcSlotList },
     { method: 'get', path: '/portable-charger-subscription', handler: getPcSubscriptionList },
-    { method: 'get', path: '/portable-charger-cancel', handler: userCancelBooking },
+    { method: 'get', path: '/portable-charger-cancel', handler: userCancelPCBooking },
 
     /* Offer Routes */
     { method: 'get', path: '/offer-list', handler: offerList },
