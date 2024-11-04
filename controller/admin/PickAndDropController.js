@@ -301,7 +301,7 @@ export const pdAddSlot = async (req, resp) => {
 
 export const pdEditSlot = async (req, resp) => {
     try {
-        console.log(req.body);
+        // console.log(req.body);
         
         const { slot_id, start_time, end_time, booking_limit, status } = req.body;
 
@@ -328,7 +328,7 @@ export const pdEditSlot = async (req, resp) => {
         };
     
         const update = await updateRecord('pick_drop_slot', updates, ['slot_id'], [slot_id]);
-        console.log("update", update);
+        // console.log("update", update);
         return resp.json({
             status: update.affectedRows > 0 ? 1 : 0,
             code: 200,

@@ -222,12 +222,8 @@ export const chargerBookingDetail = async (req, resp) => {
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const booking = await queryDB(`
-        SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} 
-        FROM portable_charger_booking 
-        WHERE rider_id = ? AND booking_id = ? LIMIT 1
-    `, [rider_id, booking_id]);
-    
+    const booking = await queryDB(`SELECT portable_charger_booking.*, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
+
     if (booking.status == 'PU') {
         const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
         booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
@@ -306,8 +302,8 @@ export const invoiceList = async (req, resp) => {
 };
 
 export const invoiceDetails = async (req, resp) => {
-    const {rider_id, invoice_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], invoice_id: ["required"]});
+    const {rider_id, invoice_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoice = await queryDB(`SELECT 
@@ -365,6 +361,7 @@ export const rsaBookingStage = async (req, resp) => {
 };
 
 export const bookingAction = async (req, resp) => {
+    console.log('asdasdasd', req.body)
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
     let validationRules = {
         rsa_id         : ["required"], 
@@ -373,7 +370,7 @@ export const bookingAction = async (req, resp) => {
         longitude      : ["required"], 
         booking_status : ["required"],
     };
-    
+
     if (booking_status == "C") validationRules = { ...validationRules, reason  : ["required"] };
 
     const { isValid, errors } = validateFields(req.body, validationRules);
@@ -392,8 +389,8 @@ export const bookingAction = async (req, resp) => {
 };
 
 export const rejectBooking = async (req, resp) => {
-    const {rsa_id, booking_id, reason } = req.body; // latitude, longitude,
-    const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"], reason: ["required"]});
+    const {rsa_id, booking_id, reason } = mergeParam(req); // latitude, longitude,
+    const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"], reason: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const checkOrder = await queryDB(`
@@ -440,7 +437,7 @@ export const rejectBooking = async (req, resp) => {
 
 // booking action helper
 const acceptBooking = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -491,7 +488,8 @@ const acceptBooking = async (req, resp) => {
     }
 };
 const driverEnroute = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    console.log('asdas')
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -531,7 +529,7 @@ const driverEnroute = async (req, resp) => {
     }
 };
 const reachedLocation = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -573,7 +571,7 @@ const reachedLocation = async (req, resp) => {
     }
 };
 const chargingStart = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -615,7 +613,7 @@ const chargingStart = async (req, resp) => {
     }
 };
 const chargingComplete = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -654,7 +652,7 @@ const chargingComplete = async (req, resp) => {
     }
 };
 const chargerPickedUp = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = req.body;
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     if (!req.files.image) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
@@ -706,6 +704,7 @@ const chargerPickedUp = async (req, resp) => {
 export const userCancelPCBooking = async (req, resp) => {
     const {rider_id, booking_id, reason } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
+
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const checkOrder = await queryDB(`
