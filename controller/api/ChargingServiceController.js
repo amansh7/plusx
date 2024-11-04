@@ -489,7 +489,6 @@ const vehiclePickUp = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const reachedLocation = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
@@ -532,7 +531,6 @@ const reachedLocation = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const chargingComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
@@ -575,7 +573,6 @@ const chargingComplete = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const vehicleDrop = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
@@ -618,11 +615,11 @@ const vehicleDrop = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
-
 const workComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
-    // if (!req.file) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    if (!req.files.image) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    const imgName = req.files.image[0].filename; 
     
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -643,10 +640,9 @@ const workComplete = async (req, resp) => {
     );
 
     if (ordHistoryCount.count === 0) {
-        /* handle file upload */
         const insert = await db.execute(
             'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "WC", ?, ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, '']
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
         );
 
         if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
@@ -668,7 +664,7 @@ const workComplete = async (req, resp) => {
     }
 };
 
-const userCancelBooking = async (req, resp) => {
+export const userCancelValetBooking = async (req, resp) => {
     const { booking_id, rider_id, reason } = req.body;
     
     const checkOrder = await queryDB(`

@@ -243,18 +243,15 @@ const authzRsaAndAuthRoutes = [
 ];
 authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
-    const middlewares = [];
-    const upload      = multer();
-    middlewares.push( upload.array() ); 
+    const middlewares = [];   
     
-    middlewares.push(apiAuthorization);
-    middlewares.push(apiRsaAuthentication);
-    
-    if (path === '/charger-service-action' || path === '/portable-charger-action') {
+    if (path === '/portable-charger-action' || path === '/charger-service-action') {
         middlewares.push(handleFileUpload('pick-drop-images', ['image'], 1));
     }
+
+    middlewares.push(apiAuthorization);
+    middlewares.push(apiRsaAuthentication);
     router[method](path, ...middlewares, handler);
-    // router[method](path,  upload.array(), apiAuthorization, apiRsaAuthentication, handler);
 });
 router.post('/validate-coupon', redeemCoupon);
 
