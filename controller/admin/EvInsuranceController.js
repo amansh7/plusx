@@ -1,5 +1,6 @@
+import db from "../../config/db.js";
 import generateUniqueId from 'generate-unique-id';
-import { getPaginatedData, insertRecord, queryDB } from '../../dbUtils.js';
+import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import { formatDateInQuery, formatDateTimeInQuery } from '../../utils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
@@ -97,7 +98,7 @@ export const evPreSaleDetail = async (req, resp) => {
 };
 
 
-// Time Slot
+// Time Slot 
 export const evPreSaleTimeSlot = async (req, resp) => {
     const { page_no } = req.body;
     const result = await getPaginatedData({
@@ -143,10 +144,35 @@ export const evPreSaleTimeSlotAdd = async (req, resp) => {
 };
 
 export const evPreSaleTimeSlotEdit = async (req, resp) => {
+    const { slot_id, slot_name, start_time, end_time, booking_limit, status='' }  = req.body;
+    const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_name: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const start = moment(start_time, 'HH:mm:ss');
+    const end = moment(end_time, 'HH:mm:ss');
+
+    if (end.isSameOrBefore(start)) return resp.status(422).json({ message: "End Time should be greater than Start Time!", status: 0 });
     
+    const updates = {slot_name, start_time: start, end_time: end, booking_limit, status: status ? 1 : 0};
+    const update = await updateRecord('ev_pre_sale_testing_slot', updates, ['slot_id'], [slot_id]);
+
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0,
+        status: update.affectedRows > 0 ? 200 : 422,
+        message: update.affectedRows > 0 ? "Time Slot Updated Successfully" : "Failed to update time slot.",
+    }); 
 };
 
 export const evPreSaleTimeSlotDelete = async (req, resp) => {
-    
+    const { slot_id }  = req.body;
+    if (!slot_id) return resp.json({ status: 0, code: 422, message: "Slot Id is required." });
+
+    const del = await db.execute('DELETE FROM ev_pre_sale_testing_slot WHERE slot_id = ?', [slot_id]);
+
+    return resp.json({
+        status: del.affectedRows > 0 ? 1 : 0,
+        status: del.affectedRows > 0 ? 200 : 422,
+        message: del.affectedRows > 0 ? "Time Slot Deleted Successfully" : "Failed to delete time slot.",
+    }); 
 };
 

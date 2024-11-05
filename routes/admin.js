@@ -30,6 +30,7 @@ import {guideList, addGuide, guideDetail, editGuide, deleteGuide} from "../contr
 import { 
     evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete 
 } from "../controller/admin/EvInsuranceController.js";
+import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleController.js";
 
 const router = Router();
 const adminAuthRoutes = [
@@ -171,9 +172,15 @@ const adminRoutes = [
     { method: 'post',  path: '/ev-guide-update',  handler: editGuide },
     { method: 'post',  path: '/ev-guide-delete',  handler: deleteGuide },
 
+    /* EV Buy & Sell */
+    { method: 'post',  path: '/subscription-lis',    handler: sellVehicleList },
+    { method: 'post',  path: '/subscription-detail', handler: sellVehicleDetail },
+
     /* EV Insurance */
     { method: 'post',  path: '/ev-insurance-list',                 handler: evInsuranceList },
     { method: 'post',  path: '/ev-insurance-detail',               handler: evInsuranceDetail },
+
+    /* EV Pre-Sale */
     { method: 'post',  path: '/ev-pre-sale-list',                  handler: evPreSaleList },
     { method: 'post',  path: '/ev-pre-sale-detail',                handler: evPreSaleDetail },
     { method: 'post',  path: '/ev-pre-sale-time-slot-list',        handler: evPreSaleTimeSlot },
