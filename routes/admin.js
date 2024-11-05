@@ -83,6 +83,12 @@ const adminRoutes = [
     { method: 'post',   path: '/public-charger-edit-station',    handler: editPublicCharger },
     { method: 'delete', path: '/public-chargers-delete',       handler: deletePublicCharger },
     { method: 'delete', path: '/chargers-gallery-del',         handler: deletePublicChargerGallery },
+    //Pick & Drop Booking
+    { method: 'post', path: '/pick-and-drop-booking-list', handler: bookingList },
+    { method: 'post', path: '/pick-and-drop-booking-details', handler: bookingDetails },
+    { method: 'post', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
+    { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
+    { method: 'post', path: '/pick-and-drop-assign', handler: pdAssignBooking },
 
     /* Charger Installation */
     { method: 'post', path: '/charger-installation-list',    handler: chargerInstallationList },

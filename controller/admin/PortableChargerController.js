@@ -1,7 +1,8 @@
-import db from '../../config/db.js';
+import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import dotenv from 'dotenv';
+import moment from 'moment';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
@@ -201,7 +202,7 @@ export const deleteCharger = async (req, resp) => {
 
 export const chargerBookingList = async (req, resp) => {
     try {
-        const { page_no, booking_id, name, contact, status, filter_date } = req.body;
+        const { page_no, booking_id, name, contact, status, start_date, end_date } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
@@ -209,10 +210,27 @@ export const chargerBookingList = async (req, resp) => {
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const start = moment(start_date, "YYYY-MM-DD");
-        const end = moment(end_date, "YYYY-MM-DD");
+        
+        // const start = moment(start_date, "YYYY-MM-DD");
+        // const end = moment(end_date, "YYYY-MM-DD");
 
-        const result = await getPaginatedData({
+        // const result = await getPaginatedData({
+        //     tableName: 'portable_charger_booking',
+        //     columns: 'booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, slot_date, slot_time, created_at',
+        //     sortColumn: 'created_at',
+        //     sortOrder: 'DESC',
+        //     page_no,
+        //     limit: 10,
+        //     searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
+        //     searchTexts: [booking_id, name, contact, status],
+        //     whereField: ['created_at', 'created_at'],
+        //     whereValue: [start, end],
+        //     whereOperator: ['>=', '<=']
+        // });
+
+        
+
+        const params = {
             tableName: 'portable_charger_booking',
             columns: 'booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, slot_date, slot_time, created_at',
             sortColumn: 'created_at',
@@ -220,11 +238,19 @@ export const chargerBookingList = async (req, resp) => {
             page_no,
             limit: 10,
             searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
-            searchTexts: [booking_id, name, contact, status],
-            whereField: ['created_at', 'created_at'],
-            whereValue: [start, end],
-            whereOperator: ['>=', '<=']
-        });
+            searchTexts: [booking_id, name, contact, status]
+        };
+
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+            params.whereField = ['created_at', 'created_at'];
+            params.whereValue = [start, end];
+            params.whereOperator = ['>=', '<='];
+        }
+
+        const result = await getPaginatedData(params);
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
 
@@ -339,6 +365,12 @@ export const chargerBookingDetailsOld = async (req, resp) => {
         }
 
         const bookingDetails = bookingResult[0];
+        if (bookingDetails.status == 'PU') {
+            const invoice_id = bookingDetails.booking_id.replace('PCB', 'INVPC');
+            bookingDetails.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+        }
+
+        const [history] = await db.execute(`SELECT * FROM portable_charger_history WHERE booking_id = ?`, [booking_id]);
 
         const [vehicleResult] = await db.execute(`
             SELECT 
@@ -349,6 +381,7 @@ export const chargerBookingDetailsOld = async (req, resp) => {
                 vehicle_id = ?`, 
             [bookingDetails.vehicle_id]
         );
+        const bookingHistory = history
 
         const vehicleDetails = vehicleResult[0]
 
@@ -392,6 +425,7 @@ export const chargerBookingDetailsOld = async (req, resp) => {
             message: ["Booking details fetched successfully!"],
             data: {
                 booking: bookingDetails,
+                bookingHistory: bookingHistory,
                 rider: riderDetails,
                 driver: driverDetails,
                 vehicle: vehicleDetails
