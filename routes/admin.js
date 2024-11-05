@@ -20,7 +20,9 @@ import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg }
 import { carList } from "../controller/api/ElectricCarRentalController.js";
 import { carData } from "../controller/admin/ElectriCarLeasingController.js";
 import { bikeData, bikesList } from "../controller/admin/ElectricBikeRentalController.js";
-import {bookingData, bookingList as evRoadAssistanceBooking, invoiceList as evRoadAssistanceInvoice, invoiceData} from '../controller/admin/EvRoadAssistanceController.js'
+import {
+    bookingData, bookingList as evRoadAssistanceBooking, invoiceList as evRoadAssistanceInvoice, invoiceData, evRoadAssistanceConfirmBooking, evRoadAssistanceCancelBooking
+} from '../controller/admin/EvRoadAssistanceController.js'
 import { interestList } from "../controller/admin/RegisterInterestController.js";
 import { couponData, couponDetail, couponList, couponAdd, couponEdit, couponDelete } from "../controller/admin/CouponController.js";
 import { offerDetail, offerList, offerAdd, offerEdit, offerDelete } from "../controller/admin/OfferController.js";
@@ -129,10 +131,12 @@ const adminRoutes = [
     { method: 'post',  path: '/electric-bike-data',  handler: bikeData },
 
     /* EV Road Assistance */
-    { method: 'post', path: '/road-assistance-booking-list', handler: evRoadAssistanceBooking },
-    { method: 'post', path: '/road-assistance-booking-data', handler: bookingData },
-    { method: 'post', path: '/road-assistance-invoice-list', handler: evRoadAssistanceInvoice },
-    { method: 'post', path: '/road-assistance-invoice-data', handler: invoiceData },
+    { method: 'post', path: '/ev-road-assistance-booking-list',    handler: evRoadAssistanceBooking },
+    { method: 'post', path: '/ev-road-assistance-booking-details', handler: bookingData },
+    { method: 'post', path: '/ev-road-assistance-confirm-booking', handler: evRoadAssistanceConfirmBooking },
+    { method: 'post', path: '/ev-road-assistance-cancel-booking',  handler: evRoadAssistanceCancelBooking },
+    { method: 'post', path: '/ev-road-assistance-invoice-list',    handler: evRoadAssistanceInvoice },
+    { method: 'post', path: '/ev-road-assistance-invoice-data',    handler: invoiceData },
 
     /* Interest List */ 
     { method: 'post',  path: '/interest-list', handler: interestList },
