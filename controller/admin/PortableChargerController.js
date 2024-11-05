@@ -5,7 +5,6 @@ import crypto from 'crypto';
 import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import moment from 'moment';
 dotenv.config();
 
 
