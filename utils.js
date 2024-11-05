@@ -8,6 +8,7 @@ import { insertRecord } from "./dbUtils.js";
 import { GoogleAuth } from "google-auth-library";
 import { fileURLToPath } from 'url';
 import moment from "moment";
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -376,10 +377,7 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
     }
 };
 
-export const formatDateTime = (dateTime) => {
-  return moment.utc(dateTime).local().format('YYYY-MM-DD HH:mm:ss');
-};
-
+/* Fromat Date Time in Sql Query */
 export const formatDateTimeInQuery = (columns) => {
   return columns.map(column => {
       if (column.includes('.')) {
@@ -400,4 +398,12 @@ export const formatDateInQuery = (columns) => {
         return `DATE_FORMAT(${column}, '%Y-%m-%d') AS ${column}`;
       }
   }).join(', ');
+};
+
+/* Helper to delete a image from uploads/ */
+export const deleteFile = (directory, filename) => {
+  const file_path = path.join('uploads', directory, filename);
+  fs.unlink(file_path, (err) => {
+      if (err) console.error(`Failed to delete ${directory} image ${filename}:`, err);
+  });
 };
