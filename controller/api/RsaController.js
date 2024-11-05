@@ -92,7 +92,7 @@ export const rsaForgotPassword = async (req, resp) => {
         </body>
     </html>`;
     
-    emailQueue(email, 'Forgot password Request', html);
+    emailQueue.addEmail(email, 'Forgot password Request', html);
 
     resp.status(200).json({ status: 1, code: 200, message: ["An email has been sent to your given email address. Kindly check your email"] });
 };  
