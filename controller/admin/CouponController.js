@@ -1,9 +1,7 @@
-import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
-import { deleteFile } from '../../utils.js';
 
 const validations = async (coupan_code, resp, coupon_id=null) => {
     if (typeof coupan_code !== 'string') {
