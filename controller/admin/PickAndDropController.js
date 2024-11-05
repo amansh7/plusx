@@ -1,27 +1,50 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import dotenv from 'dotenv';
+import moment from 'moment';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
 
 export const bookingList = async (req, resp) => {
     try {
-        const { page_no, request_id, name, contact_no, order_status  } = req.body;
+        const { page_no, request_id, name, contact_no, order_status, start_date, end_date  } = req.body;
         const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const result = await getPaginatedData({
+        // const result = await getPaginatedData({
+        //     tableName: 'charging_service',
+        //     columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
+        //     sortColumn: 'id',
+        //     sortOrder: 'DESC',
+        //     page_no,
+        //     limit: 10,
+        //     searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
+        //     searchTexts: [request_id, name, contact_no, order_status],
+        // });
+
+        const params = {
             tableName: 'charging_service',
             columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
-            sortColumn: 'id',
+            sortColumn: 'created_at',
             sortOrder: 'DESC',
             page_no,
             limit: 10,
             searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
             searchTexts: [request_id, name, contact_no, order_status],
-        });
+        };
+
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+            params.whereField = ['created_at', 'created_at'];
+            params.whereValue = [start, end];
+            params.whereOperator = ['>=', '<='];
+        }
+
+        const result = await getPaginatedData(params);
 
         return resp.json({
             status: 1,
@@ -63,6 +86,8 @@ export const bookingDetails = async (req, resp) => {
                 cs.request_id = ?`, 
             [request_id]
         );
+        const formatCols = ['slot_date_time', 'created_at', 'updated_at'];
+        const [history] = await db.execute(`SELECT * FROM charging_service_history WHERE service_id = ?`, [request_id]);
 
         if (result.length === 0) {
             return resp.status(404).json({
@@ -77,6 +102,7 @@ export const bookingDetails = async (req, resp) => {
             code: 200,
             message: ["Pick and Drop booking details fetched successfully!"],
             data: result[0], 
+            history
         });
     } catch (error) {
         console.error('Error fetching booking details:', error);
@@ -393,7 +419,7 @@ export const PodAssignBooking = async (req, resp) => {
                 [ order_id, booking_data.rider_id, rsa_id ], 
             conn);
         }
-        await updateRecord('charging_service', {rsa_id: rsa_id}, ['booking_id'], [booking_id], conn);
+        await updateRecord('charging_service', {rsa_id: rsa_id}, ['request_id'], [booking_id], conn);
         
         const href    = 'charging_service/' + booking_id;
         const heading = 'Booking Assigned!';

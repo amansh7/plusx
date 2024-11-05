@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const rsaList = async (req, resp) => {
-    const{ rsa_id, rsa_name, rsa_email, rsa_mobile, page = 1, list  } = req.body;
+    const{ rsa_id, rsa_name, rsa_email, rsa_mobile, page = 1, list, service_type  } = req.body;
 
     const searchField = [];
     const searchText = [];
@@ -31,6 +31,10 @@ export const rsaList = async (req, resp) => {
     if (rsa_mobile) {
         searchField.push('rsa_mobile');
         searchText.push(rsa_mobile);
+    }
+    if (service_type) {
+        searchField.push('booking_type');
+        searchText.push(service_type);
     }
 
     const result = await getPaginatedData({
