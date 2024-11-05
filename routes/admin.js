@@ -38,129 +38,123 @@ adminAuthRoutes.forEach(({ method, path, handler }) => {
 });
 
 const adminRoutes = [
-    { method: 'put', path: '/logout', handler: logout },
+    { method: 'put',  path: '/logout',          handler: logout },
     { method: 'post', path: '/forgot-password', handler: forgotPassword },
-    { method: 'put', path: '/change-password', handler: updatePassword },
-    { method: 'get', path: '/dashboard', handler: getDashboardData },
-    { method: 'post', path: '/rider-list', handler: riderList },
-    { method: 'post', path: '/rider-details', handler: riderDetails },
-    { method: 'post', path: '/delete-rider', handler: deleteRider },
+    { method: 'put',  path: '/change-password', handler: updatePassword },
+    { method: 'get',  path: '/dashboard',       handler: getDashboardData },
+    { method: 'post', path: '/rider-list',      handler: riderList },
+    { method: 'post', path: '/rider-details',   handler: riderDetails },
+    { method: 'post', path: '/delete-rider',    handler: deleteRider },
 
-    //Portable Charger 
-    { method: 'post', path: '/charger-list', handler: chargerList },
-    { method: 'post', path: '/charger-details', handler: chargerDetails },
-    { method: 'post', path: '/add-charger', handler: addCharger },
-    { method: 'post', path: '/edit-charger', handler: editCharger },
-    { method: 'post', path: '/delete-charger', handler: deleteCharger },
+    /* Portable Charger */ 
+    { method: 'post',   path: '/charger-list',                    handler: chargerList },
+    { method: 'post',   path: '/charger-details',                 handler: chargerDetails },
+    { method: 'post',   path: '/add-charger',                     handler: addCharger },
+    { method: 'post',   path: '/edit-charger',                    handler: editCharger },
+    { method: 'delete', path: '/delete-charger',                  handler: deleteCharger },
+    { method: 'post',   path: '/charger-booking-list',            handler: chargerBookingList },
+    { method: 'post',   path: '/charger-booking-details',         handler: chargerBookingDetails },
+    { method: 'post',   path: '/charger-booking-invoice-list',    handler: invoiceList },
+    { method: 'post',   path: '/charger-booking-invoice-details', handler: invoiceDetails },
+    { method: 'post',   path: '/charger-booking-assign',          handler: assignBooking },
+    { method: 'post',   path: '/charger-slot-list',               handler: slotList },
+    { method: 'post',   path: '/charger-slot-details',            handler: slotDetails },
+    { method: 'post',   path: '/charger-add-time-slot',           handler: addSlot },
+    { method: 'post',   path: '/charger-edit-time-slot',          handler: editSlot },
+    { method: 'delete', path: '/charger-delete-time-slot',        handler: deleteSlot },
 
-    //Portable Charger Booking
-    { method: 'post', path: '/charger-booking-list', handler: chargerBookingList },
-    { method: 'post', path: '/charger-booking-details', handler: chargerBookingDetails },
-    { method: 'post', path: '/charger-booking-invoice-list', handler: invoiceList },
-    { method: 'post', path: '/charger-booking-invoice-details', handler: invoiceDetails },
-    { method: 'post', path: '/charger-booking-assign', handler: assignBooking },
-   
-    //Portable Charger Slot List
-    { method: 'post', path: '/charger-slot-list', handler: slotList },
-    { method: 'post', path: '/charger-slot-details', handler: slotDetails },
-    { method: 'post', path: '/charger-add-time-slot', handler: addSlot },
-    { method: 'post', path: '/charger-edit-time-slot', handler: editSlot },
-    { method: 'post', path: '/charger-delete-time-slot', handler: deleteSlot },
+    /* Pick & Drop */
+    { method: 'post',   path: '/pick-and-drop-booking-list',     handler: bookingList },
+    { method: 'post',   path: '/pick-and-drop-booking-details',  handler: bookingDetails },
+    { method: 'post',   path: '/pick-and-drop-assign',          handler: pdAssignBooking },
+    { method: 'post',   path: '/pick-and-drop-invoice-list',     handler: pdInvoiceList },
+    { method: 'post',   path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
+    { method: 'post',   path: '/pick-and-drop-slot-list',        handler: pdSlotList },
+    { method: 'post',   path: '/pick-and-drop-slot-details',     handler: pdSlotDetails },
+    { method: 'post',   path: '/pick-and-drop-add-slot',         handler: pdAddSlot },
+    { method: 'post',   path: '/pick-and-drop-edit-slot',        handler: pdEditSlot },
+    { method: 'delete', path: '/pick-and-drop-delete-slot',    handler: pdDeleteSlot },
 
-    //Pick & Drop Booking
-    { method: 'post', path: '/pick-and-drop-booking-list', handler: bookingList },
-    { method: 'post', path: '/pick-and-drop-booking-details', handler: bookingDetails },
-    { method: 'post', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
-    { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
-    { method: 'get', path: '/pick-and-drop-assign', handler: pdAssignBooking },
+    /* Public Charger */
+    { method: 'post',   path: '/public-charger-station-list',    handler: stationList },
+    { method: 'post',   path: '/public-charger-station-details', handler: stationDetail },
+    { method: 'post',   path: '/public-charger-station-data',    handler: stationData },
+    { method: 'post',   path: '/public-charger-add-station',     handler: addPublicCharger },
+    { method: 'post',   path: '/public-charger-edit-station',    handler: editPublicCharger },
+    { method: 'delete', path: '/public-chargers-delete',       handler: deletePublicCharger },
+    { method: 'delete', path: '/chargers-gallery-del',         handler: deletePublicChargerGallery },
 
-    //Pick & Drop  Slot List
-    { method: 'post', path: '/pick-and-drop-slot-list', handler: pdSlotList },
-    { method: 'post', path: '/pick-and-drop-slot-details', handler: pdSlotDetails },
-    { method: 'post', path: '/pick-and-drop-add-slot', handler: pdAddSlot },
-    { method: 'post', path: '/pick-and-drop-edit-slot', handler: pdEditSlot },
-    { method: 'post', path: '/pick-and-drop-delete-slot', handler: pdDeleteSlot },
-
-    //Public Charger
-    { method: 'post', path: '/public-charger-station-list',    handler: stationList },
-    { method: 'post', path: '/public-charger-station-details', handler: stationDetail },
-    { method: 'post', path: '/public-charger-station-data',    handler: stationData },
-    { method: 'post', path: '/public-charger-add-station',     handler: addPublicCharger },
-    { method: 'post', path: '/public-charger-edit-station',    handler: editPublicCharger },
-    { method: 'post', path: '/public-chargers-delete',         handler: deletePublicCharger },
-    { method: 'post', path: '/chargers-gallery-del',           handler: deletePublicChargerGallery },
-
-    //Charger Installation
-    { method: 'post', path: '/charger-installation-list', handler: chargerInstallationList },
+    /* Charger Installation */
+    { method: 'post', path: '/charger-installation-list',    handler: chargerInstallationList },
     { method: 'post', path: '/charger-installation-details', handler: chargerInstallationDetails },
     
     /* Service Shops */
-    { method: 'post',    path: '/shop-list',           handler: storeList },
-    { method: 'get',    path: '/shop-data',           handler: storeData },
+    { method: 'post',   path: '/shop-list',           handler: storeList },
+    { method: 'post',   path: '/shop-data',           handler: storeData },
     { method: 'post',   path: '/shop-add',            handler: storeAdd },
-    { method: 'get',    path: '/shop-view',           handler: storeView },
+    { method: 'post',   path: '/shop-view',           handler: storeView },
     { method: 'post',   path: '/shop-update',         handler: storeUpdate },
     { method: 'delete', path: '/shop-delete',         handler: storeDelete },
     { method: 'post',   path: '/shop-service-list',   handler: serviceList },
     { method: 'post',   path: '/shop-service-create', handler: serviceCreate },
     { method: 'post',   path: '/shop-service-update', handler: serviceUpdate },
     { method: 'delete', path: '/shop-service-delete', handler: serviceDelete },
-    { method: 'post',    path: '/shop-brand-list',     handler: brandList },
+    { method: 'post',   path: '/shop-brand-list',     handler: brandList },
     { method: 'post',   path: '/shop-brand-create',   handler: brandCreate },
     { method: 'post',   path: '/shop-brand-update',   handler: brandUpdate },
     { method: 'delete', path: '/shop-brand-delete',   handler: brandDelete },
 
-    //RSA Routes
+    /* RSA Routes */
     { method: 'post',  path: '/rsa-list',          handler: rsaList },
     { method: 'post',  path: '/rsa-data',          handler: rsaData },
-    { method: 'post', path: '/rsa-add',           handler: rsaAdd },
-    { method: 'post', path: '/rsa-update',        handler: rsaUpdate },
+    { method: 'post',  path: '/rsa-add',           handler: rsaAdd },
+    { method: 'post',  path: '/rsa-update',        handler: rsaUpdate },
     { method: 'post',  path: '/rsa-delete',        handler: rsaDelete },
-    { method: 'get',  path: '/rsa-status-change', handler: rsaStatusChange },
+    { method: 'post',  path: '/rsa-status-change', handler: rsaStatusChange },
 
     /* Rider Clubs */
-    { method: 'post',    path: '/club-list',       handler: clubList },
-    { method: 'get',    path: '/club-data',       handler: clubData },
+    { method: 'post',   path: '/club-list',      handler: clubList },
+    { method: 'post',   path: '/club-data',       handler: clubData },
     { method: 'post',   path: '/add-club',        handler: clubCreate },
     { method: 'post',   path: '/edit-club',       handler: clubUpdate },
     { method: 'delete', path: '/club-delete',     handler: clubDelete },
     { method: 'delete', path: '/club-delete-img', handler: clubDeleteImg },
 
-    //Electric Cars Leasing
+    /* Electric Cars Leasing */
     { method: 'post',  path: '/electric-cars-list', handler: carList },
     { method: 'post',  path: '/electric-car-data',  handler: carData },
 
-    //Electric Cars Leasing
+    /* Electric Cars Leasing */
     { method: 'post',  path: '/electric-bikes-list', handler: bikesList },
     { method: 'post',  path: '/electric-bike-data',  handler: bikeData },
 
-    //EV Road Assistance
-    { method: 'post',  path: '/road-assistance-booking-list', handler: evRoadAssistanceBooking },
-    { method: 'post',  path: '/road-assistance-booking-data',  handler: bookingData },
-    { method: 'post',  path: '/road-assistance-invoice-list',  handler: evRoadAssistanceInvoice },
-    { method: 'post',  path: '/road-assistance-invoice-data',  handler: invoiceData },
+    /* EV Road Assistance */
+    { method: 'post', path: '/road-assistance-booking-list', handler: evRoadAssistanceBooking },
+    { method: 'post', path: '/road-assistance-booking-data', handler: bookingData },
+    { method: 'post', path: '/road-assistance-invoice-list', handler: evRoadAssistanceInvoice },
+    { method: 'post', path: '/road-assistance-invoice-data', handler: invoiceData },
 
-    //Interest List
+    /* Interest List */ 
     { method: 'post',  path: '/interest-list', handler: interestList },
 
-    //Coupon
-    { method: 'post',  path: '/coupon-list', handler: couponList },
-    { method: 'post',  path: '/coupon-data', handler: couponData },
+    /* Coupon */
+    { method: 'post', path: '/coupon-list', handler: couponList },
+    { method: 'post', path: '/coupon-data', handler: couponData },
 
-    //Offer
-    { method: 'post',  path: '/offer-list', handler: offerList },
-    { method: 'post',  path: '/offer-data', handler: offerData },
+    /* Offer */
+    { method: 'post', path: '/offer-list', handler: offerList },
+    { method: 'post', path: '/offer-data', handler: offerData },
 
     //Discussion Board
     //  { method: 'post',  path: '/discussion-board-list', handler: rsaList },
     //  { method: 'post',  path: '/discussion-board-data',  handler: rsaData },
 
-    //Ev Guide Routes
-    { method: 'get',  path: '/ev-guide-list',    handler: guideList },
-    { method: 'get',  path: '/ev-guide-add',     handler: addGuide },
-    { method: 'post', path: '/ev-guide-details', handler: guideDetail },
-    { method: 'post', path: '/ev-guide-update',  handler: editGuide },
-    { method: 'get',  path: '/ev-guide-delete',  handler: deleteGuide },
+    /* Ev Guide Routes */
+    { method: 'post',  path: '/ev-guide-list',    handler: guideList },
+    { method: 'post',  path: '/ev-guide-add',     handler: addGuide },
+    { method: 'post',  path: '/ev-guide-details', handler: guideDetail },
+    { method: 'post',  path: '/ev-guide-update',  handler: editGuide },
+    { method: 'post',  path: '/ev-guide-delete',  handler: deleteGuide },
 
     /* EV Insurance */
     { method: 'post',  path: '/ev-insurance-list',                 handler: evInsuranceList },
