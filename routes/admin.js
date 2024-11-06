@@ -51,7 +51,7 @@ const adminRoutes = [
     { method: 'post',   path: '/charger-details',                 handler: chargerDetails },
     { method: 'post',   path: '/add-charger',                     handler: addCharger },
     { method: 'post',   path: '/edit-charger',                    handler: editCharger },
-    { method: 'delete', path: '/delete-charger',                  handler: deleteCharger },
+    { method: 'post',   path: '/delete-charger',                  handler: deleteCharger },
     { method: 'post',   path: '/charger-booking-list',            handler: chargerBookingList },
     { method: 'post',   path: '/charger-booking-details',         handler: chargerBookingDetails },
     { method: 'post',   path: '/charger-booking-invoice-list',    handler: invoiceList },

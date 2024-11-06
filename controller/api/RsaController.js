@@ -1,7 +1,7 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
-import { formatDateInQuery, formatDateTimeInQuery, mergeParam } from "../../utils.js";
+import { formatDateInQuery, formatDateTimeInQuery, mergeParam, generateRandomPassword } from "../../utils.js";
 import crypto from 'crypto';
 import bcrypt from "bcryptjs";
 import emailQueue from "../../emailQueue.js";
@@ -81,7 +81,7 @@ export const rsaForgotPassword = async (req, resp) => {
 
     const password = generateRandomPassword(6);
     const hashedPswd = await bcrypt.hash(password, 10);
-    await db.execute('UPDATE rsa SET password=? WHERE rider_email=?', [hashedPswd, email]);
+    await db.execute('UPDATE rsa SET password=? WHERE email=?', [hashedPswd, email]);
     const html = `<html>
         <body> 
             <h4>Hello ${rsa.rsa_name},</h4>
@@ -92,7 +92,7 @@ export const rsaForgotPassword = async (req, resp) => {
         </body>
     </html>`;
     
-    emailQueue(email, 'Forgot password Request', html);
+    emailQueue.addEmail(email, 'Forgot password Request', html);
 
     resp.status(200).json({ status: 1, code: 200, message: ["An email has been sent to your given email address. Kindly check your email"] });
 };  

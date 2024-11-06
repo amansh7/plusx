@@ -30,10 +30,10 @@ import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, all
     deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
 } from '../controller/api/VehicleController.js';
 import { 
-    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking
+    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking
 } from '../controller/api/PortableChargerController.js';
 import { 
-    getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking 
+    getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking, cancelValetBooking
 } from '../controller/api/ChargingServiceController.js';
 
 const router = Router();
@@ -158,6 +158,7 @@ const authzAndAuthRoutes = [
     { method: 'get', path: '/charging-service-details', handler: getServiceOrderDetail },
     { method: 'get', path: '/pick-and-drop-invoice-list', handler: getInvoiceList },
     { method: 'get', path: '/pick-and-drop-invoice-detail', handler: getInvoiceDetail },
+    { method: 'post', path: '/charging-service-cancel', handler: cancelValetBooking },
 
     /* Portable charger */
     { method: 'get', path: '/portable-charger-list', handler: chargerList },
