@@ -2,7 +2,7 @@ import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { getOpenAndCloseTimings, formatOpenAndCloseTimings} from '../../utils.js';
+import { getOpenAndCloseTimings, formatOpenAndCloseTimings, deleteFile} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
