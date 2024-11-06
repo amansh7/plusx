@@ -13,7 +13,7 @@ export const discussionBoardList = async (req, resp) => {
             (select count(id) from board_comment as bc where bc.board_id = discussion_board.board_id) as comment_count,
             (select count(id) from board_views as bv where bv.board_id = discussion_board.board_id) as view_count,
             (select count(id) from board_likes as bl where bl.board_id = discussion_board.board_id and status =1) as likes_count,
-            (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count'
+            (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count
         `,
         searchFields: ['blog_title'],
         searchTexts: [search],
@@ -44,7 +44,7 @@ export const discussionBoardDetail = async (req, resp) => {
             (select count(id) from board_comment as bc where bc.board_id = discussion_board.board_id) as comment_count,
             (select count(id) from board_views as bv where bv.board_id = discussion_board.board_id) as view_count,
             (select count(id) from board_likes as bl where bl.board_id = discussion_board.board_id and status =1) as likes_count,
-            (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count' 
+            (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count
         FROM 
             discussion_board 
         WHERE 
