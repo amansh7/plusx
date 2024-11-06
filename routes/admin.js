@@ -7,9 +7,7 @@ import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList
     invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail
 } from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
-
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, PodAssignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
-
 import { addPublicCharger, editPublicCharger, stationDetail, stationList, deletePublicCharger, deletePublicChargerGallery, stationData } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { 
@@ -30,6 +28,7 @@ import {
     evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete 
 } from "../controller/admin/EvInsuranceController.js";
 import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleController.js";
+import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
 
 const router = Router();
 const adminAuthRoutes = [
@@ -168,9 +167,10 @@ const adminRoutes = [
     { method: 'post',  path: '/subscription-lis',    handler: subscriptionList },
     { method: 'post',  path: '/subscription-detail', handler: subscriptionDetail },
     
-    //Discussion Board
-    //  { method: 'post',  path: '/discussion-board-list', handler: rsaList },
-    //  { method: 'post',  path: '/discussion-board-data',  handler: rsaData },
+    /* Discussion Board */
+    { method: 'post',   path: '/discussion-board-list',   handler: discussionBoardList },
+    { method: 'post',   path: '/discussion-board-detail', handler: discussionBoardDetail },
+    { method: 'delete', path: '/discussion-board-delete', handler: discussionBoardDelete },
 
     /* Ev Guide Routes */
     { method: 'post',  path: '/ev-guide-list',    handler: guideList },
