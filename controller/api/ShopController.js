@@ -1,9 +1,9 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB } from '../../dbUtils.js';
-import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, asyncHandler} from '../../utils.js';
 
-export const shopList = async (req, resp) => {
+export const shopList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, location, latitude, longitude, search_text, service, brand } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"], location: ["required"], latitude: ["required"], longitude: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -72,9 +72,9 @@ export const shopList = async (req, resp) => {
         code: 200,
         base_url: `${req.protocol}://${req.get('host')}/uploads/shop-images/`,
     });
-};
+});
 
-export const shopDetail = async (req, resp) => {
+export const shopDetail = asyncHandler(async (req, resp) => {
     const {rider_id, store_id, location, latitude, longitude } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], store_id: ["required"], location: ["required"], latitude: ["required"], longitude: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -122,4 +122,4 @@ export const shopDetail = async (req, resp) => {
         address: address,
         base_url: `${req.protocol}://${req.get('host')}/uploads/shop-images/`,
     });
-};
+});

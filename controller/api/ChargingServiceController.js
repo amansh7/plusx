@@ -3,10 +3,10 @@ import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
-import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
-export const getChargingServiceSlotList = async (req, resp) => {
+export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const [slot] = await db.execute(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}  FROM pick_drop_slot WHERE status = ?`, [1]);
     return resp.json({
         message: [ "Slot List fetch successfully!" ], 
@@ -14,13 +14,12 @@ export const getChargingServiceSlotList = async (req, resp) => {
         status: 1,
         code: 200
     });
-};
+});
 
-export const requestService = async (req, resp) => {
+export const requestService = asyncHandler(async (req, resp) => {
     const { rider_id, name, country_code, contact_no, slot_id, pickup_address, pickup_latitude, pickup_longitude,vehicle_id, parking_number, parking_floor, 
         slot_date_time, coupan_code, price = '', order_status = 'CNF'
     } = mergeParam(req);
-
     const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id         : ["required"],
         name             : ["required"],
@@ -35,8 +34,8 @@ export const requestService = async (req, resp) => {
         parking_floor    : ["required"],
         slot_date_time   : ["required"],
     });
-
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
     const conn = await startTransaction();
     try{
         const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email,
@@ -105,7 +104,7 @@ export const requestService = async (req, resp) => {
             const heading1 = 'Valet Charging Service';
             const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
             createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
-            pushNotification(rsa.fcm_token, heading1, desc1, 'RDRFCM', href);
+            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
         }
 
         await commitTransaction(conn);
@@ -123,9 +122,9 @@ export const requestService = async (req, resp) => {
     }finally{
         if (conn) conn.release();
     }
-};
+});
 
-export const listServices = async (req, resp) => {
+export const listServices = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, history } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -155,9 +154,9 @@ export const listServices = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
-export const getServiceOrderDetail = async (req, resp) => {
+export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
     const {rider_id, service_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], service_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -182,10 +181,10 @@ export const getServiceOrderDetail = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
 /* Invoice */
-export const getInvoiceList = async (req, resp) => {
+export const getInvoiceList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, orderStatus } = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -220,9 +219,9 @@ export const getInvoiceList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/pick-drop-invoice/`,
     });
-};
+});
 
-export const getInvoiceDetail = async (req, resp) => {
+export const getInvoiceDetail = asyncHandler(async (req, resp) => {
     const {rider_id, invoice_id } = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -246,10 +245,10 @@ export const getInvoiceDetail = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
 /* RSA */
-export const getRsaBookingStage = async (req, resp) => {
+export const getRsaBookingStage = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -276,9 +275,9 @@ export const getRsaBookingStage = async (req, resp) => {
         booking_history : bookingTracking,
         image_path      : `${req.protocol}://${req.get('host')}/uploads/pick-drop-images/`
     });
-};
+});
 
-export const handleBookingAction = async (req, resp) => {
+export const handleBookingAction = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
 
     let validationRules = {
@@ -308,10 +307,10 @@ export const handleBookingAction = async (req, resp) => {
         case 'WC': return await workComplete(req, resp);
         default: return resp.json({status: 0, code: 200, message: ['Invalid booking status.']});
     }
-};
+});
 
-export const handleRejectBooking = async (req, resp) => {
-    const {rsa_id, booking_id, reason, latitude, longitude } = req.body;
+export const handleRejectBooking = asyncHandler(async (req, resp) => {
+    const {rsa_id, booking_id, reason, latitude='', longitude='' } = req.body;
     const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"], reason: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -356,7 +355,7 @@ export const handleRejectBooking = async (req, resp) => {
     emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Charging Service Booking rejected - ${booking_id}`, html);
 
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
-};
+});
 
 // cs booking action helper
 const acceptBooking = async (req, resp) => {
@@ -662,9 +661,10 @@ const workComplete = async (req, resp) => {
     }
 };
 
-export const cancelValetBooking = async (req, resp) => {
-
-    const { booking_id, rider_id, reason } = req.body;
+export const cancelValetBooking = asyncHandler(async (req, resp) => {
+    const { rider_id, booking_id, reason } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
     const checkOrder = await queryDB(`
         SELECT 
@@ -744,4 +744,4 @@ export const cancelValetBooking = async (req, resp) => {
     emailQueue.addEmail('valetbookings@plusxelectric.com', `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
-};
+});

@@ -5,9 +5,9 @@ import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
 import fs from 'fs';
 import path from "path";
-import { createNotification, mergeParam, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, mergeParam, pushNotification } from "../../utils.js";
 
-export const addDiscussionBoard = async (req, resp) => {
+export const addDiscussionBoard = asyncHandler(async (req, resp) => {
     try{
         const files = req.files;
         const image = files.image.map(file => file.filename).join('*') || '';
@@ -42,9 +42,9 @@ export const addDiscussionBoard = async (req, resp) => {
         }
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-};
+});
 
-export const getDiscussionBoardList = async (req, resp) => {
+export const getDiscussionBoardList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, search_text, by_rider } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -115,9 +115,9 @@ export const getDiscussionBoardList = async (req, resp) => {
         console.error('Error getting board list:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const getDiscussionBoardDetail = async (req, resp) => {
+export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
     const {rider_id, board_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -199,9 +199,9 @@ export const getDiscussionBoardDetail = async (req, resp) => {
         console.error('Error getting board detail:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const addComment = async (req, resp) => {
+export const addComment = asyncHandler(async (req, resp) => {
     const {rider_id, board_id, comment } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"], comment: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -242,9 +242,9 @@ export const addComment = async (req, resp) => {
         console.error('Error adding comment:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const replyComment = async (req, resp) => {
+export const replyComment = asyncHandler(async (req, resp) => {
     const {rider_id, comment_id, comment } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], comment_id: ["required"], comment: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -283,9 +283,9 @@ export const replyComment = async (req, resp) => {
         console.error('Error reply comment:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const boardLike = async (req, resp) => {
+export const boardLike = asyncHandler(async (req, resp) => {
     const {rider_id, board_id, status } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"], status: ["required"]});
     if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
@@ -337,9 +337,9 @@ export const boardLike = async (req, resp) => {
         console.error('Error like board:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const boardView = async (req, resp) => {
+export const boardView = asyncHandler(async (req, resp) => {
     const {rider_id, board_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -360,9 +360,9 @@ export const boardView = async (req, resp) => {
         console.error('Error viewing board:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const boardShare = async (req, resp) => {
+export const boardShare = asyncHandler(async (req, resp) => {
     const {rider_id, board_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -394,9 +394,9 @@ export const boardShare = async (req, resp) => {
         console.error('Error sharing board:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const votePoll = async (req, resp) => {
+export const votePoll = asyncHandler(async (req, resp) => {
     const {rider_id, poll_id, option } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], poll_id: ["required"], option: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -432,9 +432,9 @@ export const votePoll = async (req, resp) => {
         console.error('Error voting poll:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const reportOnBoard = async (req, resp) => {
+export const reportOnBoard = asyncHandler(async (req, resp) => {
     const {rider_id, board_id, reason } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"], reason: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -478,9 +478,9 @@ export const reportOnBoard = async (req, resp) => {
         console.error('Error getting report on board:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const boardNotInterested = async (req, resp) => {
+export const boardNotInterested = asyncHandler(async (req, resp) => {
     const {rider_id, board_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -503,9 +503,9 @@ export const boardNotInterested = async (req, resp) => {
         console.error('Error board not interested:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const boardDelete = async (req, resp) => {
+export const boardDelete = asyncHandler(async (req, resp) => {
     const {rider_id, board_id } = mergeparam(req);
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -544,9 +544,9 @@ export const boardDelete = async (req, resp) => {
         console.error('Error deleting board:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const editBoard = async (req, resp) => {
+export const editBoard = asyncHandler(async (req, resp) => {
     try{
         const files = req.files;
         const newImages = files.image.map(file => file.filename).join('*') || '';
@@ -585,9 +585,9 @@ export const editBoard = async (req, resp) => {
         console.error('Error updating board:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const editPoll = async (req, resp) => {
+export const editPoll = asyncHandler(async (req, resp) => {
     const { rider_id, board_id, poll_id, poll_option1='', poll_option2='', poll_option3='', poll_option4='', expiry_days } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         rider_id: ["required"], 
@@ -630,9 +630,9 @@ export const editPoll = async (req, resp) => {
         console.error('Error updating poll:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const deleteComment = async (req, resp) => {
+export const deleteComment = asyncHandler(async (req, resp) => {
     const {rider_id, comment_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], comment_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -670,9 +670,9 @@ export const deleteComment = async (req, resp) => {
         console.error('Error deleting comment:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const deleteReplyComment = async (req, resp) => {
+export const deleteReplyComment = asyncHandler(async (req, resp) => {
     const {rider_id, reply_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], reply_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -711,9 +711,9 @@ export const deleteReplyComment = async (req, resp) => {
         console.error('Error deleting reply comment:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const commentLike = async (req, resp) => {
+export const commentLike = asyncHandler(async (req, resp) => {
     const {rider_id, comment_id, status} = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
     if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
@@ -766,9 +766,9 @@ export const commentLike = async (req, resp) => {
         console.error('Error like comment:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});
 
-export const replyCommentLike = async (req, resp) => {
+export const replyCommentLike = asyncHandler(async (req, resp) => {
     const {rider_id, comment_id, status} = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
     if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
@@ -811,4 +811,4 @@ export const replyCommentLike = async (req, resp) => {
         console.error('Error like reply comment:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
-};
+});

@@ -1,10 +1,10 @@
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
-import { formatDateTimeInQuery, mergeParam } from '../../utils.js';
+import { asyncHandler, formatDateTimeInQuery, mergeParam } from '../../utils.js';
 import db from "../../config/db.js";
 
 
-export const carList = async (req, resp) => {
+export const carList = asyncHandler(async (req, resp) => {
     const { page_no, search_text, sort_by } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {page_no: ["required"]});
@@ -35,9 +35,9 @@ export const carList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/car-rental-images/`,
     });
-};
+});
 
-export const carDetail = async (req, resp) => {
+export const carDetail = asyncHandler(async (req, resp) => {
     const {rider_id, rental_id } = mergeParam(req);
     let gallery = [];
         
@@ -57,4 +57,4 @@ export const carDetail = async (req, resp) => {
         gallery_data: imgName,
         base_url: `${req.protocol}://${req.get('host')}/uploads/car-rental-images/`,
     });
-};
+});

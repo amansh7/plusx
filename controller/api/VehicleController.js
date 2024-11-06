@@ -3,10 +3,10 @@ import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
-import { mergeParam} from '../../utils.js';
+import { asyncHandler, mergeParam} from '../../utils.js';
 import emailQueue from "../../emailQueue.js";
 
-export const vehicleList = async (req, resp) => {
+export const vehicleList = asyncHandler(async (req, resp) => {
     const {vehicle_type, page_no, vehicle_name, vehicle_model } = req.body;
     const { isValid, errors } = validateFields(req.body, {vehicle_type: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -33,9 +33,9 @@ export const vehicleList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`
     });
-};
+});
 
-export const vehicleDetail = async (req, resp) => {
+export const vehicleDetail = asyncHandler(async (req, resp) => {
     const { vehicle_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {vehicle_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -54,9 +54,9 @@ export const vehicleDetail = async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`,
     });
 
-};
+});
 
-export const interestedPeople = async (req, resp) => {
+export const interestedPeople = asyncHandler(async (req, resp) => {
     const {rider_id, name, country_code, mobile, address, vehicle, region_specification } = req.body;
         
     const { isValid, errors } = validateFields(req.body, {
@@ -84,9 +84,9 @@ export const interestedPeople = async (req, resp) => {
         code: 200,
         message: insert.affectedRows > 0 ? ["Charging Station Details fetched successfully!"] : ["Oops! Something went wrong. Please try again."]
     });
-};
+});
 
-export const sellVehicle = async (req, resp) => {
+export const sellVehicle = asyncHandler(async (req, resp) => {
     try{     
         const uploadedFiles = req.files;
         const car_images = uploadedFiles['car_images']?.map(file => file.filename).join('*') || '';
@@ -153,9 +153,9 @@ export const sellVehicle = async (req, resp) => {
     }catch(err){
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-};
+});
 
-export const allSellVehicleList = async (req, resp) => {
+export const allSellVehicleList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, search_text, sort_col, sort_by } = req.body;
         
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
@@ -186,9 +186,9 @@ export const allSellVehicleList = async (req, resp) => {
         image_path: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
     });
 
-};
+});
 
-export const sellVehicleList = async (req, resp) => {
+export const sellVehicleList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, search_text, sort_col, sort_by } = req.body;
         
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
@@ -219,9 +219,9 @@ export const sellVehicleList = async (req, resp) => {
         image_path: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
     });
 
-};
+});
 
-export const sellVehicleDetail = async (req, resp) => {
+export const sellVehicleDetail = asyncHandler(async (req, resp) => {
     const { rider_id, sell_id } = req.body;
         
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], sell_id: ["required"]});
@@ -255,9 +255,9 @@ export const sellVehicleDetail = async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`,
     });
 
-};
+});
 
-export const updateSellVehicle = async (req, resp) => {
+export const updateSellVehicle = asyncHandler(async (req, resp) => {
     try{
         const uploadedFiles = req.files;
         const car_images = uploadedFiles['car_images']?.map(file => file.filename).join('*') || '';
@@ -314,9 +314,9 @@ export const updateSellVehicle = async (req, resp) => {
     }catch(err){
 
     }
-};
+});
 
-export const deleteSellVehicle = async (req, resp) => {
+export const deleteSellVehicle = asyncHandler(async (req, resp) => {
     const {rider_id, sell_id} = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], sell_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
@@ -348,9 +348,9 @@ export const deleteSellVehicle = async (req, resp) => {
         return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
     }
 
-};
+});
 
-export const soldSellVehicle = async (req, resp) => {
+export const soldSellVehicle = asyncHandler(async (req, resp) => {
     const {rider_id, sell_id} = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], sell_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
@@ -369,10 +369,10 @@ export const soldSellVehicle = async (req, resp) => {
         error: update.affectedRows > 0 ? false : true,
         message: update.affectedRows > 0 ? ['Your Car for Sale Sold Successful!'] : ['Something went wrong, please try again!'],
     });
-};
+});
 
 /* Dynamic Data */
-export const areaList = async (req, resp) => {
+export const areaList = asyncHandler(async (req, resp) => {
     const { location_id, area_name } = mergeParam(req);
 
     let query = `SELECT id AS loc_id, location_id, area_name FROM locations_area_list WHERE location_id = ? AND status = ?`;
@@ -393,9 +393,9 @@ export const areaList = async (req, resp) => {
         message: ["Area List fetch successfully!"],
         area_data: result
     });
-};
+});
 
-export const reminder_sell_vehicle_list = async (req, resp) => {
+export const reminder_sell_vehicle_list = asyncHandler(async (req, resp) => {
     const date = moment().subtract(15, 'days').format('YYYY-MM-DD');
 
     const [sellData] = await db.execute(`
@@ -419,9 +419,9 @@ export const reminder_sell_vehicle_list = async (req, resp) => {
     }
 
     return resp.json({ status: 1, code: 200, message: "Notification Sent!" });
-};
+});
 
-export const vehicleModelList = async (req, resp) => {
+export const vehicleModelList = asyncHandler(async (req, resp) => {
     const {vehicle_type, make_name} = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {vehicle_type: ["required"], make_name: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -444,9 +444,9 @@ export const vehicleModelList = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
-export const vehicleBrandList = async (req, resp) => {
+export const vehicleBrandList = asyncHandler(async (req, resp) => {
     const {vehicle_type} = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {vehicle_type: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -467,5 +467,5 @@ export const vehicleBrandList = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
