@@ -361,7 +361,7 @@ export const rsaBookingStage = async (req, resp) => {
 };
 
 export const bookingAction = async (req, resp) => {
-    console.log('asdasdasd', req.body)
+    
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
     let validationRules = {
         rsa_id         : ["required"], 
@@ -488,7 +488,7 @@ const acceptBooking = async (req, resp) => {
     }
 };
 const driverEnroute = async (req, resp) => {
-    console.log('asdas')
+    
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
@@ -544,11 +544,9 @@ const reachedLocation = async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "RL" AND booking_id = ?',[rsa_id, booking_id]
     );
-
     if (ordHistoryCount.count === 0) {
         const insert = await db.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "RL", ?, ?, ?)',
@@ -702,7 +700,7 @@ const chargerPickedUp = async (req, resp) => {
 };
 
 export const userCancelPCBooking = async (req, resp) => {
-    const {rider_id, booking_id, reason } = req.body;
+    const { rider_id, booking_id, reason } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });

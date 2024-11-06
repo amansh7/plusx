@@ -17,10 +17,9 @@ const __dirname = path.dirname(__filename);
 
 const corsOptions = {
     origin: [
-        'http://192.168.1.87:3000',
-        'http://192.168.1.87:3333',
-        'http://localhost:3000',
-        // 'http://192.168.1.21:3434/admin/driver-list'
+        'http://192.168.1.21:1112',
+        'http://192.168.1.87:3434',
+        'http://localhost:1112',
     ],
     // origin : "*",
     methods: 'GET, POST, PUT, DELETE',

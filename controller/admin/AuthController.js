@@ -20,11 +20,11 @@ var transporter = nodemailer.createTransport({
 export const login = async(req, resp) => {
     const { email, password } = req.body;
     const [users] = (await db.execute('SELECT * FROM users WHERE email=?', [email]));
-    if(users.length === 0){ return resp.status(401).json({message: "Invalid email or password"}); }
+    if(users.length === 0){ return resp.status(200).json({message: "Invalid email "}); }
     const user = users[0];
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-        return resp.status(401).json({ message: 'Invalid email or password' });
+        return resp.status(200).json({ message: 'Invalid password' });
     }
 
     await db.execute('UPDATE users SET status = 1 WHERE email = ?', [email]);

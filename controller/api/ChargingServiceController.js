@@ -662,16 +662,18 @@ const workComplete = async (req, resp) => {
     }
 };
 
-export const userCancelValetBooking = async (req, resp) => {
+export const cancelValetBooking = async (req, resp) => {
+
     const { booking_id, rider_id, reason } = req.body;
     
     const checkOrder = await queryDB(`
         SELECT 
-            name, rsa_id, slot_date_time, pickup_address, 
+            name, rsa_id, slot_date_time,
+            (select cancel_reason from charging_service_history as csh where csh.service_id = charging_service.request_id ) as cancel_reason, 
             concat( country_code, "-", contact_no) as contact_no, 
-            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = charging_service_assign.rider_id) AS rider_email,
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token,
-            (select fcm_token from rsa where rsa.rsa_id = charging_service_assign.rsa_id ) as rsa_fcm_token
+            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = charging_service.rider_id) AS rider_email,
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service.rider_id) AS fcm_token,
+            (select fcm_token from rsa where rsa.rsa_id = charging_service.rsa_id ) as rsa_fcm_token
         FROM 
             charging_service
         WHERE 
@@ -698,12 +700,13 @@ export const userCancelValetBooking = async (req, resp) => {
 
     if( checkOrder.rsa_id) {
         await db.execute(`DELETE FROM charging_service_assign WHERE rider_id=? AND order_id = ?`, [rider_id, booking_id]);
-        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
 
         const message1 = `A Booking of the Valet Service booking has been cancelled by user with booking id : ${booking_id}`;
         await createNotification(title, message1, 'Charging Service', 'RSA', 'Rider', rider_id, checkOrder.rsa_id,  href);
         await pushNotification(checkOrder.rsa_fcm_token, title, message1, 'RSAFCM', href);
     }
+    const slot_date_time = moment(checkOrder.slot_date_time).format('YYYY-MM-DD');
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
@@ -712,7 +715,7 @@ export const userCancelValetBooking = async (req, resp) => {
             <p>Booking Details:</p><br />
 
             <p>Booking ID    : ${booking_id}</p>
-            <p>Booking Date : ${checkOrder.slot_date_time}</p>
+            <p>Booking Date : ${slot_date_time}</p>
             
             <p>Thank you for choosing PlusX Electric, and we hope to serve you in the future!</p><br />
 
@@ -733,7 +736,7 @@ export const userCancelValetBooking = async (req, resp) => {
             <p>Contact      : ${checkOrder.contact_no}</p>
             <p>Booking ID   : ${booking_id}</p>
             <p>Booking Date : ${checkOrder.slot_date_time}</p> 
-            <p>Reason       : ${checkOrder.pickup_address}</p> <br />
+            <p>Reason       : ${checkOrder.cancel_reason}</p> <br />
 
             <p>Thank you,<br/> The PlusX Electric Team </p>
         </body>
