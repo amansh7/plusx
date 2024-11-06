@@ -316,9 +316,9 @@ export const chargerBookingDetails = async (req, resp) => {
             message : ["Booking details fetched successfully!"],
             data : {
                 booking: bookingDetails,
-                rider: riderDetails,
-                driver: driverDetails,
-                vehicle: vehicleDetails
+                // rider: riderDetails,
+                // driver: driverDetails,
+                // vehicle: vehicleDetails
             }, 
         });
     } catch (error) {
