@@ -5,7 +5,6 @@ import crypto from 'crypto';
 import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-
 dotenv.config();
 
 
@@ -270,7 +269,6 @@ export const chargerBookingList = async (req, resp) => {
     }
 };
 
-
 export const chargerBookingDetails = async (req, resp) => {
     try {
         const { booking_id } = req.body;
@@ -530,7 +528,6 @@ export const invoiceDetails = async (req, resp) => {
         code: 200,
     });
 };
-/* Invoice */
 
 /* Slot */
 export const slotList = async (req, resp) => {
@@ -611,7 +608,6 @@ export const slotDetails = async (req, resp) => {
         return resp.status(500).json({ status: 0, message: 'Error fetching charger lists' });
     }
 };
-
 
 export const addSlot = async (req, resp) => {
     try {
@@ -722,9 +718,8 @@ export const deleteSlot = async (req, resp) => {
         return resp.json({ status: 0, message: 'Error deleting time slot' });
     }
 }
-/* Slot */
 
-// Assign Booking
+/* Assign Booking */
 export const assignBooking = async (req, resp) => {
     const {  rsa_id, booking_id  } = mergeParam(req);
     const { isValid, errors }      = validateFields(mergeParam(req), {
@@ -786,6 +781,45 @@ export const assignBooking = async (req, resp) => {
         if (conn) conn.release();
     }
 };
+
+
+/* Subscription */
+export const subscriptionList = async (req, resp) => {
+    const { page_no } = req.body;
+    const result = await getPaginatedData({
+        tableName: 'portable_charger_subscriptions',
+        columns: `subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
+            (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
+        `,
+        sortColumn: 'id',
+        sortOrder: 'DESC',
+        page_no,
+        limit: 10,
+    });
+
+    return resp.json({
+        status: 1,
+        code: 200,
+        message: "Subscription List fetch successfully!",
+        data: result.data,
+        total_page: result.totalPage,
+        total: result.total,
+    });    
+};
+
+export const subscriptionDetail = async (req, resp) => {
+    const { subscription_id } = req.body;
+    if (!subscription_id) return resp.json({ status: 0, code: 422, message: "Subscription Id is required" });
+    
+    const subscription = await queryDB(`SELECT 
+        subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
+        (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
+        FROM portable_charger_subscriptions WHERE subscription_id = ?
+    `, [subscription_id]);
+
+    return resp.status(200).json({status: 1, data: subscription, message: "Subscription Detail fetch successfully!"});
+};
+
 
 
 

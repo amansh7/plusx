@@ -3,13 +3,11 @@ import { authenticate, authenticateAdmin } from "../middleware/admin/authenticat
 import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
 import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
-import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, 
-    invoiceList,invoiceDetails, slotList, addSlot,editSlot,deleteSlot, assignBooking,
-    slotDetails, chargerDetails} from "../controller/admin/PortableChargerController.js";
+import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, assignBooking, chargerDetails, 
+    invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail
+} from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
-
 import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, PodAssignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
-
 import { addPublicCharger, editPublicCharger, stationDetail, stationList, deletePublicCharger, deletePublicChargerGallery, stationData } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { 
@@ -17,17 +15,20 @@ import {
 } from "../controller/admin/ShopController.js";
 import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange,  } from "../controller/admin/RsaController.js";
 import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg } from "../controller/admin/RiderClubController.js"
-import { carList } from "../controller/api/ElectricCarRentalController.js";
-import { carData } from "../controller/admin/ElectriCarLeasingController.js";
-import { bikeData, bikesList } from "../controller/admin/ElectricBikeRentalController.js";
-import {bookingData, bookingList as evRoadAssistanceBooking, invoiceList as evRoadAssistanceInvoice, invoiceData} from '../controller/admin/EvRoadAssistanceController.js'
+import { carsList, carDetail, carAdd, carEdit, carDelete, carGalleryDelete } from "../controller/admin/ElectriCarLeasingController.js";
+import { bikeDetail, bikesList, bikeAdd, bikeEdit, bikeDelete, bikeGalleryDelete } from "../controller/admin/ElectricBikeRentalController.js";
+import {
+    bookingData, bookingList as evRoadAssistanceBooking, invoiceList as evRoadAssistanceInvoice, invoiceData, evRoadAssistanceConfirmBooking, evRoadAssistanceCancelBooking
+} from '../controller/admin/EvRoadAssistanceController.js'
 import { interestList } from "../controller/admin/RegisterInterestController.js";
-import { couponData, couponList } from "../controller/admin/CouponController.js";
-import { offerData, offerList } from "../controller/admin/OfferController.js";
+import { couponData, couponDetail, couponList, couponAdd, couponEdit, couponDelete } from "../controller/admin/CouponController.js";
+import { offerDetail, offerList, offerAdd, offerEdit, offerDelete } from "../controller/admin/OfferController.js";
 import {guideList, addGuide, guideDetail, editGuide, deleteGuide} from "../controller/admin/EvGuideController.js";
 import { 
     evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete 
 } from "../controller/admin/EvInsuranceController.js";
+import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleController.js";
+import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
 
 const router = Router();
 const adminAuthRoutes = [
@@ -66,14 +67,14 @@ const adminRoutes = [
     /* Pick & Drop */
     { method: 'post',   path: '/pick-and-drop-booking-list',     handler: bookingList },
     { method: 'post',   path: '/pick-and-drop-booking-details',  handler: bookingDetails },
-    { method: 'post',   path: '/pick-and-drop-assign',          handler: pdAssignBooking },
+    { method: 'post',   path: '/pick-and-drop-assign',           handler: pdAssignBooking },
     { method: 'post',   path: '/pick-and-drop-invoice-list',     handler: pdInvoiceList },
-    { method: 'post',   path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
+    { method: 'post',   path: '/pick-and-drop-invoice-details',  handler: pdInvoiceDetails },
     { method: 'post',   path: '/pick-and-drop-slot-list',        handler: pdSlotList },
     { method: 'post',   path: '/pick-and-drop-slot-details',     handler: pdSlotDetails },
     { method: 'post',   path: '/pick-and-drop-add-slot',         handler: pdAddSlot },
     { method: 'post',   path: '/pick-and-drop-edit-slot',        handler: pdEditSlot },
-    { method: 'delete', path: '/pick-and-drop-delete-slot',    handler: pdDeleteSlot },
+    { method: 'delete', path: '/pick-and-drop-delete-slot',      handler: pdDeleteSlot },
 
     /* Public Charger */
     { method: 'post',   path: '/public-charger-station-list',    handler: stationList },
@@ -81,14 +82,8 @@ const adminRoutes = [
     { method: 'post',   path: '/public-charger-station-data',    handler: stationData },
     { method: 'post',   path: '/public-charger-add-station',     handler: addPublicCharger },
     { method: 'post',   path: '/public-charger-edit-station',    handler: editPublicCharger },
-    { method: 'delete', path: '/public-chargers-delete',       handler: deletePublicCharger },
-    { method: 'delete', path: '/chargers-gallery-del',         handler: deletePublicChargerGallery },
-    //Pick & Drop Booking
-    { method: 'post', path: '/pick-and-drop-booking-list', handler: bookingList },
-    { method: 'post', path: '/pick-and-drop-booking-details', handler: bookingDetails },
-    { method: 'post', path: '/pick-and-drop-invoice-list', handler: pdInvoiceList },
-    { method: 'get', path: '/pick-and-drop-invoice-details', handler: pdInvoiceDetails },
-    { method: 'post', path: '/pick-and-drop-assign', handler: pdAssignBooking },
+    { method: 'delete', path: '/public-chargers-delete',         handler: deletePublicCharger },
+    { method: 'delete', path: '/chargers-gallery-del',           handler: deletePublicChargerGallery },
 
     /* Charger Installation */
     { method: 'post', path: '/charger-installation-list',    handler: chargerInstallationList },
@@ -119,7 +114,7 @@ const adminRoutes = [
     { method: 'post',  path: '/rsa-status-change', handler: rsaStatusChange },
 
     /* Rider Clubs */
-    { method: 'post',   path: '/club-list',      handler: clubList },
+    { method: 'post',   path: '/club-list',       handler: clubList },
     { method: 'post',   path: '/club-data',       handler: clubData },
     { method: 'post',   path: '/add-club',        handler: clubCreate },
     { method: 'post',   path: '/edit-club',       handler: clubUpdate },
@@ -127,33 +122,55 @@ const adminRoutes = [
     { method: 'delete', path: '/club-delete-img', handler: clubDeleteImg },
 
     /* Electric Cars Leasing */
-    { method: 'post',  path: '/electric-cars-list', handler: carList },
-    { method: 'post',  path: '/electric-car-data',  handler: carData },
+    { method: 'post',    path: '/electric-cars-list',     handler: carsList },
+    { method: 'post',    path: '/electric-car-detail',    handler: carDetail },
+    { method: 'post',    path: '/electric-car-add',       handler: carAdd },
+    { method: 'post',    path: '/electric-car-edit',      handler: carEdit },
+    { method: 'delete',  path: '/electric-car-delete',    handler: carDelete },
+    { method: 'delete',  path: '/electric-car-gallery-d', handler: carGalleryDelete },
 
-    /* Electric Cars Leasing */
-    { method: 'post',  path: '/electric-bikes-list', handler: bikesList },
-    { method: 'post',  path: '/electric-bike-data',  handler: bikeData },
+    /* Electric Bikes Leasing */
+    { method: 'post',    path: '/electric-bikes-list',     handler: bikesList },
+    { method: 'post',    path: '/electric-bike-detail',    handler: bikeDetail },
+    { method: 'post',    path: '/electric-bike-add',       handler: bikeAdd },
+    { method: 'post',    path: '/electric-bike-edit',      handler: bikeEdit },
+    { method: 'delete',  path: '/electric-bike-delete',    handler: bikeDelete },
+    { method: 'delete',  path: '/electric-bike-gallery-d', handler: bikeGalleryDelete },
 
     /* EV Road Assistance */
-    { method: 'post', path: '/road-assistance-booking-list', handler: evRoadAssistanceBooking },
-    { method: 'post', path: '/road-assistance-booking-data', handler: bookingData },
-    { method: 'post', path: '/road-assistance-invoice-list', handler: evRoadAssistanceInvoice },
-    { method: 'post', path: '/road-assistance-invoice-data', handler: invoiceData },
+    { method: 'post', path: '/ev-road-assistance-booking-list',    handler: evRoadAssistanceBooking },
+    { method: 'post', path: '/ev-road-assistance-booking-details', handler: bookingData },
+    { method: 'post', path: '/ev-road-assistance-confirm-booking', handler: evRoadAssistanceConfirmBooking },
+    { method: 'post', path: '/ev-road-assistance-cancel-booking',  handler: evRoadAssistanceCancelBooking },
+    { method: 'post', path: '/ev-road-assistance-invoice-list',    handler: evRoadAssistanceInvoice },
+    { method: 'post', path: '/ev-road-assistance-invoice-data',    handler: invoiceData },
 
     /* Interest List */ 
     { method: 'post',  path: '/interest-list', handler: interestList },
 
     /* Coupon */
-    { method: 'post', path: '/coupon-list', handler: couponList },
-    { method: 'post', path: '/coupon-data', handler: couponData },
+    { method: 'post',   path: '/coupon-list',     handler: couponList },
+    { method: 'post',   path: '/coupon-detail',   handler: couponDetail },
+    { method: 'post',   path: '/coupon-data',     handler: couponDetail },
+    { method: 'post',   path: '/add-coupan',      handler: couponAdd },
+    { method: 'post',   path: '/edit-coupan',     handler: couponEdit },
+    { method: 'delete', path: '/delete-coupan',   handler: couponDelete },
 
     /* Offer */
-    { method: 'post', path: '/offer-list', handler: offerList },
-    { method: 'post', path: '/offer-data', handler: offerData },
+    { method: 'post',   path: '/offer-list',   handler: offerList },
+    { method: 'post',   path: '/offer-detail', handler: offerDetail },
+    { method: 'post',   path: '/add-offer',    handler: offerAdd },
+    { method: 'post',   path: '/edit-offer',   handler: offerEdit },
+    { method: 'delete', path: '/delete-offer', handler: offerDelete },
 
-    //Discussion Board
-    //  { method: 'post',  path: '/discussion-board-list', handler: rsaList },
-    //  { method: 'post',  path: '/discussion-board-data',  handler: rsaData },
+    /* Subscription */
+    { method: 'post',  path: '/subscription-lis',    handler: subscriptionList },
+    { method: 'post',  path: '/subscription-detail', handler: subscriptionDetail },
+    
+    /* Discussion Board */
+    { method: 'post',   path: '/discussion-board-list',   handler: discussionBoardList },
+    { method: 'post',   path: '/discussion-board-detail', handler: discussionBoardDetail },
+    { method: 'delete', path: '/discussion-board-delete', handler: discussionBoardDelete },
 
     /* Ev Guide Routes */
     { method: 'post',  path: '/ev-guide-list',    handler: guideList },
@@ -162,9 +179,15 @@ const adminRoutes = [
     { method: 'post',  path: '/ev-guide-update',  handler: editGuide },
     { method: 'post',  path: '/ev-guide-delete',  handler: deleteGuide },
 
+    /* EV Buy & Sell */
+    { method: 'post',  path: '/subscription-lis',    handler: sellVehicleList },
+    { method: 'post',  path: '/subscription-detail', handler: sellVehicleDetail },
+
     /* EV Insurance */
     { method: 'post',  path: '/ev-insurance-list',                 handler: evInsuranceList },
     { method: 'post',  path: '/ev-insurance-detail',               handler: evInsuranceDetail },
+
+    /* EV Pre-Sale */
     { method: 'post',  path: '/ev-pre-sale-list',                  handler: evPreSaleList },
     { method: 'post',  path: '/ev-pre-sale-detail',                handler: evPreSaleDetail },
     { method: 'post',  path: '/ev-pre-sale-time-slot-list',        handler: evPreSaleTimeSlot },
@@ -194,6 +217,16 @@ adminRoutes.forEach(({ method, path, handler }) => {
     if (path === '/ev-guide-add' || path === '/ev-guide-update') {
         middlewares.push(handleFileUpload('vehicle-image', ['cover_image', 'vehicle_gallery'], 5));
     }
+    if (path === '/add-offer' || path === '/edit-offer') {
+        middlewares.push(handleFileUpload('offer', ['offer_image'], 1));
+    }
+    if (path === '/electric-bike-add' || path === '/electric-bike-edit') {
+        middlewares.push(handleFileUpload('bike-rental-images', ['cover_image', 'rental_gallery'], 5));
+    }
+    if (path === '/electric-car-add' || path === '/electric-car-edit') {
+        middlewares.push(handleFileUpload('car-rental-images', ['cover_image', 'rental_gallery'], 5));
+    }
+
     middlewares.push(authenticateAdmin);
     // middlewares.push(authenticate);
 

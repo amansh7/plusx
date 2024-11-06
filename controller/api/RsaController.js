@@ -1,7 +1,7 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
-import { formatDateInQuery, formatDateTimeInQuery, mergeParam, generateRandomPassword } from "../../utils.js";
+import { formatDateInQuery, formatDateTimeInQuery, generateRandomPassword, mergeParam } from "../../utils.js";
 import crypto from 'crypto';
 import bcrypt from "bcryptjs";
 import emailQueue from "../../emailQueue.js";
@@ -56,6 +56,8 @@ export const rsaUpdatePassword = async (req, resp) => {
 
     if(new_password != confirm_password) return resp.json({ status: 0, code: 422, message: ['New password and confirm password not matched!'] });
     
+    if (new_password == old_password) return resp.status(401).json({ message: ["Old and New Password can't be same, Please enter correct password."] });
+    
     const rsa = await queryDB(`SELECT password FROM rsa WHERE rsa_id=?`, [rsa_id]);
     
     const isMatch = await bcrypt.compare(old_password, rsa.password);  
@@ -72,8 +74,8 @@ export const rsaUpdatePassword = async (req, resp) => {
 };
 
 export const rsaForgotPassword = async (req, resp) => {
-    const { email, mobile } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {email: ["required"], mobile: ["required"]});
+    const { email } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), { email: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const rsa = queryDB(`SELECT rsa_name FROM rsa WHERE email=? LIMIT 1`, [email]);
