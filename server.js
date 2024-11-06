@@ -6,6 +6,7 @@ import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { fileURLToPath } from 'url';
+import { errorHandler } from './middleware/errorHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -40,6 +41,8 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+
+app.use(errorHandler);
 
 app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);

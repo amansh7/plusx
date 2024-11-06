@@ -1,8 +1,8 @@
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
-import { formatDateTimeInQuery, mergeParam } from '../../utils.js';
+import { asyncHandler, formatDateTimeInQuery, mergeParam } from '../../utils.js';
 
-export const bikeList = async (req, resp) => {
+export const bikeList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, search_text, sort_by } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
@@ -33,9 +33,9 @@ export const bikeList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/bike-rental-images/`,
     });
-};
+});
 
-export const bikeDetail = async (req, resp) => {
+export const bikeDetail = asyncHandler(async (req, resp) => {
     const {rider_id, rental_id } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], rental_id: ["required"]});
@@ -55,4 +55,4 @@ export const bikeDetail = async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/bike-rental-images/`,
     });
 
-};
+});

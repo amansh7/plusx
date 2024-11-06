@@ -407,3 +407,9 @@ export const deleteFile = (directory, filename) => {
       if (err) console.error(`Failed to delete ${directory} image ${filename}:`, err);
   });
 };
+
+export const asyncHandler = (fn) => {
+  return function (req, res, next) {
+      fn(req, res, next).catch(next);
+  };
+};

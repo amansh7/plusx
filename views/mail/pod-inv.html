@@ -90,7 +90,7 @@
                             <tr>
                                 <td style="width: 40%; padding-right: 20px;">
                                     <p style="font-size: 16px; color: #00ffcc;">Bill To:</p>
-                                    <p style="font-size: 14px; font-weight: bold; color: #ffffff;"><%= data.name %></p>
+                                    <p style="font-size: 14px; font-weight: bold; color: #ffffff;">Thanseeh Muhammed</p>
                                 </td>
                                 <td style="text-align: right;">
                                     <p style="font-size: 14px; color: #ffffff;">Invoice Date: <%= new Date(data.invoice_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
@@ -119,7 +119,7 @@
                                 <tr>
                                     <td style="font-size: 14px; color: #ffffff;">Portable Charger Service</td>
                                     <td style="font-size: 14px; color: #ffffff;">--</td>
-                                    <td style="font-size: 14px; color: #ffffff; text-align: right;">AED 40</td>
+                                    <td style="font-size: 14px; color: #ffffff; text-align: right;"><%= data.currency ? data.currency.toUpperCase() : '' %> <%= formatNumber(data.amount) %></td>
                                 </tr>
                                 <tr>
                                     <td style="font-size: 14px; color: #00ffcc;">VAT:</td>
@@ -135,7 +135,7 @@
                         <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #00ffcc;">Total Amount:</p>
                     </td>
                     <td style="text-align: right;">
-                        <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #ffffff;">AED 40</td></p>
+                        <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #ffffff;"><%= data.currency ? data.currency.toUpperCase() : '' %> <%= formatNumber(data.amount) %></td></p>
                     </td>
                 </tr>
             </tbody>

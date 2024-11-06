@@ -1,10 +1,10 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
-import { createNotification, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
-export const serviceRequest = async (req, resp) => {
+export const serviceRequest = asyncHandler(async (req, resp) => {
     const {
         rider_id, name, email, country_code, contact_no, service_type, address, latitude, longitude, charger_for, no_of_charger, description,
         company_name='', resident_type='', vehicle_model='', region_specification=''
@@ -78,9 +78,9 @@ export const serviceRequest = async (req, resp) => {
         return resp.json({status:0, code:200, message: ['Oops! There is something went wrong! Please Try Again']});
     }
 
-};
+});
 
-export const requestList = async (req, resp) => {
+export const requestList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, sort_by } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -108,9 +108,9 @@ export const requestList = async (req, resp) => {
         total: result.total,
     });
 
-};
+});
 
-export const requestDetails = async (req, resp) => { 
+export const requestDetails = asyncHandler(async (req, resp) => { 
     const {rider_id, request_id } = mergeParam(req);     
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -136,4 +136,4 @@ export const requestDetails = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});

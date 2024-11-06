@@ -3,7 +3,7 @@ import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import moment from "moment";
 import multer from 'multer';
-import { mergeParam } from '../../utils.js';
+import { asyncHandler, mergeParam } from '../../utils.js';
 import emailQueue from "../../emailQueue.js";
 
 const storage = multer.diskStorage({
@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
 
 export const upload = multer({ storage: storage });
 
-export const addRoadAssistance = async (req, resp) => {
+export const addRoadAssistance = asyncHandler(async (req, resp) => {
     const {
         rider_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, pickup_latitude, pickup_longitude, drop_latitude, drop_longitude, order_status=''
     } = mergeParam;
@@ -102,9 +102,9 @@ export const addRoadAssistance = async (req, resp) => {
     }finally{
         if (conn) conn.release();
     }    
-};
+});
 
-export const roadAssistanceList = async (req, resp) => {
+export const roadAssistanceList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, sort_by } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
@@ -131,9 +131,9 @@ export const roadAssistanceList = async (req, resp) => {
         total: result.total,
     });
 
-};
+});
 
-export const roadAssistanceDetail = async (req, resp) => {
+export const roadAssistanceDetail = asyncHandler(async (req, resp) => {
     const { rider_id, order_id } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], order_id: ["required"]});
@@ -166,10 +166,10 @@ export const roadAssistanceDetail = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
 /* Invoice */
-export const roadAssistanceInvoiceList = async (req, resp) => {
+export const roadAssistanceInvoiceList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, orderStatus } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -206,9 +206,9 @@ export const roadAssistanceInvoiceList = async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/road-side-invoice/`,
     });
 
-};
+});
 
-export const roadAssistanceInvoiceDetail = async (req, resp) => {
+export const roadAssistanceInvoiceDetail = asyncHandler(async (req, resp) => {
     const {rider_id, invoice_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -232,10 +232,10 @@ export const roadAssistanceInvoiceDetail = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
 /* RSA */
-export const getRsaOrderStage = async (req, resp) => {
+export const getRsaOrderStage = asyncHandler(async (req, resp) => {
     const {rsa_id, order_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], order_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -297,9 +297,9 @@ export const getRsaOrderStage = async (req, resp) => {
     }catch(err){
         return resp.json({message: ['An error occurred while processing your request.'], status: 0, code: 500});  
     }
-};
+});
 
-export const orderAction = async (req, resp) => {
+export const orderAction = asyncHandler(async (req, resp) => {
     const {order_status, order_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {order_status: ["required"], order_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -311,7 +311,7 @@ export const orderAction = async (req, resp) => {
         case 'ES': return await esOrder(req, resp);
         default: return resp.json({status: 0, code: 200, message: ['Invalid booking status.']});
     }
-};
+});
 
 // rs booking/order action helper
 const acceptOrder = async (req, resp) => {

@@ -1,9 +1,9 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB } from '../../dbUtils.js';
-import { mergeParam, getOpenAndCloseTimings} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, asyncHandler} from '../../utils.js';
 
-export const stationList = async (req, resp) => {
+export const stationList = asyncHandler(async (req, resp) => {
     const {rider_id, latitude, longitude, page_no, search_text, sort_by } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -50,9 +50,9 @@ export const stationList = async (req, resp) => {
         code: 200,
         base_url: new URL('/uploads/charging-station-images/', req.protocol + '://' + req.get('host')).href // Generating base URL
     });  
-};
+});
 
-export const stationDetail = async (req, resp) => {
+export const stationDetail = asyncHandler(async (req, resp) => {
     const {rider_id, station_id, latitude, longitude } = mergeParam(req);
     let gallery = [];
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -82,9 +82,9 @@ export const stationDetail = async (req, resp) => {
         gallery_data: imgName,
         base_url: new URL('/uploads/charging-station-images/', req.protocol + '://' + req.get('host')).href
     });
-};
+});
 
-export const nearestChargerList = async (req, resp) => {
+export const nearestChargerList = asyncHandler(async (req, resp) => {
     const {rider_id, latitude, longitude } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -108,4 +108,4 @@ export const nearestChargerList = async (req, resp) => {
         data: chargers
     });
 
-};
+});

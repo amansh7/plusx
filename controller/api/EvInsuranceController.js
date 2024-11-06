@@ -5,10 +5,10 @@ import path from 'path';
 import fs from 'fs';
 import moment from "moment";
 import generateUniqueId from 'generate-unique-id';
-import { createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
-export const addInsurance = async (req, resp) => {
+export const addInsurance = asyncHandler(async (req, resp) => {
     try{
         const fileFields = ['vehicle_registration_img', 'driving_licence', 'car_images', 'car_type_image', 'scretch_image', 'emirates_id'];
         let tempFileNames = {};
@@ -99,9 +99,9 @@ export const addInsurance = async (req, resp) => {
         }
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-};
+});
 
-export const insuranceList = async (req, resp) => {
+export const insuranceList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, mobile_no, vehicle } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -142,9 +142,9 @@ export const insuranceList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/pick-drop-invoice/`,
     });
-};
+});
 
-export const insuranceDetails = async (req, resp) => {
+export const insuranceDetails = asyncHandler(async (req, resp) => {
     const {rider_id, insurance_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], insurance_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -166,9 +166,9 @@ export const insuranceDetails = async (req, resp) => {
         status: 1, 
         code: 200, 
     });
-};
+});
 
-export const evPreSaleBooking = async (req, resp) => {
+export const evPreSaleBooking = asyncHandler(async (req, resp) => {
     const {rider_id, owner_name, country, country_code, mobile_no, email, vehicle, pickup_address, reason_of_testing, pickup_latitude, pickup_longitude, 
         slot_date, slot_time_id 
     } = req.body;
@@ -246,9 +246,9 @@ export const evPreSaleBooking = async (req, resp) => {
         message: ["Thanks for booking EV presale testing! We`ll be in touch shortly. We appreciate your trust in PlusX electric"],
         request_id: bookingId,
     });
-};
+});
 
-export const evPreSaleList = async (req, resp) => {
+export const evPreSaleList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, mobile_no, vehicle } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -289,9 +289,9 @@ export const evPreSaleList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });
-};
+});
 
-export const evPreSaleDetails = async (req, resp) => {
+export const evPreSaleDetails = asyncHandler(async (req, resp) => {
     const {rider_id, booking_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -314,9 +314,9 @@ export const evPreSaleDetails = async (req, resp) => {
         status: 1, 
         code: 200, 
     });
-};
+});
 
-export const preSaleSlotList = async (req, resp) => {
+export const preSaleSlotList = asyncHandler(async (req, resp) => {
     const [slot] = await db.execute(`SELECT slot_id, slot_name, start_time, end_time, booking_limit FROM ev_pre_sale_testing_slot WHERE status = ? ORDER BY id ASC`, [1]);
 
     let result = {};
@@ -341,4 +341,4 @@ export const preSaleSlotList = async (req, resp) => {
         status: 1,
         code: 200
     });
-};
+});

@@ -158,7 +158,6 @@ export const pickAndDropInvoice = async (req, resp) => {
     const invoiceData = { data, numberToWords, formatNumber }
     const pdfPath = path.join(__dirname,  '../public/pick-drop-invoice',`${invoiceId}-invoice.pdf`);
     const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req);
-    
     if(pdf.success){
         const html = `<html>
             <body>
@@ -175,7 +174,7 @@ export const pickAndDropInvoice = async (req, resp) => {
     }
     
     if(insert.affectedRows > 0){
-        resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200 });
+        return resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200 });
     }else{
         return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
     }
@@ -258,7 +257,7 @@ export const portableChargerInvoice = async (req, resp) => {
     }
     
     if(insert.affectedRows > 0){
-        resp.json({ message: ["Portable Charger Invoice created successfully!"], status:1, code:200 });
+        return resp.json({ message: ["Portable Charger Invoice created successfully!"], status:1, code:200 });
     }else{
         return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
     }
