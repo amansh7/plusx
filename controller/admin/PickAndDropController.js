@@ -176,6 +176,7 @@ export const pdInvoiceDetails = async (req, resp) => {
             cs.parking_floor, 
             cs.pickup_latitude, 
             cs.pickup_longitude,
+            cs.created_at,
             (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
         FROM 
             charging_service_invoice AS csi

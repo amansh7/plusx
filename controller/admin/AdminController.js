@@ -2,6 +2,7 @@ import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import {  getPaginatedData } from '../../dbUtils.js';
 import path from 'path';
+import moment from 'moment';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 dotenv.config();
@@ -60,7 +61,7 @@ export const getDashboardData = async (req, resp) => {
 };
 
 export const riderList = async (req, resp) => {
-    let { page_no, sortBy, riderName, riderEmail, riderMobile, addedFrom } = req.body;
+    let { page_no, sortBy, riderName, riderEmail, riderMobile, addedFrom, emirates, start_date, end_date } = req.body;
 
     page_no = parseInt(page_no, 10);
     if (isNaN(page_no) || page_no < 1) {
@@ -70,22 +71,35 @@ export const riderList = async (req, resp) => {
     const sortOrder = sortBy === 'd' ? 'DESC' : 'ASC';
 
     try {
-        const result = await getPaginatedData({
+        const params = {
             tableName: 'riders',
             columns: 'rider_id, rider_name, rider_email, country_code, rider_mobile, emirates, profile_img, vehicle_type, status, created_at, updated_at',
-            sortColumn: 'id', 
+            sortColumn: 'id',
             sortOrder : "DESC",
             page_no : page_no,
             limit: 10,
-            searchFields: ['rider_name', 'rider_email', 'rider_mobile', 'added_from'],
-            searchTexts: [riderName, riderEmail, riderMobile, addedFrom],
-        });
+            searchFields: ['rider_name', 'rider_email', 'rider_mobile', 'added_from', 'emirates'],
+            searchTexts: [riderName, riderEmail, riderMobile, addedFrom, emirates],
+        };
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+            params.whereField = ['created_at', 'created_at'];
+            params.whereValue = [start, end];
+            params.whereOperator = ['>=', '<='];
+        }
+
+        const result = await getPaginatedData(params);
+        const [emiratesResult] = await db.query('SELECT DISTINCT emirates FROM riders');
+        
 
         return resp.json({
             status: 1,
             code: 200,
             message: ["Rider list fetched successfully!"],
             data: result.data,
+            emirates: emiratesResult,
             total_page: result.totalPage,
             total: result.total,
         });
@@ -132,22 +146,33 @@ export const riderDetails = async (req, resp) => {
         }
 
         const [chargerRows] = await db.execute(
-            `SELECT pcb.booking_id, pcb.rsa_id, pcb.charger_id, pcb.service_name, pcb.service_price, pcb.service_type, pcb.service_feature, pcb.status, pcb.created_at
+            `SELECT pcb.booking_id, pcb.rsa_id, rsa.rsa_name, pcb.charger_id, pcb.vehicle_id, pcb.service_name, pcb.service_price, pcb.service_type, pcb.service_feature, pcb.status, pcb.created_at
              FROM portable_charger_booking pcb
+             JOIN rsa ON pcb.rsa_id = rsa.rsa_id
              WHERE pcb.rider_id = ?
              ORDER BY pcb.created_at DESC
              LIMIT 5`, 
             [riderId]
         );
 
+
         const [chargingServiceRows] = await db.execute(
-            `SELECT cs.request_id, cs.rsa_id, cs.vehicle_id, cs.price, cs.order_status, cs.created_at
+            `SELECT 
+                cs.request_id, 
+                cs.rsa_id, 
+                rsa.rsa_name, 
+                cs.vehicle_id, 
+                cs.price, 
+                cs.order_status, 
+                cs.created_at
              FROM charging_service cs
+             JOIN rsa ON cs.rsa_id = rsa.rsa_id
              WHERE cs.rider_id = ?
              ORDER BY cs.created_at DESC
              LIMIT 5`,
             [riderId]
         );
+        
 
         const rider = {
             rider_id: rows[0].rider_id,
@@ -165,7 +190,9 @@ export const riderDetails = async (req, resp) => {
             portableChargerBookings: chargerRows.map(row => ({
                 booking_id: row.booking_id,
                 rsa_id: row.rsa_id,
+                rsa_name: row.rsa_name,
                 charger_id: row.charger_id,
+                vehicle_id: row.vehicle_id,
                 service_name: row.service_name,
                 service_type: row.service_type,
                 service_price: row.service_price,
@@ -176,6 +203,7 @@ export const riderDetails = async (req, resp) => {
             pickAndDropBookings: chargingServiceRows.map(row => ({
                 request_id: row.request_id,
                 rsa_id: row.rsa_id,
+                rsa_name: row.rsa_name,
                 vehicle_id: row.vehicle_id,
                 price: row.price,
                 order_status: row.order_status,

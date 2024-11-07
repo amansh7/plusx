@@ -1,5 +1,6 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
+import moment from 'moment';
 import path from 'path';
 import fs from 'fs';
 import { getOpenAndCloseTimings, formatOpenAndCloseTimings, deleteFile} from '../../utils.js';
@@ -11,11 +12,21 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 export const stationList = async (req, resp) => {
     try {
-        const { page_no, search, sort_by = 'd' } = req.body; 
+        const { page_no, search, sort_by = 'd', start_date, end_date} = req.body; 
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const result = await getPaginatedData({
+        // const result = await getPaginatedData({
+        //     tableName: 'public_charging_station_list',
+        //     columns: `station_id, station_name, charging_for, charger_type, station_image, price, address`,
+        //     sortColumn:'id',
+        //     sortOrder: 'DESC',
+        //     page_no,
+        //     limit: 10,
+        //     searchFields: ['station_name'],
+        //     searchTexts: [search],
+        // });
+        const params = {
             tableName: 'public_charging_station_list',
             columns: `station_id, station_name, charging_for, charger_type, station_image, price, address`,
             sortColumn:'id',
@@ -24,7 +35,17 @@ export const stationList = async (req, resp) => {
             limit: 10,
             searchFields: ['station_name'],
             searchTexts: [search],
-        });
+        };
+
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+            params.whereField = ['created_at', 'created_at'];
+            params.whereValue = [start, end];
+            params.whereOperator = ['>=', '<='];
+        }
+        const result = await getPaginatedData(params);
 
         return resp.json({
             status: 1,

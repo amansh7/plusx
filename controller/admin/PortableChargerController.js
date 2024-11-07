@@ -502,6 +502,7 @@ export const invoiceDetails = async (req, resp) => {
             pcb.booking_id, 
             cs.start_time, 
             pcb.slot_time,  
+            pcb.created_at,
             ${formatDateInQuery(['pcb.slot_date'])},
             (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email
         FROM 
