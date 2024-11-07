@@ -113,6 +113,8 @@ export const queryDB = async (query, params, connection = null) => {
 export const getPaginatedData = async ({
   tableName,
   columns = '*',
+  liveSearchFields = [],
+  liveSearchTexts = [],
   searchFields = [],
   searchTexts = [],
   sortColumn = 'id',
@@ -147,6 +149,13 @@ export const getPaginatedData = async ({
     if (searchTexts[index]) {
       searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' AND ') + `${field} LIKE ?`;
       queryParams.push(`%${searchTexts[index].trim()}%`);
+    }
+  });
+
+  liveSearchFields.forEach((field, index) => {
+    if (liveSearchTexts[index]) {
+      searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' OR ') + `${field} LIKE ?`;
+      queryParams.push(`%${liveSearchTexts[index].trim()}%`);
     }
   });
 

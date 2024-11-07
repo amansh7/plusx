@@ -61,7 +61,7 @@ export const getDashboardData = async (req, resp) => {
 };
 
 export const riderList = async (req, resp) => {
-    let { page_no, sortBy, riderName, riderEmail, riderMobile, addedFrom, emirates, start_date, end_date } = req.body;
+    let { page_no, sortBy, riderName, riderEmail, riderMobile, addedFrom, emirates, start_date, end_date, search_text = '' } = req.body;
 
     page_no = parseInt(page_no, 10);
     if (isNaN(page_no) || page_no < 1) {
@@ -78,8 +78,10 @@ export const riderList = async (req, resp) => {
             sortOrder : "DESC",
             page_no : page_no,
             limit: 10,
-            searchFields: ['rider_name', 'rider_email', 'rider_mobile', 'added_from', 'emirates'],
-            searchTexts: [riderName, riderEmail, riderMobile, addedFrom, emirates],
+            liveSearchFields: ['rider_name', 'rider_id', 'rider_email', 'rider_mobile',],
+            liveSearchTexts: [search_text, search_text, search_text, search_text,],
+            searchFields: ['added_from', 'emirates'],
+            searchTexts: [addedFrom, emirates],
         };
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
