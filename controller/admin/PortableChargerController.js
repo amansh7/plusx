@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
 dotenv.config();
 
 
@@ -614,42 +615,31 @@ export const slotDetails = async (req, resp) => {
 
 export const addSlot = async (req, resp) => {
     try {
-        const { start_time, end_time, booking_limit, status = 1 } = req.body;
-
-        // Validation
-        const { isValid, errors } = validateFields({ 
-            start_time, end_time, booking_limit
-        }, {
-            start_time: ["required"],
-            end_time: ["required"],
-            booking_limit: ["required"],
-        });
-
+        const { slot_date, start_time, end_time, booking_limit, status = 1 } = req.body;
+        const { isValid, errors } = validateFields(req.body, { slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    
-        const startTime24 = convertTo24HourFormat(start_time);
-        const endTime24 = convertTo24HourFormat(end_time);
+        
+        if (!Array.isArray(slot_date) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit)) {
+            return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
+        }
+        if (slot_date.length !== start_time.length || start_time.length !== end_time.length || end_time.length !== booking_limit.length) {
+            return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
+        }
 
-        // const generateSlotId = () => {
-        //     const prefix = 'PTS'; 
-        //     const uniqueString = crypto.randomBytes(6).toString('hex').slice(0, 12);
-        //     return `${prefix}${uniqueString}`; 
-        // };
-        const generateSlotId = () => {
-            const prefix = 'PTS';
-            const uniqueNumber = Math.floor(1000 + Math.random() * 9000); 
-            return `${prefix}${uniqueNumber}`;
-        };
-        const slot_id = generateSlotId();
-        const insert = await insertRecord('portable_charger_slot', [
-            'slot_id', 'start_time', 'end_time', 'booking_limit', 'status'
-        ],[
-            slot_id, startTime24, endTime24, booking_limit, status
-        ]);
-    
+        const values = []; const placeholders = [];
+
+        for (let i = 0; i < slot_date.length; i++) {
+            values.push(slotId, slot_date[i], convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
+            placeholders.push('(?, ?, ?, ?, ?, ?)');
+        }
+
+        const query = `INSERT INTO portable_charger_slot (slot_id, slot_date, start_time, end_time, booking_limit, status) VALUES ${placeholders.join(', ')}`;
+        const [insert] = await db.execute(query, values);
+        
         return resp.json({
+            insert,
             code: 200,
-            message: insert.affectedRows > 0 ? ['Slot added successfully!'] : ['Oops! Something went wrong. Please try again.'],
+            message: insert.affectedRows > 0 ? ['Slots added successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: insert.affectedRows > 0 ? 1 : 0
         });
     } catch (error) {
