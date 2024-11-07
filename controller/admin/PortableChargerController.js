@@ -309,6 +309,7 @@ export const chargerBookingDetails = async (req, resp) => {
             [booking_id]
         );
         const bookingDetails = bookingResult[0];
+        const history = bookingHistory
         // if (bookingDetails.status == 'PU') {
         //     const invoice_id = bookingDetails.booking_id.replace('PCB', 'INVPC');
         //     bookingDetails.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
@@ -320,9 +321,7 @@ export const chargerBookingDetails = async (req, resp) => {
             message : ["Booking details fetched successfully!"],
             data : {
                 booking: bookingDetails,
-                // rider: riderDetails,
-                // driver: driverDetails,
-                // vehicle: vehicleDetails
+                history
             }, 
         });
     } catch (error) {
