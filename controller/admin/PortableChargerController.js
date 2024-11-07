@@ -647,12 +647,11 @@ export const addSlot = async (req, resp) => {
 
 export const editSlot = async (req, resp) => {
     try {
-        const { slot_id, start_time, end_time, booking_limit, status } = req.body;
+        const { slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
 
-        const { isValid, errors } = validateFields({ 
-            slot_id, start_time, end_time, booking_limit, status
-        }, {
+        const { isValid, errors } = validateFields(req.body, {
             slot_id : ["required"],
+            slot_date : ["required"],
             start_time: ["required"],
             end_time: ["required"],
             booking_limit: ["required"],
@@ -665,6 +664,7 @@ export const editSlot = async (req, resp) => {
         const endTime24 = convertTo24HourFormat(end_time);
 
         const updates = {
+            slot_date : moment.format(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
             start_time : startTime24, 
             end_time : endTime24, 
             booking_limit, 

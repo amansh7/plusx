@@ -55,7 +55,7 @@ export const login = asyncHandler(async (req, resp) => {
 });
 
 export const register = asyncHandler(async (req, resp) => {
-    const { password, country_code, rider_name, rider_email, rider_mobile, country, emirates, vehicle_type, date_of_birth, 
+    const { password, country_code, rider_name, rider_email, rider_mobile, country, emirates, vehicle_type, date_of_birth, fcm_token,
         area, added_from ,vehicle_make='', vehicle_model='', year_manufacture='', vehicle_code='', vehicle_number='', owner_type='', leased_from='', specification='' 
     } = mergeParam(req);
     
@@ -69,6 +69,7 @@ export const register = asyncHandler(async (req, resp) => {
         emirates: ["required"],
         date_of_birth: ["required"], 
         vehicle_type: ["required"],
+        fcm_token: ["required"],
     };
     if (vehicle_type && vehicle_type != "None") {  // None
         validationRules = {
@@ -107,9 +108,11 @@ export const register = asyncHandler(async (req, resp) => {
     const hashedPswd = await bcrypt.hash(password, 10);
     const accessToken = crypto.randomBytes(12).toString('hex');
     const rider = await insertRecord('riders', [
-        'rider_name', 'rider_mobile', 'rider_email', 'password', 'country_code', 'country', 'emirates', 'area', 'vehicle_type', 'access_token', 'status', 'date_of_birth', 'added_from' 
+        'rider_name', 'rider_mobile', 'rider_email', 'password', 'country_code', 'country', 'emirates', 'area', 'vehicle_type', 'access_token', 'status', 'fcm_token', 
+        'date_of_birth', 'added_from' 
     ],[
-        rider_name, rider_mobile, rider_email, hashedPswd, country_code, country, emirates, area || '', vehicle_type, accessToken, 0, moment('18-10-2006', 'DD-MM-YYYY').format('YYYY-MM-DD'), added_from || 'Android'
+        rider_name, rider_mobile, rider_email, hashedPswd, country_code, country, emirates, area || '', vehicle_type, accessToken, 0, fcm_token,
+        moment('18-10-2006', 'DD-MM-YYYY').format('YYYY-MM-DD'), added_from || 'Android'
     ]);
     
     if(!rider) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true});
@@ -221,91 +224,52 @@ export const createOTP = asyncHandler(async (req, resp) => {
 });
 
 export const verifyOTP = asyncHandler(async (req, resp) => {
-    const { mobile, user_type, country_code, otp, fcm_token } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {
-        mobile: ["required"], user_type: ["required"], country_code: ["required"], otp: ["required"], fcm_token: ["required"],
-    });
+    const { mobile, user_type, country_code, otp } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), { mobile: ["required"], user_type: ["required"], country_code: ["required"], otp: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const fullMobile = `${country_code}${mobile}`;
     const cachedOtp = getOTP(fullMobile);
-    let result, isLogin = 0, loginStatus;
-    let respResult = {};
+    let result, isLogin, loginStatus, respResult = {};
 
-    if(user_type === 'RSA'){
-        result = await queryDB(`SELECT (SELECT COUNT(*) FROM rsa WHERE mobile = ?) AS rsa_mob, (SELECT status FROM rsa WHERE mobile = ?) AS rsa_status`, [mobile, mobile]);
-        isLogin = result.rsa_mob
-        loginStatus = result.rsa_status
-    }else {
-        result = await queryDB(`SELECT (SELECT COUNT(*) FROM riders WHERE rider_mobile = ?) AS mob_count, (SELECT status FROM riders WHERE rider_mobile = ? AND country_code = ?) AS rider_status,
-        `, [mobile, mobile, country_code]);
+    if(user_type === 'Rider'){
+        result = await queryDB(`SELECT COUNT(*) AS rider_mob, r.status AS rider_status FROM riders r WHERE r.rider_mobile = ? AND r.country_code = ? LIMIT 1
+        `, [mobile, country_code]);
         isLogin = result.rider_mob
         loginStatus = result.rider_status
     }
-
     // if (!cachedOtp || cachedOtp !== otp) return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
     if (otp != '0587') return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
-
+    
     if(!isLogin) return resp.json({status: 1, code: 200, message: ['OTP verified succeessfully!'], is_login: 0});
-
+    
     if(loginStatus == 2 && user_type != 'RSA'){
         return resp.json({status: 1, code: 422, message: ["You can not login as your status is inactive. Kindly contact to customer care"]});
     }
-
-    const token = crypto.randomBytes(12).toString('hex');
-    const updates = { access_token: token, fcm_token };
-
-    if(user_type === 'RSA'){
-        const rsaData = await queryDB(`SELECT rsa_id, rsa_name, email, mobile, gender, birthday, rsa_type, profile_img, dl_img, passport_img, running_order, 
-            (select count(*) from vehicle as v where v.assign_id = rsa.rsa_id ) as assign_vehicle
-            FROM rsa WHERE mobile = ?
-        `, [mobile]);
-
-        /* const status = rsaData.running_order > 0 ? [1,2] : [1];
-        status.forEach((val) => {
-            insertRecord('rsa_login_hostiry', ['rsa_id', 'status'], [rsaData.rsa_id, val]);
-        }); */
-        updates.status = rsaData.running_order > 0 ? 2 : 1;
-        
-        await updateRecord('rsa', updates, ['mobile'], [mobile]);
-
-        result = {
-            rsa_id: rsaData.rsa_id,
-            rsa_name: rsaData.rsa_name,
-            email: rsaData.email,
-            mobile: rsaData.mobile,
-            gender: rsaData.gender,
-            rsa_type: rsaData.rsa_type,
-            birthday: rsaData.birthday,
-            profile_img: rsaData.profile_img ? `${req.protocol}://${req.get('host')}/public/uploads/rsa_images/${rsaData.profile_img}` : '',
-            passport_img: rsaData.passport_img ? `${req.protocol}://${req.get('host')}/public/uploads/rsa_images/${rsaData.passport_img}` : '',
-            dl_img: rsaData.dl_img ? `${req.protocol}://${req.get('host')}/public/uploads/rsa_images/${rsaData.dl_img}` : '',
-            access_token: token
-        };
-    }else{
-        updates.status = 1;
-        await updateRecord('riders', updates, ['rider_mobile', 'country_code'], [mobile, country_code]);
-        const riderData = await queryDB(`rider_id, rider_name, rider_email, profile_img, country_code, country, emirates, rider_mobile, date_of_birth 
-            FROM rsa WHERE mobile = ? AND country_code = ?
+    
+    if(user_type === 'Rider'){
+        const token = crypto.randomBytes(12).toString('hex');
+        const update = await updateRecord('riders', { access_token: token }, ['rider_mobile', 'country_code'], [mobile, country_code]);
+        const riderData = await queryDB(`SELECT rider_id, rider_name, rider_email, profile_img, country_code, country, emirates, rider_mobile, date_of_birth 
+            FROM riders WHERE rider_mobile = ? AND country_code = ?
         `, [mobile, country_code]);
 
         respResult = {
             image_url: `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
-            rider_id: rider_data.rider_id,
-            rider_name: rider_data.rider_name,
-            rider_email: rider_data.rider_email,
-            profile_img: rider_data.profile_img ? `${req.protocol}://${req.get('host')}/uploads/rider_profile/${rider_data.profile_img}` : '',
-            rider_mobile: rider_data.rider_mobile,
-            country_code: rider_data.country_code,
-            country: rider_data.country,
-            emirates: rider_data.emirates,
-            date_of_birth: rider_data.date_of_birth,
+            rider_id: riderData.rider_id,
+            rider_name: riderData.rider_name,
+            rider_email: riderData.rider_email,
+            profile_img: riderData.profile_img ? `${req.protocol}://${req.get('host')}/uploads/rider_profile/${riderData.profile_img}` : '',
+            rider_mobile: riderData.rider_mobile,
+            country_code: riderData.country_code,
+            country: riderData.country,
+            emirates: riderData.emirates,
+            date_of_birth: riderData.date_of_birth,
             access_token: token
         };
     }
 
-    return resp.json({message: [ "Login successful!" ], status: 1, code: 200, is_login: 1, result: respResult})
-    
+    return resp.json({message: [ "Login successful!" ], status: 1, code: 200, is_login: 1, result: respResult});
 });
 
 export const logout = asyncHandler(async (req, resp) => {
