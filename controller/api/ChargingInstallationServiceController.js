@@ -28,7 +28,7 @@ export const serviceRequest = asyncHandler(async (req, resp) => {
         'charger_for', 'vehicle_model', 'no_of_charger', 'description', 'order_status', 'region_specification'
     ], [
         requestId, rider_id, name, email, country_code, contact_no, service_type, company_name, resident_type, address, latitude, longitude, 
-        charger_for, vehicle_model, no_of_charger, description, '', region_specification
+        charger_for, vehicle_model, no_of_charger, description, 'P', region_specification
     ]);
     
     if(insert.affectedRows > 0){
