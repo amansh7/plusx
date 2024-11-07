@@ -303,7 +303,7 @@ export const updatePassword = asyncHandler(async (req, resp) => {
     const rider = await queryDB(`SELECT password FROM riders WHERE rider_id=?`, [rider_id]);
     
     const isMatch = await bcrypt.compare(old_password, rider.password);  
-    if (!isMatch) return resp.status(401).json({ message: ["Please enter correct current password."] });
+    if (!isMatch) return resp.json({ status: 0, code: 422, message: ["Please enter correct current password."] });
 
     const hashedPswd = await bcrypt.hash(new_password, 10);
     const update = await updateRecord('riders', {password: hashedPswd}, ['rider_id'], [rider_id]);
