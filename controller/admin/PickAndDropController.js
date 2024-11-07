@@ -2,7 +2,7 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from '..
 import dotenv from 'dotenv';
 import moment from 'moment';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery, createNotification, pushNotification} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
