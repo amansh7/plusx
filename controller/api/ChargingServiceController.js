@@ -3,10 +3,10 @@ import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
-import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
-export const getChargingServiceSlotList = async (req, resp) => {
+export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const [slot] = await db.execute(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}  FROM pick_drop_slot WHERE status = ?`, [1]);
     return resp.json({
         message: [ "Slot List fetch successfully!" ], 
@@ -14,13 +14,12 @@ export const getChargingServiceSlotList = async (req, resp) => {
         status: 1,
         code: 200
     });
-};
+});
 
-export const requestService = async (req, resp) => {
+export const requestService = asyncHandler(async (req, resp) => {
     const { rider_id, name, country_code, contact_no, slot_id, pickup_address, pickup_latitude, pickup_longitude,vehicle_id, parking_number, parking_floor, 
         slot_date_time, coupan_code, price = '', order_status = 'CNF'
     } = mergeParam(req);
-
     const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id         : ["required"],
         name             : ["required"],
@@ -35,8 +34,8 @@ export const requestService = async (req, resp) => {
         parking_floor    : ["required"],
         slot_date_time   : ["required"],
     });
-
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
     const conn = await startTransaction();
     try{
         const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email,
@@ -105,7 +104,7 @@ export const requestService = async (req, resp) => {
             const heading1 = 'Valet Charging Service';
             const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
             createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
-            pushNotification(rsa.fcm_token, heading1, desc1, 'RDRFCM', href);
+            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
         }
 
         await commitTransaction(conn);
@@ -123,9 +122,9 @@ export const requestService = async (req, resp) => {
     }finally{
         if (conn) conn.release();
     }
-};
+});
 
-export const listServices = async (req, resp) => {
+export const listServices = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, history } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -155,9 +154,9 @@ export const listServices = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
-export const getServiceOrderDetail = async (req, resp) => {
+export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
     const {rider_id, service_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], service_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -182,10 +181,10 @@ export const getServiceOrderDetail = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
 /* Invoice */
-export const getInvoiceList = async (req, resp) => {
+export const getInvoiceList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, orderStatus } = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -220,9 +219,9 @@ export const getInvoiceList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/pick-drop-invoice/`,
     });
-};
+});
 
-export const getInvoiceDetail = async (req, resp) => {
+export const getInvoiceDetail = asyncHandler(async (req, resp) => {
     const {rider_id, invoice_id } = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -246,10 +245,10 @@ export const getInvoiceDetail = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
 /* RSA */
-export const getRsaBookingStage = async (req, resp) => {
+export const getRsaBookingStage = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -276,9 +275,9 @@ export const getRsaBookingStage = async (req, resp) => {
         booking_history : bookingTracking,
         image_path      : `${req.protocol}://${req.get('host')}/uploads/pick-drop-images/`
     });
-};
+});
 
-export const handleBookingAction = async (req, resp) => {
+export const handleBookingAction = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
 
     let validationRules = {
@@ -308,10 +307,10 @@ export const handleBookingAction = async (req, resp) => {
         case 'WC': return await workComplete(req, resp);
         default: return resp.json({status: 0, code: 200, message: ['Invalid booking status.']});
     }
-};
+});
 
-export const handleRejectBooking = async (req, resp) => {
-    const {rsa_id, booking_id, reason, latitude, longitude } = req.body;
+export const handleRejectBooking = asyncHandler(async (req, resp) => {
+    const {rsa_id, booking_id, reason, latitude='', longitude='' } = req.body;
     const { isValid, errors } = validateFields(req.body, {rsa_id: ["required"], booking_id: ["required"], reason: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -356,7 +355,7 @@ export const handleRejectBooking = async (req, resp) => {
     emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Charging Service Booking rejected - ${booking_id}`, html);
 
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
-};
+});
 
 // cs booking action helper
 const acceptBooking = async (req, resp) => {
@@ -662,16 +661,19 @@ const workComplete = async (req, resp) => {
     }
 };
 
-export const userCancelValetBooking = async (req, resp) => {
-    const { booking_id, rider_id, reason } = req.body;
+export const cancelValetBooking = asyncHandler(async (req, resp) => {
+    const { rider_id, booking_id, reason } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
     const checkOrder = await queryDB(`
         SELECT 
-            name, rsa_id, slot_date_time, pickup_address, 
+            name, rsa_id, slot_date_time,
+            (select cancel_reason from charging_service_history as csh where csh.service_id = charging_service.request_id ) as cancel_reason, 
             concat( country_code, "-", contact_no) as contact_no, 
-            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = charging_service_assign.rider_id) AS rider_email,
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token,
-            (select fcm_token from rsa where rsa.rsa_id = charging_service_assign.rsa_id ) as rsa_fcm_token
+            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = charging_service.rider_id) AS rider_email,
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service.rider_id) AS fcm_token,
+            (select fcm_token from rsa where rsa.rsa_id = charging_service.rsa_id ) as rsa_fcm_token
         FROM 
             charging_service
         WHERE 
@@ -698,12 +700,13 @@ export const userCancelValetBooking = async (req, resp) => {
 
     if( checkOrder.rsa_id) {
         await db.execute(`DELETE FROM charging_service_assign WHERE rider_id=? AND order_id = ?`, [rider_id, booking_id]);
-        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
 
         const message1 = `A Booking of the Valet Service booking has been cancelled by user with booking id : ${booking_id}`;
         await createNotification(title, message1, 'Charging Service', 'RSA', 'Rider', rider_id, checkOrder.rsa_id,  href);
         await pushNotification(checkOrder.rsa_fcm_token, title, message1, 'RSAFCM', href);
     }
+    const slot_date_time = moment(checkOrder.slot_date_time).format('YYYY-MM-DD');
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
@@ -712,7 +715,7 @@ export const userCancelValetBooking = async (req, resp) => {
             <p>Booking Details:</p><br />
 
             <p>Booking ID    : ${booking_id}</p>
-            <p>Booking Date : ${checkOrder.slot_date_time}</p>
+            <p>Booking Date : ${slot_date_time}</p>
             
             <p>Thank you for choosing PlusX Electric, and we hope to serve you in the future!</p><br />
 
@@ -733,7 +736,7 @@ export const userCancelValetBooking = async (req, resp) => {
             <p>Contact      : ${checkOrder.contact_no}</p>
             <p>Booking ID   : ${booking_id}</p>
             <p>Booking Date : ${checkOrder.slot_date_time}</p> 
-            <p>Reason       : ${checkOrder.pickup_address}</p> <br />
+            <p>Reason       : ${checkOrder.cancel_reason}</p> <br />
 
             <p>Thank you,<br/> The PlusX Electric Team </p>
         </body>
@@ -741,4 +744,4 @@ export const userCancelValetBooking = async (req, resp) => {
     emailQueue.addEmail('valetbookings@plusxelectric.com', `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
-};
+});

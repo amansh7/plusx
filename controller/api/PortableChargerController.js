@@ -3,10 +3,10 @@ import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
-import { createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
-export const chargerList = async (req, resp) => {
+export const chargerList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -34,9 +34,9 @@ export const chargerList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/portable-charger/`,
     });
-};
+});
 
-export const getPcSlotList = async (req, resp) => {
+export const getPcSlotList = asyncHandler(async (req, resp) => {
     const [slot] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
     return resp.json({
         message: [ "Slot List fetch successfully!" ], 
@@ -44,9 +44,9 @@ export const getPcSlotList = async (req, resp) => {
         status: 1,
         code: 200
     });
-};
+});
 
-export const chargerBooking = async (req, resp) => {
+export const chargerBooking = asyncHandler(async (req, resp) => {
     const { 
         rider_id, charger_id, vehicle_id, service_name, service_type, service_feature, user_name, country_code, contact_no, address, latitude, longitude, 
         slot_date, slot_time, slot_id, service_price='', coupan_code, user_id
@@ -70,8 +70,10 @@ export const chargerBooking = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const conn = await startTransaction();
-    // const slot_date  = moment().format('YYYY-MM-DD');
     try{
+        const fSlotDate  = moment(slot_date, 'DD-MM-YYYY').format('YYYY-MM-DD');
+        const currDate = moment().format('YYYY-MM-DD');
+
         const rider = await queryDB(` SELECT fcm_token, rider_name, rider_email,
                 (SELECT MAX(id) FROM portable_charger_booking) AS last_index,
                 (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
@@ -79,7 +81,7 @@ export const chargerBooking = async (req, resp) => {
                 (select count(id) from portable_charger_booking as pod where pod.slot=? and pod.slot_date=? and status NOT IN ("PU", "C") ) as slot_booking_count 
             FROM riders AS r
             WHERE r.rider_id = ?
-        `, [charger_id, slot_id, slot_id, slot_date, rider_id], conn);
+        `, [charger_id, slot_id, slot_id, fSlotDate, rider_id], conn);
     
         const { charg_count, booking_limit, slot_booking_count } = rider;
     
@@ -88,7 +90,7 @@ export const chargerBooking = async (req, resp) => {
     
         if (service_type.toLowerCase() === "get monthly subscription") {
             const [subsCountRows] = await db.execute(`SELECT COUNT(*) AS count FROM portable_charger_subscription WHERE rider_id = ? AND (total_booking >= 10 OR expiry_date < ?)`, 
-                [rider_id, moment().format('YYYY-MM-DD')]
+                [rider_id, currDate]
             );
             const subsCount = subsCountRows[0].count;
             if (subsCount > 0) { 
@@ -97,14 +99,14 @@ export const chargerBooking = async (req, resp) => {
         }
         const start     = (!rider.last_index) ? 0 : rider.last_index; 
         const nextId    = start + 1;
-        const bookingId = 'PCD' + String(nextId).padStart(4, '0');
+        const bookingId = 'PCB' + String(nextId).padStart(4, '0');
         
         const insert = await insertRecord('portable_charger_booking', [
             'booking_id', 'rider_id', 'charger_id', 'vehicle_id', 'service_name', 'service_price', 'service_type', 'service_feature', 'user_name', 'country_code', 
             'contact_no', 'slot', 'slot_date', 'slot_time', 'address', 'latitude', 'longitude', 'status'
         ], [
             bookingId, rider_id, charger_id, vehicle_id, service_name, service_price, service_type, service_feature, user_name, country_code, contact_no,
-            slot_id, slot_date, slot_time, address, latitude, longitude, 'CNF'
+            slot_id, fSlotDate, slot_time, address, latitude, longitude, 'CNF'
         ], conn);
     
         if(insert.affectedRows = 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]});
@@ -183,9 +185,9 @@ export const chargerBooking = async (req, resp) => {
     }finally{
         if (conn) conn.release();
     }
-};
+});
 
-export const chargerBookingList = async (req, resp) => {
+export const chargerBookingList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, history } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -204,7 +206,7 @@ export const chargerBookingList = async (req, resp) => {
         ${formatDateTimeInQuery(['created_at'])}, ${formatDateInQuery(['slot_date'])}
         FROM portable_charger_booking WHERE rider_id = ? AND ${statusCondition} ORDER BY id DESC LIMIT ${parseInt(start)}, ${parseInt(limit)}
     `;
-
+    
     const [bookingList] = await db.execute(bookingsQuery, [rider_id, ...statusParams]);
 
     return resp.json({
@@ -215,9 +217,9 @@ export const chargerBookingList = async (req, resp) => {
         code: 200,
         base_url: `${req.protocol}://${req.get('host')}/uploads/portable-charger/`,
     });
-};
+});
 
-export const chargerBookingDetail = async (req, resp) => {
+export const chargerBookingDetail = asyncHandler(async (req, resp) => {
     const {rider_id, booking_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -236,9 +238,9 @@ export const chargerBookingDetail = async (req, resp) => {
         status          : 1,
         code            : 200,
     });
-};
+});
 
-export const getPcSubscriptionList = async (req, resp) => {
+export const getPcSubscriptionList = asyncHandler(async (req, resp) => {
     const { rider_id } = mergeParam(req);
     if(!rider_id) return resp.json({status: 0, code: 200, error: true, message: ["Rider Id is required"]});
 
@@ -260,11 +262,11 @@ export const getPcSubscriptionList = async (req, resp) => {
         code: 200,
         subscription_img: `${req.protocol}://${req.get('host')}/public/pod-no-subscription.jpeg`,
     });
-};
+});
 
 
 /* Invoice */
-export const invoiceList = async (req, resp) => {
+export const invoiceList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, orderStatus } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -299,9 +301,9 @@ export const invoiceList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
     });
-};
+});
 
-export const invoiceDetails = async (req, resp) => {
+export const invoiceDetails = asyncHandler(async (req, resp) => {
     const {rider_id, invoice_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -327,10 +329,10 @@ export const invoiceDetails = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 
 /* RSA */
-export const rsaBookingStage = async (req, resp) => {
+export const rsaBookingStage = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -358,10 +360,10 @@ export const rsaBookingStage = async (req, resp) => {
         image_path: `${req.protocol}://${req.get('host')}/uploads/portable-charger/`
     });
     
-};
+});
 
-export const bookingAction = async (req, resp) => {
-    console.log('asdasdasd', req.body)
+export const bookingAction = asyncHandler(async (req, resp) => {
+    
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
     let validationRules = {
         rsa_id         : ["required"], 
@@ -386,9 +388,9 @@ export const bookingAction = async (req, resp) => {
         case 'PU': return await chargerPickedUp(req, resp);
         default: return resp.json({status: 0, code: 200, message: ['Invalid booking status.']});
     }
-};
+});
 
-export const rejectBooking = async (req, resp) => {
+export const rejectBooking = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id, reason } = mergeParam(req); // latitude, longitude,
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"], reason: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -433,7 +435,7 @@ export const rejectBooking = async (req, resp) => {
     emailQueue.addEmail('podbookings@plusxelectric.com', `POD Service Booking rejected - ${booking_id}`, html);
 
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
-};
+});
 
 // booking action helper
 const acceptBooking = async (req, resp) => {
@@ -488,7 +490,7 @@ const acceptBooking = async (req, resp) => {
     }
 };
 const driverEnroute = async (req, resp) => {
-    console.log('asdas')
+    
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
@@ -544,11 +546,9 @@ const reachedLocation = async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "RL" AND booking_id = ?',[rsa_id, booking_id]
     );
-
     if (ordHistoryCount.count === 0) {
         const insert = await db.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "RL", ?, ?, ?)',
@@ -701,9 +701,9 @@ const chargerPickedUp = async (req, resp) => {
     }
 };
 
-export const userCancelPCBooking = async (req, resp) => {
-    const {rider_id, booking_id, reason } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
+export const userCancelPCBooking = asyncHandler(async (req, resp) => {
+    const { rider_id, booking_id, reason } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -788,4 +788,4 @@ export const userCancelPCBooking = async (req, resp) => {
     emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
-};
+});

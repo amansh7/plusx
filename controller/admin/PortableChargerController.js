@@ -283,7 +283,11 @@ export const chargerBookingDetails = async (req, resp) => {
 
         const [bookingResult] = await db.execute(`
             SELECT 
-                portable_charger_booking.*, (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data
+                booking_id, created_at, user_name, country_code, contact_no, status, address, 
+                service_name, service_price, service_type, service_feature, slot_date, slot_time,
+                
+                (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, 
+                (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data
             FROM 
                 portable_charger_booking 
             WHERE 
@@ -296,7 +300,7 @@ export const chargerBookingDetails = async (req, resp) => {
                 code: 404,
                 message: 'Booking not found.',
             });
-        }
+        } // invoice_url
         const [bookingHistory] = await db.execute(`
             SELECT 
                 order_status, cancel_by, cancel_reason as reason, rsa_id, created_at, image,   
@@ -308,8 +312,11 @@ export const chargerBookingDetails = async (req, resp) => {
             [booking_id]
         );
         const bookingDetails = bookingResult[0];
-
-       
+        // if (bookingDetails.status == 'PU') {
+        //     const invoice_id = bookingDetails.booking_id.replace('PCB', 'INVPC');
+        //     bookingDetails.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+        // }
+        bookingDetails.imageUrl = `${req.protocol}://${req.get('host')}/uploads/portable-charger/`;
         return resp.json({
             status  : 1,
             code    : 200,
@@ -535,25 +542,26 @@ export const slotList = async (req, resp) => {
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
+        let slot_date = moment().format("YYYY-MM-DD");
+        console.log('count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count', slot_date)
         const result = await getPaginatedData({
-            tableName: 'portable_charger_slot',
-            columns: 'slot_id, start_time, end_time, booking_limit, status, created_at',
-            sortColumn: 'created_at',
-            sortOrder: 'DESC',
+            tableName  : 'portable_charger_slot',
+            columns    : 'slot_id, start_time, end_time, booking_limit, status, (select count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count',
+            sortColumn : 'created_at',
+            sortOrder  : 'DESC',
             page_no,
-            limit: 10,
-            whereField: 'status',
-            whereValue: 1
-        });
+            limit      : 10,
+            whereField : 'status',
+            whereValue : 1
+        });  // created_at, 
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
-            slot_id: item.slot_id,
-            booking_limit: item.booking_limit,
-            status: item.status,
-            created_at: item.created_at,
-             timing: `${item.start_time} - ${item.end_time}`
+            slot_id            : item.slot_id,
+            booking_limit      : item.booking_limit,
+            status             : item.status,
+            slot_booking_count : item.slot_booking_count,
+            timing             : `${item.start_time} - ${item.end_time}`
         }));
         return resp.json({
             status: 1,

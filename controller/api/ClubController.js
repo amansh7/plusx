@@ -1,9 +1,9 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB } from '../../dbUtils.js';
-import { mergeParam} from '../../utils.js';
+import { asyncHandler, mergeParam} from '../../utils.js';
 
-export const clubList = async (req, resp) => {
+export const clubList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, preference, search_text, age_group, location, category } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
@@ -58,9 +58,9 @@ export const clubList = async (req, resp) => {
         code: 200,
         base_url: `${req.protocol}://${req.get('host')}/uploads/club-images/`
     });
-};
+});
 
-export const clubDetail = async (req, resp) => {
+export const clubDetail = asyncHandler(async (req, resp) => {
     const {rider_id, club_id } = mergeParam(req);
     let galleryData = [];
         
@@ -81,4 +81,4 @@ export const clubDetail = async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/bike-rental-images/`,
     });
 
-};
+});

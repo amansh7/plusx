@@ -6,6 +6,7 @@ import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { fileURLToPath } from 'url';
+import { errorHandler } from './middleware/errorHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -22,6 +23,9 @@ const corsOptions = {
         'http://localhost:3000',
         'http://localhost:3001',
         // 'http://192.168.1.21:3434/admin/driver-list'
+        'http://192.168.1.21:1112',
+        'http://192.168.1.87:3434',
+        'http://localhost:1112',
     ],
     // origin : "*",
     methods: 'GET, POST, PUT, DELETE',
@@ -42,6 +46,8 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+
+app.use(errorHandler);
 
 app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);

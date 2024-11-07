@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import path from "path";
 import fs from 'fs';
 import validateFields from "../../validation.js";
-import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery } from '../../utils.js';
+import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery, asyncHandler } from '../../utils.js';
 import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
@@ -13,7 +13,7 @@ import emailQueue from "../../emailQueue.js";
 dotenv.config();
 
 /* Rider Auth */
-export const login = async (req, resp) => {
+export const login = asyncHandler(async (req, resp) => {
     const { mobile, password ,fcm_token , country_code } = mergeParam(req);
 
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -52,10 +52,10 @@ export const login = async (req, resp) => {
     }else{
         return resp.json({status:0, code:405, message: ["Oops! There is something went wrong! Please Try Again"], error: true});
     }
-};
+});
 
-export const register = async (req, resp) => {
-    const { password, fcm_token, country_code, rider_name, rider_email, rider_mobile, country, emirates, vehicle_type, date_of_birth, 
+export const register = asyncHandler(async (req, resp) => {
+    const { password, country_code, rider_name, rider_email, rider_mobile, country, emirates, vehicle_type, date_of_birth, 
         area, added_from ,vehicle_make='', vehicle_model='', year_manufacture='', vehicle_code='', vehicle_number='', owner_type='', leased_from='', specification='' 
     } = mergeParam(req);
     
@@ -139,9 +139,9 @@ export const register = async (req, resp) => {
         access_token: accessToken,
     };
     return resp.json({status:1, code:200, message: ["Rider registered successfully"], result: result});
-};
+});
 
-export const forgotPassword = async (req, resp) => {
+export const forgotPassword = asyncHandler(async (req, resp) => {
     const { email } = mergeParam(req);
     if (!email) return resp.status(400).json({ status: 0, code: 405, error: true, message: 'Email is required' });
     const [[rider]] = await db.execute('SELECT rider_name FROM riders WHERE rider_email=?', [email]);
@@ -175,9 +175,9 @@ export const forgotPassword = async (req, resp) => {
         // console.log(error);
         resp.status(500).json({ status: 0, code: 500, message: ["Failed to send email."] });
     }
-};
+});
 
-export const createOTP = async (req, resp) => {
+export const createOTP = asyncHandler(async (req, resp) => {
     const { mobile, user_type, country_code } = mergeParam(req);
 
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -218,27 +218,97 @@ export const createOTP = async (req, resp) => {
         console.error('Error in otpController:', err.message);
         return resp.json({ status: 'error', msg: 'Failed to send OTP' });
     }); */
-};
+});
 
-export const verifyOTP = async (req, resp) => {
+export const verifyOTP = asyncHandler(async (req, resp) => {
     const { mobile, user_type, country_code, otp, fcm_token } = mergeParam(req);
-
     const { isValid, errors } = validateFields(mergeParam(req), {
         mobile: ["required"], user_type: ["required"], country_code: ["required"], otp: ["required"], fcm_token: ["required"],
     });
-
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const fullMobile = `${country_code}${mobile}`;
     const cachedOtp = getOTP(fullMobile);
+    let result, isLogin = 0, loginStatus;
+    let respResult = {};
+
+    if(user_type === 'RSA'){
+        result = await queryDB(`SELECT (SELECT COUNT(*) FROM rsa WHERE mobile = ?) AS rsa_mob, (SELECT status FROM rsa WHERE mobile = ?) AS rsa_status`, [mobile, mobile]);
+        isLogin = result.rsa_mob
+        loginStatus = result.rsa_status
+    }else {
+        result = await queryDB(`SELECT (SELECT COUNT(*) FROM riders WHERE rider_mobile = ?) AS mob_count, (SELECT status FROM riders WHERE rider_mobile = ? AND country_code = ?) AS rider_status,
+        `, [mobile, mobile, country_code]);
+        isLogin = result.rider_mob
+        loginStatus = result.rider_status
+    }
 
     // if (!cachedOtp || cachedOtp !== otp) return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
     if (otp != '0587') return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
-    
-    return resp.json({status: 1, code: 200, message: ['OTP verified succeessfully!'], is_login: 0});
-};
 
-export const logout = async (req, resp) => {
+    if(!isLogin) return resp.json({status: 1, code: 200, message: ['OTP verified succeessfully!'], is_login: 0});
+
+    if(loginStatus == 2 && user_type != 'RSA'){
+        return resp.json({status: 1, code: 422, message: ["You can not login as your status is inactive. Kindly contact to customer care"]});
+    }
+
+    const token = crypto.randomBytes(12).toString('hex');
+    const updates = { access_token: token, fcm_token };
+
+    if(user_type === 'RSA'){
+        const rsaData = await queryDB(`SELECT rsa_id, rsa_name, email, mobile, gender, birthday, rsa_type, profile_img, dl_img, passport_img, running_order, 
+            (select count(*) from vehicle as v where v.assign_id = rsa.rsa_id ) as assign_vehicle
+            FROM rsa WHERE mobile = ?
+        `, [mobile]);
+
+        /* const status = rsaData.running_order > 0 ? [1,2] : [1];
+        status.forEach((val) => {
+            insertRecord('rsa_login_hostiry', ['rsa_id', 'status'], [rsaData.rsa_id, val]);
+        }); */
+        updates.status = rsaData.running_order > 0 ? 2 : 1;
+        
+        await updateRecord('rsa', updates, ['mobile'], [mobile]);
+
+        result = {
+            rsa_id: rsaData.rsa_id,
+            rsa_name: rsaData.rsa_name,
+            email: rsaData.email,
+            mobile: rsaData.mobile,
+            gender: rsaData.gender,
+            rsa_type: rsaData.rsa_type,
+            birthday: rsaData.birthday,
+            profile_img: rsaData.profile_img ? `${req.protocol}://${req.get('host')}/public/uploads/rsa_images/${rsaData.profile_img}` : '',
+            passport_img: rsaData.passport_img ? `${req.protocol}://${req.get('host')}/public/uploads/rsa_images/${rsaData.passport_img}` : '',
+            dl_img: rsaData.dl_img ? `${req.protocol}://${req.get('host')}/public/uploads/rsa_images/${rsaData.dl_img}` : '',
+            access_token: token
+        };
+    }else{
+        updates.status = 1;
+        await updateRecord('riders', updates, ['rider_mobile', 'country_code'], [mobile, country_code]);
+        const riderData = await queryDB(`rider_id, rider_name, rider_email, profile_img, country_code, country, emirates, rider_mobile, date_of_birth 
+            FROM rsa WHERE mobile = ? AND country_code = ?
+        `, [mobile, country_code]);
+
+        respResult = {
+            image_url: `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
+            rider_id: rider_data.rider_id,
+            rider_name: rider_data.rider_name,
+            rider_email: rider_data.rider_email,
+            profile_img: rider_data.profile_img ? `${req.protocol}://${req.get('host')}/uploads/rider_profile/${rider_data.profile_img}` : '',
+            rider_mobile: rider_data.rider_mobile,
+            country_code: rider_data.country_code,
+            country: rider_data.country,
+            emirates: rider_data.emirates,
+            date_of_birth: rider_data.date_of_birth,
+            access_token: token
+        };
+    }
+
+    return resp.json({message: [ "Login successful!" ], status: 1, code: 200, is_login: 1, result: respResult})
+    
+});
+
+export const logout = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
     if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
     
@@ -253,9 +323,9 @@ export const logout = async (req, resp) => {
         return resp.json({status: 0, code: 405, message: 'Oops! There is something went wrong! Please Try Again'});
     }
 
-};
+});
 
-export const updatePassword = async (req, resp) => {
+export const updatePassword = asyncHandler(async (req, resp) => {
     const { rider_id, old_password, new_password, confirm_password} = mergeParam(req);
 
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -279,10 +349,10 @@ export const updatePassword = async (req, resp) => {
         code: update.affectedRows > 0 ? 200 : 422, 
         message: update.affectedRows > 0 ? ['Password changed successfully'] : ['Failed to updated password. Please Try Again']
     });
-};
+});
 
 /* Rider Info */
-export const home = async (req, resp) => {
+export const home = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
     if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
     
@@ -311,14 +381,14 @@ export const home = async (req, resp) => {
     
     const pickDropData = await queryDB(
         `SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = charging_service.rsa_id) AS rsaDetails, created_at 
-        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status = 'ER' ORDER BY id DESC LIMIT 1
+        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status NOT IN ('CNF', 'A', 'WC', 'C') ORDER BY id DESC LIMIT 1
     `, [rider_id]);
     
     if (pickDropData) pickDropData.eta_time = '11 Min.';
     
     const podBookingData = await queryDB(
         `SELECT booking_id AS request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = portable_charger_booking.rsa_id) AS rsaDetails, created_at 
-        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status = 'ER' ORDER BY id DESC LIMIT 1
+        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status NOT IN ('CNF', 'A', 'PU', 'C') ORDER BY id DESC LIMIT 1
     `, [rider_id]);
 
     if (podBookingData) podBookingData.eta_time = '11 Min.';
@@ -335,9 +405,9 @@ export const home = async (req, resp) => {
         status                    : 1,
         code                      : 200
     });
-};
+});
 
-export const getRiderData = async(req, resp) => {
+export const getRiderData = asyncHandler(async(req, resp) => {
     const {rider_id} = mergeParam(req);
     if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
     
@@ -353,9 +423,9 @@ export const getRiderData = async(req, resp) => {
         portable_price: 90, 
         pick_drop_price: 49
     });
-};
+});
 
-export const updateProfile = async (req, resp) => {
+export const updateProfile = asyncHandler(async (req, resp) => {
     try{
         let profile_image = '';
 
@@ -390,9 +460,9 @@ export const updateProfile = async (req, resp) => {
         // console.log(err);
         return resp.status(500).json({status: 0, code: 500, message:[ "Oops! There is something went wrong! Please Try Again" ]});
     }
-};
+});
 
-export const deleteImg = async (req, resp) => {
+export const deleteImg = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
     if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
     
@@ -412,9 +482,9 @@ export const deleteImg = async (req, resp) => {
         code: 200,
         message: update.affectedRows > 0 ? 'Rider profile image deleted successfully!' : 'Oops! Something went wrong. Please try again.',
     });
-};
+});
 
-export const deleteAccount = async (req, resp) => {
+export const deleteAccount = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
     const riderId = rider_id;
     if (!riderId) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
@@ -470,14 +540,14 @@ export const deleteAccount = async (req, resp) => {
     }finally{
         connection.release();
     }
-};
+});
 
-export const locationList = async (req, resp) => {
+export const locationList = asyncHandler(async (req, resp) => {
     const [list] = await db.execute(`SELECT location_id, location_name, latitude, longitude FROM locations ORDER BY location_name ASC`);
     return resp.json({status: 1, code: 200, message: '', data: list});
-};
+});
 
-export const locationAdd = async (req, resp) => {
+export const locationAdd = asyncHandler(async (req, resp) => {
     const { location_name, latitude, longitude, status } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), { location_name: ["required"], latitude: ["required"], longitude: ["required"], status: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -494,9 +564,9 @@ export const locationAdd = async (req, resp) => {
         status: insert.affectedRows > 0 ? 1 : 0,
         code: 200,
     });
-};
+});
 
-export const notificationList = async (req, resp) => {
+export const notificationList = asyncHandler(async (req, resp) => {
     const { rider_id, page_no} = mergeParam(req);
 
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -520,10 +590,10 @@ export const notificationList = async (req, resp) => {
     await db.execute(`UPDATE notifications SET status=? WHERE status=? AND panel_to=? AND receive_id=?`, ['1', '0', 'Rider', rider_id]);
     
     return resp.json({status:1, code: 200, message: "Notification list fetch successfully", data: notifications, total_page: total_page, totalRows: totalRows.total});
-};
+});
 
 /* Rider Address */
-export const riderAddressList = async (req, resp) => {
+export const riderAddressList = asyncHandler(async (req, resp) => {
     try{
         const { rider_id, address_type, booking_for } = mergeParam(req);
 
@@ -550,9 +620,9 @@ export const riderAddressList = async (req, resp) => {
         console.error('Error fetching rider addresses:', err);
         return resp.json({message: 'Error occurred while fetching rider addresses', status: 0, code: 500});
     }
-};
+});
 
-export const addRiderAddress = async (req, resp) => {
+export const addRiderAddress = asyncHandler(async (req, resp) => {
     const { rider_id, emirates, area, building_name, unit_no, latitude, longitude, booking_for, nick_name='', street_name='', landmark=''} = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], emirates: ["required"], area: ["required"], building_name: ["required"], unit_no: ["required"], latitude: ["required"], 
@@ -577,9 +647,9 @@ export const addRiderAddress = async (req, resp) => {
         status: insert.affectedRows > 0 ? 1 : 0
     });
     
-};
+});
 
-export const deleteRiderAddress = async (req, resp) => {
+export const deleteRiderAddress = asyncHandler(async (req, resp) => {
     try{
         const {rider_id, address_id} = mergeParam(req);
         // console.log(rider_id, address_id);
@@ -599,10 +669,10 @@ export const deleteRiderAddress = async (req, resp) => {
         // console.log('Error deleting record', err);
         return resp.json({status:0, message: 'Error deleting record'});
     }
-};
+});
 
 /* Rider Vehicle  */
-export const riderVehicleList = async (req, resp) => {
+export const riderVehicleList = asyncHandler(async (req, resp) => {
     try{
         const { rider_id, vehicle_type, owner_type } = mergeParam(req);
         if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
@@ -629,9 +699,9 @@ export const riderVehicleList = async (req, resp) => {
         console.error('Error fetching rider vehicles:', err);
         return resp.json({message: 'Error occurred while fetching vehicles', status: 0, code: 500});
     }
-};
+});
 
-export const addRiderVehicle = async (req, resp) => {
+export const addRiderVehicle = asyncHandler(async (req, resp) => {
     const {rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner=''} = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -651,9 +721,9 @@ export const addRiderVehicle = async (req, resp) => {
         code: 200,
         message: insert.affectedRows > 0 ? ['Rider vehicle added successfully!'] : ['Oops! Something went wrong. Please try again.'],
     }); 
-};
+});
 
-export const editRiderVehicle = async (req, resp) => {
+export const editRiderVehicle = asyncHandler(async (req, resp) => {
     const {rider_id, vehicle_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner=''} = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -670,9 +740,9 @@ export const editRiderVehicle = async (req, resp) => {
         code: 200,
         message: update.affectedRows > 0 ? ['Rider vehicle updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
     }); 
-};
+});
 
-export const deleteRiderVehicle = async (req, resp) => {
+export const deleteRiderVehicle = asyncHandler(async (req, resp) => {
     const {rider_id, vehicle_id} = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -688,4 +758,4 @@ export const deleteRiderVehicle = async (req, resp) => {
         status: del.affectedRows > 0 ? 1 : 0,
         code: 200
     });
-};
+});

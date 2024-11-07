@@ -1,12 +1,12 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
-import { formatDateInQuery, formatDateTimeInQuery, generateRandomPassword, mergeParam } from "../../utils.js";
+import { asyncHandler, formatDateInQuery, formatDateTimeInQuery, generateRandomPassword, mergeParam } from "../../utils.js";
 import crypto from 'crypto';
 import bcrypt from "bcryptjs";
 import emailQueue from "../../emailQueue.js";
 
-export const rsaLogin = async (req, resp) => {
+export const rsaLogin = asyncHandler(async (req, resp) => {
     const { mobile, password ,fcm_token , latitude, longitude } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {
         mobile: ["required"], password: ["required"], fcm_token: ["required"], latitude: ["required"], longitude: ["required"]
@@ -45,9 +45,9 @@ export const rsaLogin = async (req, resp) => {
         return resp.json({status:0, code:405, message: ["Oops! There is something went wrong! Please Try Again"], error: true});
     }
 
-};
+});
 
-export const rsaUpdatePassword = async (req, resp) => {
+export const rsaUpdatePassword = asyncHandler(async (req, resp) => {
     const { rsa_id, old_password, new_password, confirm_password} = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {
         rsa_id: ["required"], old_password: ["required"], new_password: ["required"], confirm_password: ["required"]
@@ -71,9 +71,9 @@ export const rsaUpdatePassword = async (req, resp) => {
         code: update.affectedRows > 0 ? 200 : 422, 
         message: update.affectedRows > 0 ? ['Password changed successfully'] : ['Failed to updated password. Please Try Again']
     });
-};
+});
 
-export const rsaForgotPassword = async (req, resp) => {
+export const rsaForgotPassword = asyncHandler(async (req, resp) => {
     const { email } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), { email: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -97,9 +97,9 @@ export const rsaForgotPassword = async (req, resp) => {
     emailQueue.addEmail(email, 'Forgot password Request', html);
 
     resp.status(200).json({ status: 1, code: 200, message: ["An email has been sent to your given email address. Kindly check your email"] });
-};  
+});  
 
-export const rsaLogout = async (req, resp) => {
+export const rsaLogout = asyncHandler(async (req, resp) => {
     const {rsa_id} = mergeParam(req);
     if (!rsa_id) return resp.json({ status: 0, code: 422, message: "Rsa Id is required" });
     
@@ -113,9 +113,9 @@ export const rsaLogout = async (req, resp) => {
     }else{
         return resp.json({status: 0, code: 405, message: ['Oops! There is something went wrong! Please Try Again']});
     }
-};
+});
 
-export const rsaLogutAll = async (req, resp) => {
+export const rsaLogutAll = asyncHandler(async (req, resp) => {
     const [allRSA] = await db.execute('SELECT rsa_id FROM rsa');
 
     for (const val of allRSA) {
@@ -124,9 +124,9 @@ export const rsaLogutAll = async (req, resp) => {
     }
 
     return resp.json({status:1, code:200, message: ["All RSA Logout successful"]});
-};
+});
 
-export const rsaUpdateProfile = async (req, resp) => {
+export const rsaUpdateProfile = asyncHandler(async (req, resp) => {
     try{
         let profile_image = '';
 
@@ -157,9 +157,9 @@ export const rsaUpdateProfile = async (req, resp) => {
         console.log(err);
         return resp.status(500).json({status: 0, code: 500, message:[ "Oops! There is something went wrong! Please Try Again" ]});
     }
-};
+});
 
-export const rsaStatusChange = async (req, resp) => {
+export const rsaStatusChange = asyncHandler(async (req, resp) => {
     const { rsa_id, status } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), { rsa_id: ["required"], status: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -182,20 +182,20 @@ export const rsaStatusChange = async (req, resp) => {
         });
     }
 
-};
+});
 
-export const rsaHome = async (req, resp) => {
+export const rsaHome = asyncHandler(async (req, resp) => {
     const { rsa_id } = mergeParam(req);
     
     const rsaData = await queryDB(`
         SELECT 
-         status, booking_type, running_order,
-         (SELECT COUNT(id) FROM charging_service_assign WHERE rsa_id = ? AND status = 0) AS valet_count,
-         (SELECT COUNT(id) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 0) AS pod_count,
-         (SELECT COUNT(id) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
-         (SELECT COUNT(id) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
-         (SELECT COUNT(id) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
-         (SELECT COUNT(id) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed
+            status, booking_type, running_order,
+            (SELECT COUNT(id) FROM charging_service_assign WHERE rsa_id = ? AND status = 0) AS valet_count,
+            (SELECT COUNT(id) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 0) AS pod_count,
+            (SELECT COUNT(id) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
+            (SELECT COUNT(id) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
+            (SELECT COUNT(id) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
+            (SELECT COUNT(id) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed
         FROM rsa 
         WHERE rsa_id = ? LIMIT 1
     `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
@@ -208,11 +208,11 @@ export const rsaHome = async (req, resp) => {
            cs.request_id, cs.pickup_address, cs.pickup_latitude, cs.pickup_longitude,
            cs.order_status, cs.parking_number, cs.parking_floor,
            CONCAT(cs.name, ",", cs.country_code, "-", cs.contact_no) AS riderDetails,
-           ${formatDateTimeInQuery(['cs.created_at'])}, charging_service_assign.slot_date_time
+           ${formatDateTimeInQuery(['cs.created_at'])}, ${formatDateTimeInQuery(['charging_service_assign.slot_date_time'])}
         FROM charging_service_assign
         LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
         WHERE charging_service_assign.rsa_id = ? AND cs.request_id IS NOT NULL
-        ORDER BY charging_service_assign.slot_date_time ASC
+        ORDER BY charging_service_assign.id DESC
     `,[rsa_id]);
 
     const [podAssign] = await db.execute(`
@@ -222,11 +222,11 @@ export const rsaHome = async (req, resp) => {
            CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
            ${formatDateTimeInQuery(['pb.created_at'])}, 
            (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
-           portable_charger_booking_assign.slot_date_time
+           ${formatDateTimeInQuery(['portable_charger_booking_assign.slot_date_time'])}
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
         WHERE portable_charger_booking_assign.rsa_id = ?
-        ORDER BY portable_charger_booking_assign.slot_date_time ASC
+        ORDER BY portable_charger_booking_assign.id DESC
     `,[rsa_id]);
    
     const { status, running_order, booking_type, valet_count, pod_count, valet_rej, pod_rejected, valet_completed, pod_completed } = rsaData;
@@ -251,9 +251,9 @@ export const rsaHome = async (req, resp) => {
         status: 1,
         code: 200
     });
-};
+});
 
-export const rsaBookingHistory = async (req, resp) => {
+export const rsaBookingHistory = asyncHandler(async (req, resp) => {
     const { rsa_id, booking_type } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_type: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -330,4 +330,4 @@ export const rsaBookingHistory = async (req, resp) => {
         status: 1,
         code: 200
     }); 
-};
+});

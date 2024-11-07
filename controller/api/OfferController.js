@@ -1,9 +1,9 @@
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
 import moment from "moment";
-import { formatDateTimeInQuery, mergeParam } from '../../utils.js';
+import { asyncHandler, formatDateTimeInQuery, mergeParam } from '../../utils.js';
 
-export const offerList = async (req, resp) => {
+export const offerList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     
@@ -30,9 +30,9 @@ export const offerList = async (req, resp) => {
         total: result.total,
         base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
     });
-};
+});
 
-export const offerDetail = async (req, resp) => {
+export const offerDetail = asyncHandler(async (req, resp) => {
     const {rider_id, offer_id } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], offer_id: ["required"]});
@@ -48,4 +48,4 @@ export const offerDetail = async (req, resp) => {
         data: offer,
         base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
     });
-};
+});

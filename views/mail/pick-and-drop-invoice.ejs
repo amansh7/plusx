@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,6 +10,8 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
+            background-color: #000000;
+            color: white;
         }
         p {
             margin: 4px 0px;
@@ -17,15 +21,24 @@
             border-collapse: collapse;
             table-layout: fixed;
         }
-        td {
+        td, th {
             padding: 8px;
-            text-align: left;
         }
         th {
-            color: white;
+            color: #00ffcc;
             font-weight: 600;
-            padding: 8px;
             text-align: left;
+            border-bottom: 1px solid #00ffcc;
+        }
+        td {
+            color: #ffffff;
+        }
+        /* Adjusting the table background */
+        tr:nth-child(even) {
+            background-color: #333333;
+        }
+        tr:nth-child(odd) {
+            background-color: #1f1f1f;
         }
         /* A4 Page size for print */
         @media print {
@@ -45,25 +58,24 @@
     </style>
 </head>
 <body>
-    <div style="border: 1px solid #99a0ac; width: 100%; margin: auto;">
+    <div style="border: 1px solid #00ffcc; width: 100%; margin: auto;">
         <table style="width: 100%; font-size: 12px;">
             <tbody>
                 <tr>
                     <td colspan="2">
-                        <table>
+                        <table style="width: 100%;">
                             <tr>
                                 <td style="width:60%; vertical-align: baseline;">
-                                    <img src="<%= imgUrl %>xPlusLogo.svg" alt="companylogo"
-                                        style="max-width: 110px;" />
-                                    <p style="font-size: 14px;">D55-PBU</p>
+                                    <img src="<%= imgUrl %>xPlusLogo.svg" alt="companylogo" style="max-width: 110px;" />
+                                    <p style="font-size: 14px; color: #00ffcc;">D55-PBU</p>
                                     <p style="font-size: 14px;">DUBAI PRODUCTION CITY</p>
                                     <p style="font-size: 14px;">Dubai-United Arab Emirates</p>
                                     <p style="font-size: 14px;">+971 54279 6424</p>
                                 </td>
                                 <td style="text-align: right; vertical-align: baseline;">
-                                    <p style="font-size: 38px; line-height: 38px; font-weight: 100;">INVOICE</p>
+                                    <p style="font-size: 38px; line-height: 38px; font-weight: 100; color: #00ffcc;">INVOICE</p>
                                     <div style="text-align: right;">
-                                        <p style="font-size: 12px; font-weight: bold;">Booking ID: &nbsp;<%= data.request_id %></p>
+                                        <p style="font-size: 12px; font-weight: bold; color: #ffffff;">Booking ID: &nbsp;<%= data.request_id %></p>
                                     </div>
                                 </td>
                             </tr>
@@ -77,13 +89,12 @@
                         <table style="width: 100%; margin-top: 10px;">
                             <tr>
                                 <td style="width: 40%; padding-right: 20px;">
-                                    <p style="font-size: 16px;">Bill To:</p>
-                                    <p style="font-size: 14px; font-weight: bold;"><%= data.name %> </p>
+                                    <p style="font-size: 16px; color: #00ffcc;">Bill To:</p>
+                                    <p style="font-size: 14px; font-weight: bold; color: #ffffff;"><%= data.name %></p>
                                 </td>
                                 <td style="text-align: right;">
-                                    <p style="font-size: 14px;">Invoice Date: <%= new Date(data.invoice_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
-                                    <p style="font-size: 14px; padding-top: 10px;">Invoice No.:
-                                    <%= data.invoice_id %></p>
+                                    <p style="font-size: 14px; color: #ffffff;">Invoice Date: <%= new Date(data.invoice_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
+                                    <p style="font-size: 14px; color: #ffffff;">Invoice No.: <%= data.invoice_id %></p>
                                 </td>
                             </tr>
                         </table>
@@ -93,15 +104,27 @@
                     <td colspan="2">
                         <table style="width: 100%; border-spacing: 0;">
                             <thead>
-                                <tr style="background-color: #5e676f; color: #FFFFFF;">
-                                    <th style="width: 70%; font-size: 16px; padding: 12px 10px;">Service Name</th>
-                                    <th style="text-align: right; width: 30%; font-size: 16px; padding: 12px 10px;"> Amount</th>
+                                <tr style="background-color: #1f1f1f;">
+                                    <th style="width: 50%; font-size: 16px; padding: 12px 10px;">Item Name</th>
+                                    <th style="width: 20%; font-size: 16px; text-align: left; padding: 12px 10px;">Units</th>
+                                    <th style="width: 30%; font-size: 16px; text-align: right; padding: 12px 10px;">Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr style="border-bottom: 1px solid #5e676f;">
-                                    <td style="font-size: 14px;">Valet Charging Service</td>
-                                    <td style="text-align: right; font-size: 14px;"><%= formatNumber(data.amount) %> <%= data.currency ? data.currency.toUpperCase() : '' %></td>
+                                <tr>
+                                    <td style="font-size: 14px; color: #ffffff;">Dewa Chargers (KW consumed)</td>
+                                    <td style="font-size: 14px; color: #ffffff;">--</td>
+                                    <td style="font-size: 14px; color: #ffffff; text-align: right;">Unit X 0.48</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size: 14px; color: #ffffff;">Portable Charger Service</td>
+                                    <td style="font-size: 14px; color: #ffffff;">--</td>
+                                    <td style="font-size: 14px; color: #ffffff; text-align: right;">AED 40</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size: 14px; color: #00ffcc;">VAT:</td>
+                                    <td></td>
+                                    <td style="font-size: 14px; text-align: right; color: #ffffff;">AED 0.00</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -109,10 +132,10 @@
                 </tr>
                 <tr>
                     <td style="width:60%; text-align: left;">
-                        <p style="font-size: 14px; padding: 8px; font-weight: bold;">Total Amount:</p>
+                        <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #00ffcc;">Total Amount:</p>
                     </td>
                     <td style="text-align: right;">
-                        <p style="font-size: 14px; padding: 8px; font-weight: bold;"><%= formatNumber(data.amount) %> <%= data.currency ? data.currency.toUpperCase() : '' %></p>
+                        <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #ffffff;">AED 40</td></p>
                     </td>
                 </tr>
             </tbody>
