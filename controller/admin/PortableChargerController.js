@@ -592,7 +592,7 @@ export const slotDetails = async (req, resp) => {
 
         const [slotDetails] = await db.execute(`
             SELECT 
-                slot_id, start_time, end_time, booking_limit, status, created_at
+                slot_id,  start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
             FROM 
                 portable_charger_slot 
             WHERE 
@@ -627,9 +627,11 @@ export const addSlot = async (req, resp) => {
         }
 
         const values = []; const placeholders = [];
-
+        
         for (let i = 0; i < slot_date.length; i++) {
-            values.push(slotId, slot_date[i], convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
+            const slotId = `PTS${generateUniqueId({ length:6 })}`;
+            let fSlotDate = moment(slot_date[i], "DD-MM-YYYY").format("YYYY-MM-DD");
+            values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
             placeholders.push('(?, ?, ?, ?, ?, ?)');
         }
 

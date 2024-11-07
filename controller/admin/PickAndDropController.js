@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
 dotenv.config();
 
 export const bookingList = async (req, resp) => {
@@ -255,7 +256,7 @@ export const pdSlotDetails = async (req, resp) => {
 
         const [slotDetails] = await db.execute(`
             SELECT 
-                slot_id, start_time, end_time, booking_limit, status, created_at
+                slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
             FROM 
                 pick_drop_slot 
             WHERE 
@@ -292,7 +293,9 @@ export const pdAddSlot = async (req, resp) => {
         const values = []; const placeholders = [];
 
         for (let i = 0; i < slot_date.length; i++) {
-            values.push(slotId, slot_date[i], convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
+            const slotId = `PDS${generateUniqueId({ length:6 })}`;
+            const fSlotDate = moment(slot_date[i], "DD-MM-YYYY").format("YYYY-MM-DD");
+            values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
             placeholders.push('(?, ?, ?, ?, ?, ?)');
         }
 
