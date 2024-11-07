@@ -541,7 +541,7 @@ export const slotList = async (req, resp) => {
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         let slot_date = moment().format("YYYY-MM-DD");
-        console.log('count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count', slot_date)
+        // console.log('count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count', slot_date)
         const result = await getPaginatedData({
             tableName  : 'portable_charger_slot',
             columns    : 'slot_id, start_time, end_time, booking_limit, status, (select count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count',

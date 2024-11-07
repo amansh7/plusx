@@ -139,7 +139,7 @@ export const addPublicCharger = async (req, resp) => {
         
         
         const uploadedFiles = req.files;
-        let stationImg     = '';
+        let stationImg      = '';
         const data          = req.body;
 
         if(req.files && req.files['cover_image']){
@@ -162,14 +162,14 @@ export const addPublicCharger = async (req, resp) => {
 
         const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
 
-        const stationId = `TRQ${generateUniqueId({ length:12 })}`;
-
+        const stationId = `TRQ${generateUniqueId({ length:6 })}`;  //charging_for
+        // console.log(charging_for)
         const insert = await insertRecord('public_charging_station_list', [
             'station_id', 'station_name', 'price', 'description', 'charging_for', 'charger_type', 'charging_point', 'address', 'latitude', 'longitude', 'station_image', 'status', 
             'always_open', 'open_days', 'open_timing', 
         ], [
             stationId, station_name, price, description, charging_for, charger_type, charging_point, address, latitude, longitude, stationImg, 1, 
-            always_open ? 1 : 0, fDays, fTiming
+            always_open, fDays, fTiming
         ]);
 
         if(insert.affectedRows == 0) return resp.json({status:0, message: "Failed to add public charger! Please try again after some time."});
@@ -192,14 +192,10 @@ export const editPublicCharger = async (req, resp) => {
     try {
         console.log(req.body);
         const uploadedFiles = req.files;
-        let stationImg = '';
+        
         const data = req.body;
-
-        if(req.files && req.files['cover_image']){
-            stationImg = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
-        }
+        
         const shop_gallery = uploadedFiles['shop_gallery']?.map(file => file.filename) || [];
-
         const { station_id, station_name, charging_for, charger_type, charging_point, description, address, latitude, longitude, always_open=0, days='', price='', status } = req.body;
         const { isValid, errors } = validateFields(req.body, { 
             station_id: ["required"], 
@@ -224,6 +220,10 @@ export const editPublicCharger = async (req, resp) => {
         // let stationImg = req.files?.['cover_image']?.[0]?.filename || '';
         // let shop_gallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
 
+        let stationImg = charger.station_image;
+        if(req.files && req.files['cover_image']){
+            stationImg = uploadedFiles ? uploadedFiles['cover_image'][0].filename : stationImg;
+        }
         const updates = {
             station_name,
             price,
@@ -235,13 +235,13 @@ export const editPublicCharger = async (req, resp) => {
             latitude,
             longitude,
             status: status ? 1 : 0,
-            always_open: always_open ? 1 : 0, 
+            always_open: always_open, 
             open_days: fDays, 
             open_timing: fTiming, 
             station_image: stationImg
         };
         
-        if (charger.station_image) deleteFile('charging-station-images', charger.station_image);
+        if (req.files['cover_image']) deleteFile('charging-station-images', charger.station_image);
         if (req.files['shop_gallery'] && galleryData.length > 0) {
             galleryData.forEach(img => img && deleteFile('charging-station-images', img));
         }
