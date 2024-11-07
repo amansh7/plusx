@@ -279,40 +279,26 @@ export const pdSlotDetails = async (req, resp) => {
 
 export const pdAddSlot = async (req, resp) => {
     try {
-        const { start_time, end_time, booking_limit, status = 1 } = req.body;
-
-        // Validation
-        const { isValid, errors } = validateFields({ 
-            start_time, end_time, booking_limit
-        }, {
-            start_time: ["required"],
-            end_time: ["required"],
-            booking_limit: ["required"],
-        });
-
+        const { slot_date, start_time, end_time, booking_limit, status = 1 } = req.body;
+        const { isValid, errors } = validateFields(req.body, { slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    
-        const startTime24 = convertTo24HourFormat(start_time);
-        const endTime24 = convertTo24HourFormat(end_time);
 
-        // const generateSlotId = () => {
-        //     const prefix = 'PDS'; 
-        //     const uniqueString = crypto.randomBytes(6).toString('hex').slice(0, 12);
-        //     return `${prefix}${uniqueString}`; 
-        // };
-        const generateSlotId = () => {
-            const prefix = 'PDS';
-            const uniqueNumber = Math.floor(1000 + Math.random() * 9000); 
-            return `${prefix}${uniqueNumber}`;
-        };
+        if (!Array.isArray(slot_date) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit)) {
+            return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
+        }
+        if (slot_date.length !== start_time.length || start_time.length !== end_time.length || end_time.length !== booking_limit.length) {
+            return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
+        }
 
-    const slot_id = generateSlotId();
-    
-        const insert = await insertRecord('pick_drop_slot', [
-            'slot_id', 'start_time', 'end_time', 'booking_limit', 'status'
-        ],[
-            slot_id, startTime24, endTime24, booking_limit, status
-        ]);
+        const values = []; const placeholders = [];
+
+        for (let i = 0; i < slot_date.length; i++) {
+            values.push(slotId, slot_date[i], convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
+            placeholders.push('(?, ?, ?, ?, ?, ?)');
+        }
+
+        const query = `INSERT INTO pick_drop_slot (slot_id, slot_date, start_time, end_time, booking_limit, status) VALUES ${placeholders.join(', ')}`;
+        const [insert] = await db.execute(query, values);
     
         return resp.json({
             code: 200,
