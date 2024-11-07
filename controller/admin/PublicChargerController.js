@@ -12,7 +12,7 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 export const stationList = async (req, resp) => {
     try {
-        const { page_no, search, sort_by = 'd', start_date, end_date} = req.body; 
+        const { page_no, search, sort_by = 'd', start_date, end_date, search_text=''} = req.body; 
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -33,8 +33,10 @@ export const stationList = async (req, resp) => {
             sortOrder: 'DESC',
             page_no,
             limit: 10,
-            searchFields: ['station_name'],
-            searchTexts: [search],
+            // searchFields: ['station_name'],
+            // searchTexts: [search],
+            liveSearchFields: ['station_name', 'charger_type'],
+            liveSearchTexts: [search_text, search_text],
         };
 
         if (start_date && end_date) {

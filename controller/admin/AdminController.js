@@ -80,16 +80,29 @@ export const riderList = async (req, resp) => {
             limit: 10,
             liveSearchFields: ['rider_name', 'rider_id', 'rider_email', 'rider_mobile',],
             liveSearchTexts: [search_text, search_text, search_text, search_text,],
-            searchFields: ['added_from', 'emirates'],
-            searchTexts: [addedFrom, emirates],
+            // searchFields: ['added_from', 'emirates'],
+            // searchTexts: [addedFrom, emirates],
+            whereField: [],
+            whereValue: [],
+            whereOperator: []
         };
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
 
-            params.whereField = ['created_at', 'created_at'];
-            params.whereValue = [start, end];
-            params.whereOperator = ['>=', '<='];
+            params.whereField.push('created_at', 'created_at');
+            params.whereValue.push(start, end);
+            params.whereOperator.push('>=', '<=');
+        }
+        if(addedFrom) {
+            params.whereField.push('added_from');
+            params.whereValue.push(addedFrom);
+            params.whereOperator.push('=');
+        }
+        if(emirates) {
+            params.whereField.push('emirates');
+            params.whereValue.push(emirates);
+            params.whereOperator.push('=');
         }
 
         const result = await getPaginatedData(params);

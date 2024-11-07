@@ -9,7 +9,7 @@ dotenv.config();
 
 export const chargerInstallationList = async (req, resp) => {
     try {
-        const { page_no, sort_by = 'd' } = req.body;
+        const { page_no, sort_by = 'd' ,search_text=''} = req.body;
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) {
             return resp.json({ status: 0, code: 422, message: errors });
@@ -23,6 +23,8 @@ export const chargerInstallationList = async (req, resp) => {
         sortColumn: 'id',
         sortOrder,
         page_no,
+        liveSearchFields: ['request_id', 'name', 'service_type', ],
+        liveSearchTexts: [search_text, search_text, search_text],
         limit: 10,
     });
 

@@ -11,7 +11,7 @@ dotenv.config();
 
 export const chargerList = async (req, resp) => {
     try {
-        const {rider_id, page_no } = req.body;
+        const {rider_id, page_no, search_text = '' } = req.body;
     const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -22,6 +22,8 @@ export const chargerList = async (req, resp) => {
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        liveSearchFields: ['charger_id', 'charger_name'],
+        liveSearchTexts: [search_text, search_text],
         whereField: 'status',
         whereValue: 1
     });
@@ -202,33 +204,13 @@ export const deleteCharger = async (req, resp) => {
 
 export const chargerBookingList = async (req, resp) => {
     try {
-        const { page_no, booking_id, name, contact, status, start_date, end_date } = req.body;
+        const { page_no, booking_id, name, contact, status, start_date, end_date, search_text = '' } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
-        
-        // const start = moment(start_date, "YYYY-MM-DD");
-        // const end = moment(end_date, "YYYY-MM-DD");
-
-        // const result = await getPaginatedData({
-        //     tableName: 'portable_charger_booking',
-        //     columns: 'booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, slot_date, slot_time, created_at',
-        //     sortColumn: 'created_at',
-        //     sortOrder: 'DESC',
-        //     page_no,
-        //     limit: 10,
-        //     searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
-        //     searchTexts: [booking_id, name, contact, status],
-        //     whereField: ['created_at', 'created_at'],
-        //     whereValue: [start, end],
-        //     whereOperator: ['>=', '<=']
-        // });
-
-        
 
         const params = {
             tableName: 'portable_charger_booking',
@@ -237,17 +219,31 @@ export const chargerBookingList = async (req, resp) => {
             sortOrder: 'DESC',
             page_no,
             limit: 10,
-            searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
-            searchTexts: [booking_id, name, contact, status]
+            liveSearchFields: ['booking_id', 'user_name', 'service_name'],
+            liveSearchTexts: [search_text, search_text, search_text],
+            whereField: [],
+            whereValue: [],
+            whereOperator: []
+            // searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
+            // searchTexts: [booking_id, name, contact, status]
+            // whereField: ['status'],
+            // whereValue: [status],
+            // whereOperator: ['==']
+
         };
 
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
 
-            params.whereField = ['created_at', 'created_at'];
-            params.whereValue = [start, end];
-            params.whereOperator = ['>=', '<='];
+            params.whereField.push('created_at', 'created_at');
+            params.whereValue.push(start, end);
+            params.whereOperator.push('>=', '<=');
+        }
+        if(status) {
+            params.whereField.push('status');
+            params.whereValue.push(status);
+            params.whereOperator.push('=');
         }
 
         const result = await getPaginatedData(params);
@@ -452,7 +448,7 @@ export const chargerBookingDetailsOld = async (req, resp) => {
 /* Invoice */
 export const invoiceList = async (req, resp) => {
     try {
-        const { page_no } = req.body;
+        const { page_no, search_text } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
@@ -469,6 +465,8 @@ export const invoiceList = async (req, resp) => {
             sortOrder: 'ASC',
             page_no,
             limit: 10,
+            liveSearchFields: ['invoice_id'],
+            liveSearchTexts: [search_text],
             // whereField,
             // whereValue
         });
@@ -669,7 +667,7 @@ export const editSlot = async (req, resp) => {
         const endTime24 = convertTo24HourFormat(end_time);
 
         const updates = {
-            slot_date : moment.format(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+            slot_date : moment(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
             start_time : startTime24, 
             end_time : endTime24, 
             booking_limit, 

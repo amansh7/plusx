@@ -10,20 +10,10 @@ dotenv.config();
 
 export const bookingList = async (req, resp) => {
     try {
-        const { page_no, request_id, name, contact_no, order_status, start_date, end_date  } = req.body;
+        const { page_no, request_id, name, contact_no, order_status, start_date, end_date, search_text  } = req.body;
         const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        // const result = await getPaginatedData({
-        //     tableName: 'charging_service',
-        //     columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
-        //     sortColumn: 'id',
-        //     sortOrder: 'DESC',
-        //     page_no,
-        //     limit: 10,
-        //     searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
-        //     searchTexts: [request_id, name, contact_no, order_status],
-        // });
 
         const params = {
             tableName: 'charging_service',
@@ -32,8 +22,13 @@ export const bookingList = async (req, resp) => {
             sortOrder: 'DESC',
             page_no,
             limit: 10,
-            searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
-            searchTexts: [request_id, name, contact_no, order_status],
+            // searchFields: ['request_id', 'name', 'contact_no', 'order_status'],
+            // searchTexts: [request_id, name, contact_no, order_status],
+            liveSearchFields: ['request_id', 'name'],
+            liveSearchTexts: [search_text, search_text],
+            whereField: [],
+            whereValue: [],
+            whereOperator: []
         };
 
         if (start_date && end_date) {
@@ -43,6 +38,11 @@ export const bookingList = async (req, resp) => {
             params.whereField = ['created_at', 'created_at'];
             params.whereValue = [start, end];
             params.whereOperator = ['>=', '<='];
+        }
+        if(order_status) {
+            params.whereField.push('order_status');
+            params.whereValue.push(order_status);
+            params.whereOperator.push('=');
         }
 
         const result = await getPaginatedData(params);
@@ -116,7 +116,7 @@ export const bookingDetails = async (req, resp) => {
 /* Invoice */
 export const pdInvoiceList = async (req, resp) => {
     try {
-        const { page_no } = req.body;
+        const { page_no, search_text } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
@@ -133,6 +133,8 @@ export const pdInvoiceList = async (req, resp) => {
             sortOrder: 'DESC',
             page_no,
             limit: 10,
+            liveSearchFields: ['invoice_id'],
+            liveSearchTexts: [search_text],
             // whereField,
             // whereValue
         });
@@ -315,7 +317,7 @@ export const pdAddSlot = async (req, resp) => {
 
 export const pdEditSlot = async (req, resp) => {
     try {
-        const { slot_id, start_time, end_time, booking_limit, status } = req.body;
+        const { slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
 
         const { isValid, errors } = validateFields({ 
             slot_id, slot_date, start_time, end_time, booking_limit, status
@@ -334,7 +336,7 @@ export const pdEditSlot = async (req, resp) => {
         const endTime24 = convertTo24HourFormat(end_time);
 
         const updates = {
-            slot_date : moment.format(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+            slot_date : moment(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
             start_time : startTime24, 
             end_time : endTime24, 
             booking_limit, 
