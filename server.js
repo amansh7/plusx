@@ -34,12 +34,17 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('/*', function (req, res) {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(cookieParser());
+
 
 // Set EJS as the templating engine
 app.set('view engine', 'ejs');
