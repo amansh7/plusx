@@ -68,48 +68,46 @@ export const bookingDetails = async (req, resp) => {
 
         if (!request_id) {
             return resp.status(400).json({
-                status: 0,
-                code: 400,
-                message: 'Booking ID is required.',
+                status  : 0,
+                code    : 400,
+                message : 'Booking ID is required.',
             });
         }
-
         const result = await db.execute(`SELECT 
-                cs.request_id, cs.rider_id, cs.rsa_id, cs.name, cs.country_code, cs.contact_no, cs.vehicle_id, cs.order_status, cs.pickup_address, cs.price, 
-                cs.parking_number, cs.parking_floor, cs.pickup_latitude, cs.pickup_longitude, rv.vehicle_make, rv.vehicle_model, rv.vehicle_type,
+                cs.request_id, cs.name, cs.country_code, cs.contact_no, cs.order_status, cs.pickup_address, cs.price, 
+                cs.parking_number, cs.parking_floor,
+                (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = cs.rsa_id) as rsa_data,
+                (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = cs.vehicle_id) as vehicle_data,
                 ${formatDateTimeInQuery(['cs.slot_date_time', 'cs.created_at'])}
             FROM 
                 charging_service cs
-            LEFT JOIN 
-                riders_vehicles rv ON cs.vehicle_id = rv.vehicle_id
             WHERE 
                 cs.request_id = ?`, 
             [request_id]
         );
-        const formatCols = ['slot_date_time', 'created_at', 'updated_at'];
-        const [history] = await db.execute(`SELECT * FROM charging_service_history WHERE service_id = ?`, [request_id]);
-
         if (result.length === 0) {
             return resp.status(404).json({
-                status: 0,
-                code: 404,
-                message: 'Booking not found.',
+                status  : 0,
+                code    : 404,
+                message : 'Booking not found.',
             });
         }
+        const [history] = await db.execute(`SELECT order_status, cancel_by, cancel_reason as reason, created_at, image, (select rsa.rsa_name from rsa where rsa.rsa_id = charging_service_history.rsa_id) as rsa_name FROM charging_service_history WHERE service_id = ?`, [request_id]);
 
         return resp.json({
-            status: 1,
-            code: 200,
-            message: ["Pick and Drop booking details fetched successfully!"],
-            data: result[0], 
-            history
+            status  : 1,
+            code    : 200,
+            message : ["Pick and Drop booking details fetched successfully!"],
+            data    : result[0], 
+            history,
+            imageUrl : `${req.protocol}://${req.get('host')}/uploads/pick-drop-images/`,
         });
     } catch (error) {
-        console.error('Error fetching booking details:', error);
+        // console.error('Error fetching booking details:', error);
         return resp.status(500).json({ 
-            status: 0, 
-            code: 500, 
-            message: 'Error fetching booking details' 
+            status  : 0, 
+            code    : 500, 
+            message : 'Error fetching booking details' 
         });
     }
 };
