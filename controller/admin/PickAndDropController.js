@@ -315,14 +315,13 @@ export const pdAddSlot = async (req, resp) => {
 
 export const pdEditSlot = async (req, resp) => {
     try {
-        // console.log(req.body);
-        
         const { slot_id, start_time, end_time, booking_limit, status } = req.body;
 
         const { isValid, errors } = validateFields({ 
-            slot_id, start_time, end_time, booking_limit, status
+            slot_id, slot_date, start_time, end_time, booking_limit, status
         }, {
             slot_id : ["required"],
+            slot_date : ["required"],
             start_time: ["required"],
             end_time: ["required"],
             booking_limit: ["required"],
@@ -335,6 +334,7 @@ export const pdEditSlot = async (req, resp) => {
         const endTime24 = convertTo24HourFormat(end_time);
 
         const updates = {
+            slot_date : moment.format(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
             start_time : startTime24, 
             end_time : endTime24, 
             booking_limit, 
@@ -342,7 +342,7 @@ export const pdEditSlot = async (req, resp) => {
         };
     
         const update = await updateRecord('pick_drop_slot', updates, ['slot_id'], [slot_id]);
-        // console.log("update", update);
+        
         return resp.json({
             status: update.affectedRows > 0 ? 1 : 0,
             code: 200,

@@ -161,13 +161,13 @@ const authzAndAuthRoutes = [
     { method: 'post', path: '/charging-service-cancel',      handler: cancelValetBooking },
 
     /* Portable charger */
-    { method: 'get', path: '/portable-charger-list',            handler: chargerList },
-    { method: 'post', path: '/portable-charger-booking',        handler: chargerBooking },
-    { method: 'get', path: '/portable-charger-booking-list',    handler: chargerBookingList },
-    { method: 'get', path: '/portable-charger-booking-detail',  handler: chargerBookingDetail },
-    { method: 'get', path: '/portable-charger-slot-list',       handler: getPcSlotList },
-    { method: 'get', path: '/portable-charger-subscription',    handler: getPcSubscriptionList },
-    { method: 'get', path: '/portable-charger-cancel',          handler: userCancelPCBooking },
+    { method: 'get',  path: '/portable-charger-list',            handler: chargerList },
+    { method: 'post', path: '/portable-charger-booking',         handler: chargerBooking },
+    { method: 'get',  path: '/portable-charger-booking-list',    handler: chargerBookingList },
+    { method: 'get',  path: '/portable-charger-booking-detail',  handler: chargerBookingDetail },
+    { method: 'get',  path: '/portable-charger-slot-list',       handler: getPcSlotList },
+    { method: 'get',  path: '/portable-charger-subscription',    handler: getPcSubscriptionList },
+    { method: 'get',  path: '/portable-charger-cancel',          handler: userCancelPCBooking },
 
     /* Offer Routes */
     { method: 'get', path: '/offer-list',   handler: offerList },

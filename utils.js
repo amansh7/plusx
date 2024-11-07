@@ -298,7 +298,7 @@ export const createNotification = async (heading, desc, module_name, panel_to, p
   const result = await insertRecord('notifications', [
     'heading', 'description', 'module_name', 'panel_to', 'panel_from', 'created_by', 'receive_id', 'status', 'href_url'
   ],[
-    heading, desc, module_name, panel_to, panel_from, created_by, receive_id, '0', href_url=''
+    heading, desc, module_name, panel_to, panel_from, created_by, receive_id, '0', href_url
   ]);
 
   return {
@@ -371,7 +371,7 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
                 'Content-Type': 'application/json',
             },
         });
-        // console.log('Notification sent successfully:', response.data);
+        console.log('Notification sent successfully:', message);
     } catch (error) {
         console.error('Error sending notification:', error.response ? error.response.data : error.message);
     }
