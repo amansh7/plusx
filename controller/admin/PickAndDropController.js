@@ -203,7 +203,7 @@ export const pdInvoiceDetails = async (req, resp) => {
 /* Slot */
 export const pdSlotList = async (req, resp) => {
     try {
-        const { page_no } = req.body;
+        const { page_no, search_text='' } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
@@ -219,7 +219,9 @@ export const pdSlotList = async (req, resp) => {
             page_no,
             limit: 10,
             whereField: 'status',
-            whereValue: 1
+            whereValue: 1,
+            liveSearchFields: ['slot_id'],
+            liveSearchTexts: [search_text],
         });
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
