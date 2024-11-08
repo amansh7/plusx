@@ -226,7 +226,7 @@ export const pdSlotList = async (req, resp) => {
 
         const params = {
             tableName: 'pick_drop_slot',
-            columns: 'slot_id, start_time, end_time, booking_limit, status, created_at',
+            columns: 'slot_id, start_time, end_time, booking_limit, status, created_at, slot_date',
             sortColumn : 'created_at',
             sortOrder  : 'DESC',
             page_no,
@@ -251,11 +251,12 @@ export const pdSlotList = async (req, resp) => {
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
-            slot_id: item.slot_id,
-            booking_limit: item.booking_limit,
-            status: item.status,
-            created_at: item.created_at,
-             timing: `${item.start_time} - ${item.end_time}`
+            slot_id       : item.slot_id,
+            slot_date     : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+            booking_limit : item.booking_limit,
+            status        : item.status,
+            created_at    : item.created_at,
+            timing        : `${item.start_time} - ${item.end_time}`
         }));
         return resp.json({
             status: 1,

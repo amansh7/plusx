@@ -6,46 +6,63 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from "bcryptjs";
+import moment from 'moment';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const rsaList = async (req, resp) => {
-    const{ rsa_id, rsa_name, rsa_email, rsa_mobile, page = 1, list, service_type  } = req.body;
+    const{ rsa_id, rsa_name, rsa_email, rsa_mobile, page = 1, list, service_type, start_date, end_date, search_text = ''} = req.body;
 
     const searchField = [];
     const searchText = [];
-    
-    if (rsa_id) {
-        searchField.push('rsa_id');
-        searchText.push(rsa_id);
-    }
-    if (rsa_name) {
-        searchField.push('rsa_name');
-        searchText.push(rsa_name);
-    }
-    if (rsa_email) {
-        searchField.push('rsa_email');
-        searchText.push(rsa_email);
-    }
-    if (rsa_mobile) {
-        searchField.push('rsa_mobile');
-        searchText.push(rsa_mobile);
-    }
-    if (service_type) {
-        searchField.push('booking_type');
-        searchText.push(service_type);
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    // if (rsa_id) {
+    //     searchField.push('rsa_id');
+    //     searchText.push(rsa_id);
+    // }
+    // if (rsa_name) {
+    //     searchField.push('rsa_name');
+    //     searchText.push(rsa_name);
+    // }
+    // if (rsa_email) {
+    //     searchField.push('rsa_email');
+    //     searchText.push(rsa_email);
+    // }
+    // if (rsa_mobile) {
+    //     searchField.push('rsa_mobile');
+    //     searchText.push(rsa_mobile);
+    // }
+    // if (service_type) {
+    //     searchField.push('booking_type');
+    //     searchText.push(service_type);
+    // }
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
     }
 
     const result = await getPaginatedData({
         tableName: 'rsa',
         columns: 'id, rsa_id, rsa_name, email, country_code, mobile, profile_img, status, booking_type',
-        searchFields: searchField,
-        searchTexts: searchText,
+        // searchFields: searchField,
+        // searchTexts: searchText,
+        liveSearchFields: ['rsa_id', 'rsa_name', 'email', 'booking_type',],
+        liveSearchTexts: [search_text, search_text, search_text, search_text,],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no: page,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({
