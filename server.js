@@ -51,6 +51,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
 
+// React build
 app.use(express.static(path.join(__dirname, 'build')));
 app.get('/*', function (req, res) {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
