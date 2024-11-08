@@ -2,7 +2,14 @@
 node_modules/
 dist/
 /public/firebase-files/
-
+uploads/
+build/
+/public/charger-installation-invoice
+/public/ev-pre-sale-invoice
+/public/pick-drop-invoice
+/public/pick-drop-invoice
+/public/portable-charger-invoice
+/public/road-side-invoice
 # Environment variable files
 .env
 

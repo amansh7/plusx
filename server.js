@@ -15,10 +15,12 @@ const PORT = process.env.PORT || 3333;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+console.log(path.join(__dirname, 'build'));
 
 const corsOptions = {
     origin: [
         'http://192.168.1.87:3000',
+        'http://192.168.1.25:3000',
         'http://192.168.1.7:3333',
         'http://localhost:3000',
         'http://localhost:3001',
@@ -34,10 +36,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.static(path.join(__dirname, 'build')));
-app.get('/*', function (req, res) {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
@@ -52,6 +50,11 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('/*', function (req, res) {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 
 app.use(errorHandler);
 
