@@ -221,12 +221,12 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
 /* -- Api Auth & Api RSA Authz Middleware -- */
 const authzRsaAndAuthRoutes = [
     /* RSA */
-    { method: 'get',  path: '/rsa-home',            handler: rsaHome },
-    { method: 'get',  path: '/rsa-logout',          handler: rsaLogout },
-    { method: 'get',  path: '/rsa-profile-change',  handler: rsaUpdateProfile },
-    { method: 'post', path: '/rsa-status-change',   handler: rsaStatusChange },
-    { method: 'get',  path: '/rsa-change-password', handler: rsaUpdatePassword },
-    { method: 'get',  path: '/rsa-booking-history', handler: rsaBookingHistory },
+    { method: 'get',   path: '/rsa-home',            handler: rsaHome },
+    { method: 'get',   path: '/rsa-logout',          handler: rsaLogout },
+    { method: 'post',  path: '/rsa-profile-change',  handler: rsaUpdateProfile },
+    { method: 'post',  path: '/rsa-status-change',   handler: rsaStatusChange },
+    { method: 'get',   path: '/rsa-change-password', handler: rsaUpdatePassword },
+    { method: 'get',   path: '/rsa-booking-history', handler: rsaBookingHistory },
 
     /* Road Assitance with RSA */
     { method: 'get', path: '/rsa-order-stage',  handler: getRsaOrderStage },
@@ -250,6 +250,9 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
         middlewares.push(handleFileUpload('portable-charger', ['image'], 1));
     } else if (path === '/charger-service-action') {
         middlewares.push(handleFileUpload('pick-drop-images', ['image'], 1));
+    }
+    if(path === '/rsa-profile-change'){   
+        middlewares.push(handleFileUpload('rsa_images', ['profile-image'], 1));
     }
 
     middlewares.push(apiAuthorization);

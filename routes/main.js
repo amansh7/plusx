@@ -8,58 +8,38 @@ import ejs from 'ejs';
 
 const router = Router();
 
-/* pdf test s */
 
-const projectRoot = path.resolve();
 const __filename = fileURLToPath(import.meta.url);
-const filesDirectory = path.join(projectRoot, 'public', 'files');
+const __dirname = path.dirname(__filename);
 
-const invoiceTemplatePath = path.join(filesDirectory, 'invoice.html');
-
-const renderTemplate = (template, data) => {
-    return template.replace(/{{(.*?)}}/g, (match, key) => {
-      return data[key.trim()] || match;
-    });
-};
-
- 
-  
-router.get('/generate-pdf-jspdf', (req, res) => {
+router.get('/generate-pdf-pdfkit', async (req, res) => {
     try {
-        if (!fs.existsSync(filesDirectory)) {
-            fs.mkdirSync(filesDirectory, { recursive: true });
-        }
-    
-        const doc = new jsPDF();
-    
-        doc.setFontSize(16);
-        doc.text('This is a PDF generated using jsPDF!', 10, 10);
-        doc.setFontSize(12);
-        doc.text('Here is more content for the PDF generated inside the route function.', 10, 20);
-        doc.text('You can customize this content as needed.', 10, 30);
-    
-        const filePath = path.join(filesDirectory, 'output-jspdf.pdf');
-    
-        const pdfOutput = doc.output('arraybuffer');
-    
-        fs.writeFile(filePath, Buffer.from(pdfOutput), (err) => {
-            if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error saving PDF with jsPDF' });
-            }
-    
-            const fullUrl = `${req.protocol}://${req.get('host')}/files/output-jspdf.pdf`;
-            res.status(200).json({
-            message: 'PDF generated successfully!',
-            filePath: fullUrl,
-            });
-        });
+        const invoiceData = {
+            invoiceNumber: 'INV-1002',
+            invoiceDate: new Date().toISOString().split('T')[0],
+            clientName: 'John Doe Str',
+            clientAddress: '1234 Main St, Springfield, USA',
+            items: [
+                { description: 'Product 1', quantity: 2, unitPrice: 30 },
+                { description: 'Product 2', quantity: 1, unitPrice: 100 },
+                { description: 'Service A', quantity: 3, unitPrice: 50 },
+                { description: 'Service B', quantity: 2, unitPrice: 10 }
+            ],
+            totalAmount: 310
+        };
+
+        const pdfPath = await generateInvoicePDF(invoiceData);
+
+        res.json({ pdfPath: `/files/${path.basename(pdfPath)}` });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Error generating PDF with jsPDF' });
+        console.log(error);
+        res.status(500).send('Error generating PDF');
     }
 });
   
+  
+/* pdf test e */
+
 /* pdf test e */
 
 
