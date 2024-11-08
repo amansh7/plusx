@@ -53,7 +53,7 @@ export const getDashboardData = async (req, resp) => {
             { module: 'Total Register your Interest', count: counts[0].total_pod }
         ];
 
-        resp.status(200).json(count_arr);
+        return resp.json({code: 200, data:count_arr});
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
         resp.status(500).json({ message: 'Error fetching dashboard data' });

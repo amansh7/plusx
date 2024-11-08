@@ -42,7 +42,7 @@ const adminRoutes = [
     { method: 'put',  path: '/logout',          handler: logout },
     { method: 'post', path: '/forgot-password', handler: forgotPassword },
     { method: 'put',  path: '/change-password', handler: updatePassword },
-    { method: 'get',  path: '/dashboard',       handler: getDashboardData },
+    { method: 'post',  path: '/dashboard',       handler: getDashboardData },
     { method: 'post', path: '/rider-list',      handler: riderList },
     { method: 'post', path: '/rider-details',   handler: riderDetails },
     { method: 'post', path: '/delete-rider',    handler: deleteRider },
@@ -62,7 +62,7 @@ const adminRoutes = [
     { method: 'post',   path: '/charger-slot-details',            handler: slotDetails },
     { method: 'post',   path: '/charger-add-time-slot',           handler: addSlot },
     { method: 'post',   path: '/charger-edit-time-slot',          handler: editSlot },
-    { method: 'delete', path: '/charger-delete-time-slot',        handler: deleteSlot },
+    { method: 'post',   path: '/charger-delete-time-slot',        handler: deleteSlot },
 
     /* Pick & Drop */
     { method: 'post',   path: '/pick-and-drop-booking-list',     handler: bookingList },
@@ -74,7 +74,7 @@ const adminRoutes = [
     { method: 'post',   path: '/pick-and-drop-slot-details',     handler: pdSlotDetails },
     { method: 'post',   path: '/pick-and-drop-add-slot',         handler: pdAddSlot },
     { method: 'post',   path: '/pick-and-drop-edit-slot',        handler: pdEditSlot },
-    { method: 'delete', path: '/pick-and-drop-delete-slot',      handler: pdDeleteSlot },
+    { method: 'post', path: '/pick-and-drop-delete-slot',      handler: pdDeleteSlot },
 
     /* Public Charger */
     { method: 'post',   path: '/public-charger-station-list',    handler: stationList },
