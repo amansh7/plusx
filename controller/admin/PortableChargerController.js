@@ -533,7 +533,7 @@ export const invoiceDetails = async (req, resp) => {
 /* Slot */
 export const slotList = async (req, resp) => {
     try {
-        const { page_no,  search_text= ''} = req.body;
+        const { page_no,  search_text= '', start_date, end_date,} = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
@@ -541,23 +541,37 @@ export const slotList = async (req, resp) => {
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         let slot_date = moment().format("YYYY-MM-DD");
-        // console.log('count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count', slot_date)
-        const result = await getPaginatedData({
+        console.log('count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count', slot_date)  
+
+        const params = {
             tableName  : 'portable_charger_slot',
-            columns    : 'slot_id, start_time, end_time, booking_limit, status, (select count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count',
+            columns    : 'slot_id, slot_date, start_time, end_time, booking_limit, status, (select count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count',
             sortColumn : 'created_at',
             sortOrder  : 'DESC',
             page_no,
             limit      : 10,
-            whereField : 'status',
-            whereValue : 1,
-            liveSearchFields: ['slot_id'],
-            liveSearchTexts: [search_text],
-        });  // created_at, 
+            liveSearchFields: ['slot_id',],
+            liveSearchTexts: [search_text,],
+            // searchFields: ['added_from', 'emirates'],
+            // searchTexts: [addedFrom, emirates],
+            whereField: [],
+            whereValue: [],
+            whereOperator: []
+        };
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+            params.whereField.push('slot_date', 'slot_date');
+            params.whereValue.push(start, end);
+            params.whereOperator.push('>=', '<=');
+        }
+        const result = await getPaginatedData(params);
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
             slot_id            : item.slot_id,
+            slot_date          : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
             booking_limit      : item.booking_limit,
             status             : item.status,
             slot_booking_count : item.slot_booking_count,

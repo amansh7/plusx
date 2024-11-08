@@ -203,26 +203,51 @@ export const pdInvoiceDetails = async (req, resp) => {
 /* Slot */
 export const pdSlotList = async (req, resp) => {
     try {
-        const { page_no, search_text='' } = req.body;
+        const { page_no, search_text='', start_date, end_date } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+        let slot_date = moment().format("YYYY-MM-DD");
+        // const result = await getPaginatedData({
+        //     tableName: 'pick_drop_slot',
+        //     columns: 'slot_id, start_time, end_time, booking_limit, status, created_at',
+        //     sortColumn: 'created_at',
+        //     sortOrder: 'DESC',
+        //     page_no,
+        //     limit: 10,
+        //     whereField: 'status',
+        //     whereValue: 1,
+        //     liveSearchFields: ['slot_id'],
+        //     liveSearchTexts: [search_text],
+        // });
 
-        const result = await getPaginatedData({
+        const params = {
             tableName: 'pick_drop_slot',
             columns: 'slot_id, start_time, end_time, booking_limit, status, created_at',
-            sortColumn: 'created_at',
-            sortOrder: 'DESC',
+            sortColumn : 'created_at',
+            sortOrder  : 'DESC',
             page_no,
-            limit: 10,
-            whereField: 'status',
-            whereValue: 1,
-            liveSearchFields: ['slot_id'],
-            liveSearchTexts: [search_text],
-        });
+            limit      : 10,
+            liveSearchFields: ['slot_id',],
+            liveSearchTexts: [search_text,],
+            // searchFields: ['added_from', 'emirates'],
+            // searchTexts: [addedFrom, emirates],
+            whereField: [],
+            whereValue: [],
+            whereOperator: []
+        };
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+            params.whereField.push('slot_date', 'slot_date');
+            params.whereValue.push(start, end);
+            params.whereOperator.push('>=', '<=');
+        }
+        const result = await getPaginatedData(params);
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
