@@ -127,19 +127,18 @@ export const rsaLogutAll = asyncHandler(async (req, resp) => {
 });
 
 export const rsaUpdateProfile = asyncHandler(async (req, resp) => {
-    try{
-        let profile_image = '';
-
-        if(req.files && req.files['profile_image']){
-            const files = req.files;
-            profile_image = files ? files['profile_image'][0].filename : '';
-        }
-        
+    try{        
         const { rsa_id } = mergeParam(req);
         const { isValid, errors } = validateFields(mergeParam(req), { rsa_id: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
         const rsa = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id=?`, [rsa_id]);
+
+        let profile_image = rsa.profile_img;
+        if(req.files && req.files['profileImage']){
+            const files = req.files;
+            profile_image = files ? files['profileImage'][0].filename : '';
+        }
 
         if (req.file){
             const oldImagePath = path.join('uploads', 'rider_profile', rsa.profile_img || '');
