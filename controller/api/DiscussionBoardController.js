@@ -3,9 +3,7 @@ import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbU
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
-import fs from 'fs';
-import path from "path";
-import { asyncHandler, createNotification, mergeParam, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, deleteFile, mergeParam, pushNotification } from "../../utils.js";
 
 export const addDiscussionBoard = asyncHandler(async (req, resp) => {
     try{
@@ -136,11 +134,11 @@ export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
             LEFT JOIN (SELECT board_id, COUNT(id) AS share_count FROM board_share GROUP BY board_id) bs ON bs.board_id = db.board_id
             LEFT JOIN board_likes bl1 ON bl1.board_id = db.board_id AND bl1.rider_id = ?
             LEFT JOIN board_poll bp ON bp.board_id = db.board_id
-            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_one_count FROM board_poll_vote WHERE option = 'option_one' GROUP BY poll_id) bpv1 ON bpv1.poll_id = bp1.poll_id
-            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_two_count FROM board_poll_vote WHERE option = 'option_two' GROUP BY poll_id) bpv2 ON bpv2.poll_id = bp1.poll_id
-            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_three_count FROM board_poll_vote WHERE option = 'option_three' GROUP BY poll_id) bpv3 ON bpv3.poll_id = bp1.poll_id
-            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_four_count FROM board_poll_vote WHERE option = 'option_four' GROUP BY poll_id) bpv4 ON bpv4.poll_id = bp1.poll_id
-            LEFT JOIN (SELECT poll_id, option FROM board_poll_vote WHERE rider_id = ?) bl2 ON bl2.poll_id = bp1.poll_id
+            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_one_count FROM board_poll_vote WHERE \`option\` = 'option_one' GROUP BY poll_id) bpv1 ON bpv1.poll_id = bp1.poll_id
+            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_two_count FROM board_poll_vote WHERE \`option\` = 'option_two' GROUP BY poll_id) bpv2 ON bpv2.poll_id = bp1.poll_id
+            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_three_count FROM board_poll_vote WHERE \`option\` = 'option_three' GROUP BY poll_id) bpv3 ON bpv3.poll_id = bp1.poll_id
+            LEFT JOIN (SELECT poll_id, COUNT(*) AS option_four_count FROM board_poll_vote WHERE \`option\` = 'option_four' GROUP BY poll_id) bpv4 ON bpv4.poll_id = bp1.poll_id
+            LEFT JOIN (SELECT poll_id, \`option\` FROM board_poll_vote WHERE rider_id = ?) bl2 ON bl2.poll_id = bp1.poll_id
     
             WHERE db.board_id = ? LIMIT 1
         `, [rider_id, rider_id, board_id]);
@@ -198,6 +196,73 @@ export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
     }
 });
 
+export const editBoard = asyncHandler(async (req, resp) => {
+    try{
+        
+        const { rider_id, board_id, blog_title, description='', hyper_link='' } = req.body;
+        const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"], blog_title: ["required"]});
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+        
+        const board = await queryDB(`SELECT rider_id, image FROM discussion_board WHERE board_id = ? AND rider_id = ?`, [board_id, rider_id]);
+        if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
+        
+        let updatedImage = board.image;
+        if (req.files && req.files['image']) {
+            updatedImage = req.files['image'] ? req.files.image.map(file => file.filename).join('*') : '';
+            const imageArray = board.image.split("*");
+            imageArray.forEach(img => img && deleteFile('discussion-board-images', img));
+        }
+
+        const update = await updateRecord('discussion_board', {blog_title, description, image: updatedImage, hyper_link}, ['board_id', 'rider_id'], [board_id, rider_id]);
+        if(update.affectedRows === 0) return resp.json({ status: 0, code: 422, message: ["Failed to update baord. Please Try Again."] });
+
+        return resp.json({ 
+            status: 1, 
+            code: 200, 
+            message: ["Board updated successfully!"] 
+        });
+    }catch(err){
+        console.error('Error updating board:', err);
+        return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
+    }
+});
+
+export const boardDelete = asyncHandler(async (req, resp) => {
+    const {rider_id, board_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"]});
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const connection = await startTransaction();
+    try{
+        const board = await queryDB(`SELECT rider_id, image FROM discussion_board WHERE board_id = ? AND rider_id = ?`, [board_id, rider_id]);
+        if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
+        
+        const deleteBoard = await db.execute(`DELETE FROM discussion_board WHERE board_id = ?`, [board_id], connection);
+        if (deleteBoard.affectedRows === 0) {
+            await rollbackTransaction(connection);
+            return resp.json({ status: 0, code: 422, error: true, message: ["Board ID not found!"] });
+        }
+        await db.execute(`DELETE FROM board_comment WHERE board_id = ?`, [board_id], connection);
+        await db.execute(`DELETE FROM board_likes WHERE board_id = ?`, [board_id], connection);
+        await db.execute(`DELETE FROM board_poll WHERE board_id = ?`, [board_id], connection);
+        await db.execute(`DELETE FROM board_share WHERE board_id = ?`, [board_id], connection);
+        await db.execute(`DELETE FROM board_views WHERE board_id = ?`, [board_id], connection);
+        deleteFile('discussion-board-images', board.image);
+
+        await commitTransaction(connection);
+        return resp.json({
+            status: 1,
+            code: 200,
+            error: false,
+            message: ["Discussion Board deleted successfully!"]
+        });
+    }catch(err){
+        await rollbackTransaction(connection);
+        console.error('Error deleting board:', err);
+        return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
+    }
+});
+
 export const addComment = asyncHandler(async (req, resp) => {
     const {rider_id, board_id, comment } = req.body;
     const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"], comment: ["required"]});
@@ -230,7 +295,7 @@ export const addComment = asyncHandler(async (req, resp) => {
         }
     
         return resp.json({
-            staus: 1, 
+            status: 1, 
             code: 200,
             error: false,
             message: ["Discussion Board Comment added successfully!"]
@@ -285,7 +350,7 @@ export const replyComment = asyncHandler(async (req, resp) => {
 export const boardLike = asyncHandler(async (req, resp) => {
     const {rider_id, board_id, status } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"], status: ["required"]});
-    if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
+    if (![1, 2, '1', '2'].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -302,15 +367,14 @@ export const boardLike = asyncHandler(async (req, resp) => {
     
         if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
         
-        const count = await queryDB(`SELECT COUNT(*) AS count FROM board_likes WHERE rider_id = ? AND board_id = ?`, [rider_id, board_id]);
+        const {count} = await queryDB(`SELECT COUNT(*) AS count FROM board_likes WHERE rider_id = ? AND board_id = ?`, [rider_id, board_id]);
         let insert;
         
         if(count){
-            insert = await updateRecord('board_likes', {status}, ['rider_id', 'board_id'], [rider_id, board_id]);
+            insert = await updateRecord('board_likes', {status: status == 1 ? 1 : 0}, ['rider_id', 'board_id'], [rider_id, board_id]);
         }else{
             insert = await insertRecord('board_likes', ['rider_id', 'board_id', 'status'], [rider_id, board_id, status]);
         }
-    
         if(insert.affectedRows === 0) return resp.json({status:0, code:422, error: true, message:["Failed to like board. Please Try Again."]});
         
         const statusTxt = status == 1 ? 'Like' : 'Un-like';
@@ -320,11 +384,11 @@ export const boardLike = asyncHandler(async (req, resp) => {
             const href = 'disscussion_board/' + board_id;
             const heading = `${statusTxt} On Board`;
             const desc = `One ${statusTxt} on your board by rider : ${board.rider_name}`;
-            // pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
+            pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
         }
     
         return resp.json({
-            status:0, 
+            status: 1, 
             code:200,
             error: false,
             message: [`Board ${statusTxt} Successfully`],
@@ -498,88 +562,6 @@ export const boardNotInterested = asyncHandler(async (req, resp) => {
         });
     }catch(err){
         console.error('Error board not interested:', err);
-        return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
-    }
-});
-
-export const boardDelete = asyncHandler(async (req, resp) => {
-    const {rider_id, board_id } = mergeparam(req);
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"]});
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
-    const connection = await startTransaction();
-    try{
-        const board = await queryDB(`SELECT rider_id, image FROM discussion_board WHERE board_id = ? AND rider_id = ?`, [board_id, rider_id]);
-        if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
-        
-        const deleteBoard = await db.execute(`DELETE FROM discussion_board WHERE board_id = ?`, [board_id], connection);
-        if (deleteBoard.affectedRows === 0) {
-            await rollbackTransaction(connection);
-            return resp.json({ status: 0, code: 422, error: true, message: ["Board ID not found!"] });
-        }
-        await db.execute(`DELETE FROM board_comment WHERE board_id = ?`, [board_id], connection);
-        await db.execute(`DELETE FROM board_likes WHERE board_id = ?`, [board_id], connection);
-        await db.execute(`DELETE FROM board_poll WHERE board_id = ?`, [board_id], connection);
-        await db.execute(`DELETE FROM board_share WHERE board_id = ?`, [board_id], connection);
-        await db.execute(`DELETE FROM board_views WHERE board_id = ?`, [board_id], connection);
-        const imagePath = board?.image ? `/uploads/discussion-board-images/${board.image}` : null;
-        if (imagePath) {
-            const filePath = public_path() + imagePath;
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
-        await commitTransaction(connection);
-        return resp.json({
-            status: 1,
-            code: 200,
-            error: false,
-            message: ["Discussion Board deleted successfully!"]
-        });
-    }catch(err){
-        await rollbackTransaction(connection);
-        console.error('Error deleting board:', err);
-        return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
-    }
-});
-
-export const editBoard = asyncHandler(async (req, resp) => {
-    try{
-        const files = req.files;
-        const newImages = files.image.map(file => file.filename).join('*') || '';
-    
-        const { rider_id, board_id, blog_title, description='', hyper_link='' } = req.body;
-        const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], board_id: ["required"], blog_title: ["required"]});
-        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    
-        const board = await queryDB(`SELECT rider_id, image FROM discussion_board WHERE board_id = ? AND rider_id = ?`, [board_id, rider_id]);
-        if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
-        
-        if (newImages) {
-            const imageArray = board.image.split("*");
-            for (const img of imageArray) {
-                const filePath = path.join('uploads', 'discussion-board-images', img);
-                if (fs.existsSync(filePath)) {
-                    try {
-                        fs.unlinkSync(filePath);
-                    } catch (error) {
-                        console.error(`Failed to delete image: ${filePath}`, error);
-                    }
-                }
-            }
-        }
-
-        const updatedImage = newImages ? newImages : board.image;
-        const update = await updateRecord('discussion_board', {blog_title, description, image: updatedImage, hyper_link}, ['board_id', 'rider_id'], [board_id, rider_id]);
-        if(update.affectedRows === 0) return resp.json({ status: 0, code: 422, message: ["Failed to update baord. Please Try Again."] });
-
-        return resp.json({ 
-            status: 1, 
-            code: 200, 
-            message: ["Board updated successfully!"] 
-        });
-    }catch(err){
-        console.error('Error updating board:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
 });

@@ -87,13 +87,8 @@ export const interestedPeople = asyncHandler(async (req, resp) => {
 });
 
 export const sellVehicle = asyncHandler(async (req, resp) => {
-    try{     
-        const uploadedFiles = req.files;
-        const car_images = uploadedFiles['car_images']?.map(file => file.filename).join('*') || '';
-        const car_tyre_image = uploadedFiles['car_tyre_image']?.map(file => file.filename).join('*') || '';
-        const other_images = uploadedFiles['other_images']?.map(file => file.filename).join('*') || '';
-
-        const { rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
+    try{
+        const { rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type='', seat_capacity, engine_capacity, 
             warrenty, description, horse_power
         } = req.body;
             
@@ -106,7 +101,6 @@ export const sellVehicle = asyncHandler(async (req, resp) => {
             interior_color: ["required"],
             doors: ["required"],
             body_type: ["required"],
-            owner_type: ["required"],
             seat_capacity: ["required"],
             engine_capacity: ["required"],
             warrenty: ["required"],
@@ -114,10 +108,14 @@ export const sellVehicle = asyncHandler(async (req, resp) => {
             horse_power: ["required"],
         });
         
-        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        if(!req.files['car_images'])  return resp.json({ status: 0, code: 422, message: {car_images: "car_images is required."} });
-        if(!req.files['car_tyre_image'])  return resp.json({ status: 0, code: 422, message: {car_tyre_image: "car_tyre_image is required."} });
-    
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });    
+        if (!req.files || !req.files['car_images']) return resp.json({ status: 0, code: 422, message: { car_images: "car_images is required." } });
+        if (!req.files || !req.files['car_tyre_image']) return resp.json({ status: 0, code: 422, message: { car_tyre_image: "car_tyre_image is required." } });
+
+        const car_images = req.files['car_images'] ? req.files['car_images'].map(file => file.filename).join('*') : '';
+        const car_tyre_image = req.files['car_tyre_image'] ? req.files['car_tyre_image'].map(file => file.filename).join('*') : '';
+        const other_images = req.files['other_images'] ? req.files['other_images'].map(file => file.filename).join('*') : '';
+        
         const sellId = 'SL-' + generateUniqueId({length:13});
     
         const insert = await insertRecord('vehicle_sell', [
@@ -151,6 +149,7 @@ export const sellVehicle = asyncHandler(async (req, resp) => {
             message: ["Your Car for Sale Successful Added!"],
         });    
     }catch(err){
+        console.log(err);
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 });
