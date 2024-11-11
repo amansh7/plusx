@@ -295,7 +295,7 @@ export const addComment = asyncHandler(async (req, resp) => {
         }
     
         return resp.json({
-            staus: 1, 
+            status: 1, 
             code: 200,
             error: false,
             message: ["Discussion Board Comment added successfully!"]
