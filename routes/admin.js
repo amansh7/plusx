@@ -126,7 +126,7 @@ const adminRoutes = [
     { method: 'post',    path: '/electric-car-detail',    handler: carDetail },
     { method: 'post',    path: '/electric-car-add',       handler: carAdd },
     { method: 'post',    path: '/electric-car-edit',      handler: carEdit },
-    { method: 'delete',  path: '/electric-car-delete',    handler: carDelete },
+    { method: 'post',  path: '/electric-car-delete',    handler: carDelete },
     { method: 'delete',  path: '/electric-car-gallery-d', handler: carGalleryDelete },
 
     /* Electric Bikes Leasing */

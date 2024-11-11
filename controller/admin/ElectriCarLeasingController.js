@@ -1,19 +1,38 @@
 import generateUniqueId from 'generate-unique-id';
+import moment from 'moment';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import { deleteFile } from '../../utils.js';
 
 export const carsList = async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, start_date, end_date, page_no } = req.body;
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
     const result = await getPaginatedData({
         tableName: 'electric_car_rental',
         columns: `rental_id, car_name, available_on, car_type, price, contract`,
-        searchFields: ['car_name'],
-        searchTexts: [search],
+        // searchFields: ['car_name'],
+        // searchTexts: [search],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        liveSearchFields: ['rental_id', 'car_name', 'available_on', 'car_type'],
+        liveSearchTexts: [search_text, search_text, search_text, search_text],
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({
@@ -34,7 +53,14 @@ export const carDetail = async (req, resp) => {
     const [gallery] = await db.execute(`SELECT image_name FROM electric_car_rental_gallery WHERE rental_id = ? ORDER BY id DESC`, [rental_id]);
     const galleryData = gallery.map(image => image.image_name);
 
-    return resp.status(200).json({status: 1, message: "Car Detail fetch successfully", car, galleryData});
+    return resp.status(200).json({
+         status: 1, 
+         code: 200,
+         message: "Car Detail fetch successfully",
+         car, 
+         galleryData,
+         base_url: `${req.protocol}://${req.get('host')}/uploads/car-rental-images/`
+        });
 };
 
 export const carData = async (req, resp) => {
@@ -88,7 +114,7 @@ export const carAdd = async (req, resp) => {
 
     return resp.json({
         status: insert.affectedRows > 0 ? 1 : 0,
-        message: insert.affectedRows > 0 ? "Bike rental added successfully" : "Failed to insert, Please try again.",
+        message: insert.affectedRows > 0 ? "Car rental added successfully" : "Failed to insert, Please try again.",
     });
 };
 
@@ -120,7 +146,7 @@ export const carEdit = async (req, resp) => {
     
     if (coverImg) updates.image = coverImg;
 
-    if (bike.image) deleteFile('car-rental-images', car.image);
+    if (car.image) deleteFile('car-rental-images', car.image);
     if (req.files['rental_gallery'] && galleryData.length > 0) {
         galleryData.forEach(img => img && deleteFile('car-rental-images', img));
     }
@@ -149,7 +175,7 @@ export const carDelete = async (req, resp) => {
     const [gallery] = await db.execute(`SELECT image_name FROM electric_car_rental_gallery WHERE rental_id = ?`, [rental_id]);
     const galleryData = gallery.map(img => img.image_name);
 
-    if (car.image) deleteFile('car-rental-images', bike.image);
+    if (car.image) deleteFile('car-rental-images', car.image);
     if (req.files['rental_gallery'] && galleryData.length > 0) {
         galleryData.forEach(img => img && deleteFile('car-rental-images', img));
     }
