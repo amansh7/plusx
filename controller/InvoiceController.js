@@ -1,13 +1,13 @@
-import { generatePDF, numberToWords, formatNumber, mergeParam, asyncHandler } from '../utils.js';
-import db from "../config/db.js";
-import validateFields from "../validation.js";
 import path from 'path';
-import { fileURLToPath } from 'url';
 import Stripe from "stripe";
-import dotenv from 'dotenv';
-import { insertRecord, queryDB } from '../dbUtils.js';
+import db from "../config/db.js";
+import { fileURLToPath } from 'url';
 import moment from 'moment/moment.js';
 import emailQueue from '../emailQueue.js';
+import validateFields from "../validation.js";
+import { insertRecord, queryDB } from '../dbUtils.js';
+import { generatePDF, numberToWords, formatNumber, mergeParam, asyncHandler, generateInvoicePDF } from '../utils.js';
+import dotenv from 'dotenv';
 dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -192,7 +192,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
     emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html);
     
     if(insert.affectedRows > 0){
-        return resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200 });
+        return resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200, pdf });
     }else{
         return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
     }
@@ -254,12 +254,18 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
             pci.invoice_id = ?
         LIMIT 1
     `, [invoiceId]);
-    const htmlTemplate = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs');
-    const invoiceData = { data, numberToWords, formatNumber }
+    const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
+    const invoiceData = { ...data, numberToWords, formatNumber, imgUrl  }
+    
     const pdfPath = path.join(__dirname,  '../public/portable-charger-invoice',`${invoiceId}-invoice.pdf`);
-    const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req);
+    const templatePath = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs');
+    // const templatePath = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs');
+    
+    const pdf = await generateInvoicePDF(invoiceData, pdfPath, templatePath);
+    
+    return resp.json({pdf, templatePath, pdfPath, invoiceData});
 
-/*     if(pdf.success){
+    /* if(pdf.success){
         const html = `<html>
             <body>
                 <h4>Dear ${data.user_name}</h4>

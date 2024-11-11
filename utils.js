@@ -3,6 +3,8 @@ import axios from "axios";
 import multer from 'multer';
 import path from 'path';
 import puppeteer from 'puppeteer';
+import PDFKit from 'pdfkit';
+import htmlPdf from 'html-pdf-node';
 import ejs from 'ejs';
 import { insertRecord } from "./dbUtils.js";
 import { GoogleAuth } from "google-auth-library";
@@ -191,28 +193,6 @@ export const convertTo24HourFormat = (timeStr) => {
   }
 
   return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`; 
-};
-
-/* Generates a PDF from an EJS template. */
-export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
-  const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
-  let success = false; 
-  try{
-    const html = await ejs.renderFile(templatePath, { ...pdfTemplateContext, imgUrl });
-  
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-  
-    page.setViewport({ width: 1280, height: 1050 });
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
-    console.log('pdf generated: ', pdfPath);
-    await browser.close();
-    return { success: true, pdfPath }; 
-  }catch(error){
-    console.error('Error generating PDF:', error);
-    return { success: false, error: error.message };
-  }
 };
 
 /* Amount Number To Word Converter */
@@ -412,4 +392,66 @@ export const asyncHandler = (fn) => {
   return function (req, res, next) {
       fn(req, res, next).catch(next);
   };
+};
+
+/* Generates a PDF from an EJS template. - M1 Not supported using puppeter */
+export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
+  const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
+  let success = false; 
+  try{
+    const html = await ejs.renderFile(templatePath, { ...pdfTemplateContext, imgUrl });
+  
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+  
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+    console.log('pdf generated: ', pdfPath);
+    await browser.close();
+    return { success: true, pdfPath }; 
+  }catch(error){
+    console.error('Error generating PDF:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/* Generates a PDF from an EJS template. - M2 using PDFKit */
+export const generateInvoicePDF = async (data, pdfPath, templatePath) => {
+  let success = false; 
+  try{
+    if (!pdfPath) throw new Error('PDF path is required.');
+    if (!templatePath) throw new Error('Template path is required.');
+
+    let htmlContent = fs.readFileSync(templatePath, 'utf8');
+
+    htmlContent = htmlContent.replace('{{imgUrl}}', data.imgUrl);
+    htmlContent = htmlContent.replace('{{rider_name}}', data.rider_name);
+    htmlContent = htmlContent.replace('{{invoice_date}}', data.invoice_date);
+    htmlContent = htmlContent.replace('{{invoice_id}}', data.invoice_id);
+    htmlContent = htmlContent.replace('{{amount}}', data.amount);
+    htmlContent = htmlContent.replace('{{currency}}', 'AED');
+
+    const options = {
+      format: 'A4',
+      path: pdfPath,
+      printMediaType: true,
+    };
+
+    await new Promise((resolve, reject) => {
+      htmlPdf.create(htmlContent, options).toFile(pdfPath, (err, res) => {
+        if (err) { reject(err); } else { resolve(res); }
+      });
+    })
+
+    // Object.keys(data).forEach((key) => {
+    //   const placeholder = new RegExp(`{{${key}}}`, 'g');
+    //   htmlContent = htmlContent.replace(placeholder, data[key]);
+    // });
+
+    success = true;
+    return { success: true, pdfPath }; 
+  }catch(error){
+    console.error('Error generating PDF:', error);
+    return { success: false, error: error.message };
+  }
 };

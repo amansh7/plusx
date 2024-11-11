@@ -5,6 +5,8 @@ import { asyncHandler, formatDateInQuery, formatDateTimeInQuery, generateRandomP
 import crypto from 'crypto';
 import bcrypt from "bcryptjs";
 import emailQueue from "../../emailQueue.js";
+import path from "path";
+import fs from "fs";
 
 export const rsaLogin = asyncHandler(async (req, resp) => {
     const { mobile, password ,fcm_token , latitude, longitude } = mergeParam(req);
@@ -135,22 +137,23 @@ export const rsaUpdateProfile = asyncHandler(async (req, resp) => {
         const rsa = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id=?`, [rsa_id]);
 
         let profile_image = rsa.profile_img;
-        if(req.files && req.files['profileImage']){
+        if(req.files && req.files['profile-image']){
             const files = req.files;
-            profile_image = files ? files['profileImage'][0].filename : '';
+            profile_image = files ? files['profile-image'][0].filename : '';
         }
-
-        if (req.file){
-            const oldImagePath = path.join('uploads', 'rider_profile', rsa.profile_img || '');
+        
+        if (rsa.profile_img && req.files[['profile-image']]){
+            const oldImagePath = path.join('uploads', 'rsa_images', rsa.profile_img);
             fs.unlink(oldImagePath, (err) => {
                 if (err) {
                     console.error(`Failed to delete rider old image: ${oldImagePath}`, err);
                 }
             });
         }
-
+        
         await updateRecord('rsa', { profile_img: profile_image }, ['rsa_id'], [rsa_id]);
         return resp.json({status: 1, code: 200, message: ["RSA profile updated successfully"]});
+        // return resp.json({ img : profile_image });
 
     }catch(err){
         console.log(err);
@@ -189,12 +192,12 @@ export const rsaHome = asyncHandler(async (req, resp) => {
     const rsaData = await queryDB(`
         SELECT 
             status, booking_type, running_order,
-            (SELECT COUNT(id) FROM charging_service_assign WHERE rsa_id = ? AND status = 0) AS valet_count,
-            (SELECT COUNT(id) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 0) AS pod_count,
-            (SELECT COUNT(id) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
-            (SELECT COUNT(id) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
-            (SELECT COUNT(id) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
-            (SELECT COUNT(id) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed
+            (SELECT COUNT(*) FROM charging_service_assign WHERE rsa_id = ? AND status = 0) AS valet_count,
+            (SELECT COUNT(*) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 0) AS pod_count,
+            (SELECT COUNT(*) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
+            (SELECT COUNT(*) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
+            (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
+            (SELECT COUNT(*) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed
         FROM rsa 
         WHERE rsa_id = ? LIMIT 1
     `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);

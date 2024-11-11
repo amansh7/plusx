@@ -2,6 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import adminRoutes from './routes/admin.js';
 import apiRoutes from './routes/api.js';
+import mainRoutes from './routes/main.js';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -50,6 +51,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+app.use('/web', mainRoutes);
 
 // React build
 app.use(express.static(path.join(__dirname, 'build')));

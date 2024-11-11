@@ -156,9 +156,9 @@ export const sellVehicle = asyncHandler(async (req, resp) => {
 });
 
 export const allSellVehicleList = asyncHandler(async (req, resp) => {
-    const {rider_id, page_no, search_text, sort_col, sort_by } = req.body;
+    const {rider_id, page_no, search_text, sort_col, sort_by } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
