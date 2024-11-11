@@ -7,8 +7,8 @@ import { asyncHandler, mergeParam} from '../../utils.js';
 import emailQueue from "../../emailQueue.js";
 
 export const vehicleList = asyncHandler(async (req, resp) => {
-    const {vehicle_type, page_no, vehicle_name, vehicle_model } = req.body;
-    const { isValid, errors } = validateFields(req.body, {vehicle_type: ["required"], page_no: ["required"]});
+    const {vehicle_type, page_no, vehicle_name, vehicle_model } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {vehicle_type: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const result = await getPaginatedData({
@@ -36,8 +36,8 @@ export const vehicleList = asyncHandler(async (req, resp) => {
 });
 
 export const vehicleDetail = asyncHandler(async (req, resp) => {
-    const { vehicle_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {vehicle_id: ["required"]});
+    const { vehicle_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {vehicle_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     let gallery = [];
 
@@ -146,7 +146,7 @@ export const sellVehicle = asyncHandler(async (req, resp) => {
             status: 1, 
             code: 200, 
             error: false,
-            message: ["Your Car for Sale Successful Added!"],
+            message: ["Thank you! Your request for Sell Car has been submitted. Our team will get back to you."],
         });    
     }catch(err){
         console.log(err);
@@ -170,9 +170,9 @@ export const allSellVehicleList = asyncHandler(async (req, resp) => {
         sortOrder: sort_by === 'd' ? 'DESC' : 'ASC',
         page_no,
         limit: 10,
-        whereField: 'status',
-        whereValue: 1,
-        whereOperator: '!='
+        whereField: ['vs.status'],
+        whereValue: [1],
+        whereOperator: ['!=']
     });
 
     return resp.json({
@@ -188,9 +188,9 @@ export const allSellVehicleList = asyncHandler(async (req, resp) => {
 });
 
 export const sellVehicleList = asyncHandler(async (req, resp) => {
-    const {rider_id, page_no, search_text, sort_col, sort_by } = req.body;
+    const {rider_id, page_no, search_text, sort_col, sort_by } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -221,9 +221,9 @@ export const sellVehicleList = asyncHandler(async (req, resp) => {
 });
 
 export const sellVehicleDetail = asyncHandler(async (req, resp) => {
-    const { rider_id, sell_id } = req.body;
+    const { rider_id, sell_id } = mergeParam(req);
         
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], sell_id: ["required"]});
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], sell_id: ["required"]});
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -250,7 +250,7 @@ export const sellVehicleDetail = asyncHandler(async (req, resp) => {
         status: 1,
         code: 200,
         message: ["Charging Station Details fetched successfully!"],
-        data: data,
+        sale_data: data,
         base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`,
     });
 
@@ -350,8 +350,8 @@ export const deleteSellVehicle = asyncHandler(async (req, resp) => {
 });
 
 export const soldSellVehicle = asyncHandler(async (req, resp) => {
-    const {rider_id, sell_id} = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], sell_id: ["required"]});
+    const {rider_id, sell_id} = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], sell_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
 
     const sellData = await queryDB('SELECT COUNT(*) as count FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?', [sell_id, rider_id]); 
