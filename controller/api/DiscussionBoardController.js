@@ -159,7 +159,7 @@ export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
             LEFT JOIN 
                 board_comment_reply AS rcr ON rcr.comment_id = bc.comment_id
             WHERE 
-                bc.comment_id = ? 
+                bc.board_id = ? 
             ORDER BY bc.id DESC, rcr.id DESC
         `, [rider_id, board_id]);
     
@@ -291,7 +291,7 @@ export const addComment = asyncHandler(async (req, resp) => {
             const href = 'disscussion_board/' + board_id;
             const heading = 'Comment On Discussion Board';
             const desc = `One Comment added on Discussion Board with board id : ${board_id} by rider : ${board.rider_name}`;
-            // pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
+            pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
         }
     
         return resp.json({
@@ -336,7 +336,7 @@ export const replyComment = asyncHandler(async (req, resp) => {
         }
     
         return resp.json({
-            staus: 1, 
+            status: 1, 
             code: 200,
             error: false,
             message: ["Board Comment Replied Successfully!"]
@@ -624,18 +624,18 @@ export const deleteComment = asyncHandler(async (req, resp) => {
         `, [comment_id, rider_id]);
         if(!comment) return resp.json({status:0, code:422, error: true, message:["Comment Id is invalid"]});
 
-        const [del] = await db.execute(`DELETE FROM board_comment WHERE comment_id=?, rider_id`, [comment_id, rider_id]);
+        const [del] = await db.execute(`DELETE FROM board_comment WHERE comment_id = ? AND rider_id = ?`, [comment_id, rider_id]);
         const affectedRows = del.affectedRows;
         if(affectedRows === 0) return resp.json({status:0, code:422, error:true, message:["Failed to delete comment. Please Try Again"]});
         
-        await db.execute(`DELETE FROM board_comment_reply WHERE comment_id=?, rider_id`, [comment_id, rider_id]);
+        await db.execute(`DELETE FROM board_comment_reply WHERE comment_id=? AND rider_id=?`, [comment_id, rider_id]);
         
         if(comment.riderDetails){
             const riderData = comment.riderDetails.split(",");
-            // const href = 'disscussion_board/' + board_id;
-            // const heading = Comment deleted';
-            // const desc = `One Comment deleted by you!`;
-            // pushNotification(riderData[1], heading, desc, 'RDRFCM', href);
+            const href = 'disscussion_board/' + comment.board_id;
+            const heading = "Comment deleted";
+            const desc = `One Comment deleted by you!`;
+            pushNotification(riderData[1], heading, desc, 'RDRFCM', href);
         }
 
         return resp.json({
@@ -693,9 +693,9 @@ export const deleteReplyComment = asyncHandler(async (req, resp) => {
 });
 
 export const commentLike = asyncHandler(async (req, resp) => {
-    const {rider_id, comment_id, status} = mergeparam(req);
-    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
-    if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
+    const {rider_id, comment_id, status} = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
+    if (![1, 2, '1', '2'].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -716,7 +716,7 @@ export const commentLike = asyncHandler(async (req, resp) => {
         let result;
         
         if(comment.likeCount){
-            result = await updateRecord('comments_likes', {status}, ['rider_id', 'comment_id', 'status'], [rider_id, comment_id, status]);
+            result = await updateRecord('comments_likes', {status: status == 1 ? 1 : 0}, ['rider_id', 'comment_id'], [rider_id, comment_id]);
         }else{
             result = await insertRecord('comments_likes', ['rider_id', 'comment_id', 'status'], [rider_id, comment_id, status]);
         }
@@ -731,7 +731,7 @@ export const commentLike = asyncHandler(async (req, resp) => {
             const href = 'disscussion_board/' + comment.board_id;
             const heading = `${statusTxt} On Comment`;
             const desc = `One ${statusTxt} on your comment by rider : ${riderData[0]}`;
-            // pushNotification(riderData[1], heading, desc, 'RDRFCM', href);
+            pushNotification(riderData[1], heading, desc, 'RDRFCM', href);
         }
     
         return resp.json({
@@ -750,7 +750,7 @@ export const commentLike = asyncHandler(async (req, resp) => {
 export const replyCommentLike = asyncHandler(async (req, resp) => {
     const {rider_id, comment_id, status} = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], comment_id: ["required"], status: ["required"]});
-    if (![1, 2].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
+    if (![1, 2, '1', '2'].includes(status)) return resp.json({status:0, code:422, message:"Status should be 1 or 2"});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
@@ -769,7 +769,7 @@ export const replyCommentLike = asyncHandler(async (req, resp) => {
         let result;
         
         if(comment.likeCount){
-            result = await updateRecord('reply_comments_likes', {status}, ['rider_id', 'comment_id', 'status'], [rider_id, comment_id, status]);
+            result = await updateRecord('reply_comments_likes', {status: status == 1 ? 1 : 0}, ['rider_id', 'comment_id'], [rider_id, comment_id]);
         }else{
             result = await insertRecord('reply_comments_likes', ['rider_id', 'comment_id', 'status'], [rider_id, comment_id, status]);
         }
