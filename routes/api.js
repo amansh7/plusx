@@ -104,11 +104,11 @@ const authzAndAuthRoutes = [
     { method: 'get', path: '/bike-rental-detail', handler: bikeDetail },
 
     /* Road Assistance Routes */
-    { method: 'get', path: '/road-assistance',                handler: addRoadAssistance },
-    { method: 'get', path: '/road-assistance-list',           handler: roadAssistanceList },
-    { method: 'get', path: '/road-assistance-details',        handler: roadAssistanceDetail },
-    { method: 'get', path: '/road-assistance-invoice-list',   handler: roadAssistanceInvoiceList },
-    { method: 'get', path: '/road-assistance-invoice-detail', handler: roadAssistanceInvoiceDetail },
+    { method: 'post', path: '/road-assistance',                handler: addRoadAssistance },
+    { method: 'get',  path: '/road-assistance-list',           handler: roadAssistanceList },
+    { method: 'get',  path: '/road-assistance-details',        handler: roadAssistanceDetail },
+    { method: 'get',  path: '/road-assistance-invoice-list',   handler: roadAssistanceInvoiceList },
+    { method: 'get',  path: '/road-assistance-invoice-detail', handler: roadAssistanceInvoiceDetail },
 
     /* Installation Service Routes */
     { method: 'post', path: '/charging-installation-service',  handler: serviceRequest },
@@ -208,6 +208,9 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
     }
     if(path === '/add-discussion-board' || path === '/discussion-board-edit'){
         middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
+    }
+    if(path === '/ev-pre-sale-testing'){
+        const noUpload1 = multer(); middlewares.push(noUpload1.none()); 
     }
     if(path === '/add-insurance'){
         middlewares.push(handleFileUpload('insurance-images', ['vehicle_registration_img', 'driving_licence', 'car_images', 'car_type_image', 'scretch_image', 'emirates_id'], 5));

@@ -9,18 +9,18 @@ import { asyncHandler, createNotification, mergeParam, pushNotification } from "
 
 export const addDiscussionBoard = asyncHandler(async (req, resp) => {
     try{
-        const files = req.files;
-        const image = files.image.map(file => file.filename).join('*') || '';
         const {rider_id, blog_title, description = '', hyper_link = '', board_type = '', poll_options, expiry_days } = req.body;
         const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], blog_title: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
+        
         const boardId = `DCB${generateUniqueId({length:12})}`;
-
+        const pollId = `POL${generateUniqueId({length:12})}`;
+        const images = req.files['image'] ? req.files.image.map(file => file.filename).join('*') : '';
+        
         const insert = await insertRecord('discussion_board', [
             'board_id', 'rider_id', 'blog_title', 'description', 'image', 'hyper_link', 'board_type'
         ], [
-            boardId, rider_id, blog_title, description, image, hyper_link, board_type
+            boardId, rider_id, blog_title, description, images, hyper_link, board_type
         ]);
     
         if(insert.affectedRows === 0) return resp.json({ status: 0, code: 422, message: ["Oops! There something went wrong! Please Try Again."] });
@@ -29,18 +29,15 @@ export const addDiscussionBoard = asyncHandler(async (req, resp) => {
             await insertRecord('board_poll', [
                 'poll_id', 'board_id', 'rider_id', 'expiry_date', 'option_one', 'option_two', 'option_three', 'option_four'
             ], [
-                `POL${generateUniqueId({length:12})}`, boardId, rider_id, moment().add(expiry_days, 'days').format('YYYY-MM-DD HH:mm:ss'), poll_options[0] || '', 
+                pollId, boardId, rider_id, moment().add(expiry_days, 'days').format('YYYY-MM-DD HH:mm:ss'), poll_options[0] || '', 
                 poll_options[1] || '', poll_options[2] || '', poll_options[3] || ''
             ]);
         }
     
         return resp.json({ status: 1, code: 200, message: ["Post Successfully Added!"] });
     }catch(err){
-        const error = JSON.parse(err.message);
-        if (error.code === 422){
-            return resp.status(422).json({status: 0, code: 422, message: error.message });
-        }
-        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+        console.log(err);
+        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again." });
     }
 });
 
@@ -78,17 +75,17 @@ export const getDiscussionBoardList = asyncHandler(async (req, resp) => {
                 LEFT JOIN (SELECT board_id, COUNT(id) AS share_count FROM board_share GROUP BY board_id) bs ON bs.board_id = db.board_id
                 LEFT JOIN board_likes bl1 ON bl1.board_id = db.board_id AND bl1.rider_id = '${rider_id}'
                 LEFT JOIN board_poll bp ON bp.board_id = db.board_id
-                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_one_count FROM board_poll_vote WHERE option = 'option_one' GROUP BY poll_id) bpv1 ON bpv1.poll_id = bp1.poll_id
-                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_two_count FROM board_poll_vote WHERE option = 'option_two' GROUP BY poll_id) bpv2 ON bpv2.poll_id = bp1.poll_id
-                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_three_count FROM board_poll_vote WHERE option = 'option_three' GROUP BY poll_id) bpv3 ON bpv3.poll_id = bp1.poll_id
-                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_four_count FROM board_poll_vote WHERE option = 'option_four' GROUP BY poll_id) bpv4 ON bpv4.poll_id = bp1.poll_id
-                LEFT JOIN (SELECT poll_id, option FROM board_poll_vote WHERE rider_id = '${rider_id}') bl2 ON bl2.poll_id = bp1.poll_id
+                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_one_count FROM board_poll_vote WHERE \`option\` = 'option_one' GROUP BY poll_id) bpv1 ON bpv1.poll_id = bp1.poll_id
+                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_two_count FROM board_poll_vote WHERE \`option\` = 'option_two' GROUP BY poll_id) bpv2 ON bpv2.poll_id = bp1.poll_id
+                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_three_count FROM board_poll_vote WHERE \`option\` = 'option_three' GROUP BY poll_id) bpv3 ON bpv3.poll_id = bp1.poll_id
+                LEFT JOIN (SELECT poll_id, COUNT(*) AS option_four_count FROM board_poll_vote WHERE \`option\` = 'option_four' GROUP BY poll_id) bpv4 ON bpv4.poll_id = bp1.poll_id
+                LEFT JOIN (SELECT poll_id, \`option\` FROM board_poll_vote WHERE rider_id = '${rider_id}') bl2 ON bl2.poll_id = bp1.poll_id
             `,
             columns: `db.board_id, db.rider_id, db.blog_title, db.description, db.image, db.board_type, db.hyper_link, bp1.poll_id, bp1.expiry_date AS poll_expiry,
                 r.rider_name, r.profile_img, COALESCE(bc.comment_count, 0) AS comment_count, COALESCE(bv.view_count, 0) AS view_count, COALESCE(bl.likes_count, 0) AS likes_count,
                 COALESCE(bs.share_count, 0) AS share_count, bl1.status AS likes_check, bp.option_one, bp.option_two, bp.option_three, bp.option_four,
                 COALESCE(bpv1.option_one_count, 0) AS option_one_vote_count, COALESCE(bpv2.option_two_count, 0) AS option_two_vote_count,
-                COALESCE(bpv3.option_three_count, 0) AS option_three_vote_count, COALESCE(bpv4.option_four_count, 0) AS option_four_vote_count,  bl2.option AS selected_option
+                COALESCE(bpv3.option_three_count, 0) AS option_three_vote_count, COALESCE(bpv4.option_four_count, 0) AS option_four_vote_count,  bl2.\`option\` AS selected_option
             `,
             searchField: 'db.blog_title',
             searchText: search_text,
@@ -100,7 +97,7 @@ export const getDiscussionBoardList = asyncHandler(async (req, resp) => {
             whereValue,
             whereOperator
         });
-    
+        
         return resp.json({
             status: 1,
             code: 200,
@@ -112,7 +109,7 @@ export const getDiscussionBoardList = asyncHandler(async (req, resp) => {
             rider_img_url: `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
         });
     }catch(err){
-        console.error('Error getting board list:', err);
+        console.log('Error getting board list:', err);
         return resp.json({ status: 0, code: 500, error: true, message: ["An unexpected error occurred. Please try again."] });
     }
 });

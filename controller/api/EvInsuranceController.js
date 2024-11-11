@@ -169,7 +169,7 @@ export const insuranceDetails = asyncHandler(async (req, resp) => {
 });
 
 export const evPreSaleBooking = asyncHandler(async (req, resp) => {
-    const {rider_id, owner_name, country, country_code, mobile_no, email, vehicle, pickup_address, reason_of_testing, pickup_latitude, pickup_longitude, 
+    const { rider_id, owner_name, country, country_code, mobile_no, email, vehicle, pickup_address, reason_of_testing, pickup_latitude, pickup_longitude, 
         slot_date, slot_time_id 
     } = req.body;
 
@@ -310,7 +310,7 @@ export const evPreSaleDetails = asyncHandler(async (req, resp) => {
 
     return resp.json({
         message: [ "Ev pre sale booking details fetch successfully!" ],
-        insurance_data: sale,
+        sale_data: sale,
         status: 1, 
         code: 200, 
     });
