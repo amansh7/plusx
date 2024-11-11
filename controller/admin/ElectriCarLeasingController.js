@@ -73,7 +73,7 @@ export const carAdd = async (req, resp) => {
     const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
     const rentalGallery = req.files?.['rental_gallery']?.map(file => file.filename) || [];
 
-    const rentalId = `TRQ${generateUniqueId({ length:12 })}`;
+    const rentalId = `TRQ${generateUniqueId({ length:6 })}`;
     const insert = await insertRecord('electric_car_rental', [
         'rental_id', 'car_name', 'available_on', 'description', 'price', 'car_type', 'contract', 'feature', 'image', 'status', 'lease_url', 
     ], [
