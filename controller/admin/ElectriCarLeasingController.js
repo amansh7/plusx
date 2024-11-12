@@ -119,7 +119,7 @@ export const carAdd = async (req, resp) => {
 };
 
 export const carEdit = async (req, resp) => {
-    const { rental_id, car_name, available_on, description, car_type, price, contract, feature, lease_url } = req.body;
+    const { rental_id, car_name, available_on, description, car_type, price, contract, feature, lease_url, status } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         rental_id: ["required"], 
         car_name: ["required"], 
@@ -139,7 +139,7 @@ export const carEdit = async (req, resp) => {
     const [gallery] = await db.execute(`SELECT image_name FROM electric_car_rental_gallery WHERE rental_id = ?`, [rental_id]);
     const galleryData = gallery.map(img => img.image_name);
 
-    const updates = {car_name, available_on, description, car_type, price, contract, feature, lease_url,};
+    const updates = {car_name, available_on, description, car_type, price, contract, feature, lease_url, status};
 
     let coverImg = req.files?.['cover_image']?.[0]?.filename || '';
     let rentalGallery = req.files?.['rental_gallery']?.map(file => file.filename) || [];
@@ -176,7 +176,7 @@ export const carDelete = async (req, resp) => {
     const galleryData = gallery.map(img => img.image_name);
 
     if (car.image) deleteFile('car-rental-images', car.image);
-    if (req.files['rental_gallery'] && galleryData.length > 0) {
+    if (galleryData.length > 0) {
         galleryData.forEach(img => img && deleteFile('car-rental-images', img));
     }
 

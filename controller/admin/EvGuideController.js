@@ -158,7 +158,7 @@ export const guideDetail = async (req, resp) => {
     }
 };
 export const editGuide = async (req, resp) => {
-    const{ vehicle_id, vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature } = req.body;
+    const{ vehicle_id, vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature, status } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         vehicle_id : ["required"],
         vehicle_type : ["required"],
@@ -180,7 +180,7 @@ export const editGuide = async (req, resp) => {
             const files = req.files;
             cover_image = files ? files['cover_image'][0].filename : '';
         }
-        const updates = {vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature, image : cover_image};
+        const updates = {vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, status, best_feature, image : cover_image};
         
         const update = await updateRecord('vehicle', updates, ['vehicle_id'], [vehicle_id]);
         const profileImgPath = path.join(__dirname, 'public/uploads/vehicle-image', vehicleData.image);

@@ -32,14 +32,20 @@ export const bookingData = async (req, resp) => {
     const booking = await queryDB(`SELECT * FROM road_assistance WHERE request_id = ?`, [request_id]);
 
     const result = {
-        status: 1,
+        // status: 1,
     }
 
     if(request_id){
         result.booking = booking;
     }
 
-    return resp.status(200).json(result);
+    // return resp.status(200).json(result);
+    return resp.json({
+        status  : 1,
+        code    : 200,
+        message : ["Booking details fetched successfully!"],
+        result
+    });
 };
 
 export const evRoadAssistanceConfirmBooking = async (req, resp) => {

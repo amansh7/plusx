@@ -134,7 +134,7 @@ const adminRoutes = [
     { method: 'post',    path: '/electric-bike-detail',    handler: bikeDetail },
     { method: 'post',    path: '/electric-bike-add',       handler: bikeAdd },
     { method: 'post',    path: '/electric-bike-edit',      handler: bikeEdit },
-    { method: 'delete',  path: '/electric-bike-delete',    handler: bikeDelete },
+    { method: 'post',  path: '/electric-bike-delete',    handler: bikeDelete },
     { method: 'delete',  path: '/electric-bike-gallery-d', handler: bikeGalleryDelete },
 
     /* EV Road Assistance */

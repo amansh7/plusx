@@ -35,7 +35,14 @@ export const bikeDetail = async (req, resp) => {
     const [gallery] = await db.execute(`SELECT image_name FROM electric_bike_rental_gallery WHERE rental_id = ? ORDER BY id DESC`, [rental_id]);
     const galleryData = gallery.map(image => image.image_name);
 
-    return resp.status(200).json({status: 1, message: "Bike Detail fetch successfully", bike, galleryData});
+    return resp.status(200).json({
+        status: 1,
+        code: 200, 
+        message: "Bike Detail fetch successfully", 
+        bike, 
+        galleryData,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/bike-rental-images/`
+    });
 };
 
 export const bikeData = async (req, resp) => {
@@ -74,7 +81,7 @@ export const bikeAdd = async (req, resp) => {
     const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
     const rentalGallery = req.files?.['rental_gallery']?.map(file => file.filename) || [];
 
-    const rentalId = `TRQ${generateUniqueId({ length:12 })}`;
+    const rentalId = `TRQ${generateUniqueId({ length:6 })}`;
     const insert = await insertRecord('electric_bike_rental', [
         'rental_id', 'bike_name', 'available_on', 'description', 'price', 'bike_type', 'contract', 'feature', 'image', 'status', 'lease_url', 
     ], [
@@ -151,7 +158,7 @@ export const bikeDelete = async (req, resp) => {
     const galleryData = gallery.map(img => img.image_name);
 
     if (bike.image) deleteFile('bike-rental-images', bike.image);
-    if (req.files['rental_gallery'] && galleryData.length > 0) {
+    if (galleryData.length > 0) {
         galleryData.forEach(img => img && deleteFile('bike-rental-images', img));
     }
 
