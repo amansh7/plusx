@@ -142,27 +142,47 @@ export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
     
             WHERE db.board_id = ? LIMIT 1
         `, [rider_id, rider_id, board_id]);
-    
+      
         const [comments] = await db.execute(`
             SELECT 
-                bc.comment_id, bc.comment, bc.created_at, bc.rider_id, r.rider_name, r.profile_img,
-                (SELECT status FROM comments_likes as cl WHERE cl.comment_id = bc.comment_id and cl.rider_id = ?) AS commentCheck,
-                rcr.id AS reply_comment_id, rcr.comment_id AS reply_comment_comment_id, rcr.comment AS reply_comment, rcr.created_at AS reply_comment_created_at, 
-                rcr.rider_id AS reply_comment_rider_id, 
-                (SELECT r2.rider_name FROM riders AS r2 WHERE r2.rider_id = rcr.rider_id) AS reply_rider_name,
-                (SELECT r2.profile_img FROM riders AS r2 WHERE r2.rider_id = rcr.rider_id) AS reply_profile_img,
-                (SELECT rcl.status FROM reply_comments_likes AS rcl WHERE rcl.comment_id = rcr.id AND rcl.rider_id = rcr.rider_id) AS reply_commentCheck
+                bc.comment_id, 
+                bc.comment, 
+                bc.created_at, 
+                bc.rider_id, 
+                r.rider_name, 
+                r.profile_img,
+                (SELECT status FROM comments_likes as cl WHERE cl.comment_id = bc.comment_id AND cl.rider_id = ?) AS commentCheck,
+                IFNULL(
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'reply_comment_id', rcr.id,
+                            'reply_comment', rcr.comment,
+                            'reply_comment_created_at', rcr.created_at,
+                            'reply_comment_rider_id', rcr.rider_id,
+                            'reply_rider_name', r2.rider_name,
+                            'reply_profile_img', r2.profile_img,
+                            'reply_commentCheck', 
+                            (SELECT rcl.status FROM reply_comments_likes AS rcl WHERE rcl.comment_id = rcr.id AND rcl.rider_id = rcr.rider_id)
+                        )
+                    ), 
+                    JSON_ARRAY()
+                ) AS replies
             FROM 
                 board_comment AS bc
             LEFT JOIN 
                 riders AS r ON r.rider_id = bc.rider_id
             LEFT JOIN 
                 board_comment_reply AS rcr ON rcr.comment_id = bc.comment_id
+            LEFT JOIN 
+                riders AS r2 ON r2.rider_id = rcr.rider_id
             WHERE 
-                bc.board_id = ? 
-            ORDER BY bc.id DESC, rcr.id DESC
-        `, [rider_id, board_id]);
-    
+                bc.board_id = ? AND bc.rider_id = ?
+            GROUP BY 
+                bc.comment_id
+            ORDER BY 
+                bc.comment_id DESC;
+        `, [rider_id, board_id, rider_id]);
+        
         const [polls] = await db.execute(`
             SELECT 
                 bp.poll_id, bp.option_one, bp.option_two, bp.option_three, bp.option_four, bp.expiry_date, r.rider_name, r.profile_img, bpv.id AS vote_id, 
