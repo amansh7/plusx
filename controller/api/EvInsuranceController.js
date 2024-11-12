@@ -1,11 +1,9 @@
 import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
-import path from 'path';
-import fs from 'fs';
 import moment from "moment";
 import generateUniqueId from 'generate-unique-id';
-import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, deleteFile, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
 
 export const addInsurance = asyncHandler(async (req, resp) => {
@@ -39,7 +37,7 @@ export const addInsurance = asyncHandler(async (req, resp) => {
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });   
         if (insurance_expired === 'Yes' && !type_of_insurance) resp.json({ status: 0, code: 422, message: 'Type of insurance is required'});
         if (insurance_expired === 'Yes' && !insurance_expiry) resp.json({ status: 0, code: 422, message: 'Insurance expiry is required'});
-        if (bank_loan === 'Yes' && !bank_name) resp.json({ status: 0, code: 422, message: 'Bank name is required'});
+        if (bank_loan === 'Yes' && !bank_name) return resp.json({ status: 0, code: 422, message: 'Bank name is required'});
         
         let fileNames = {vehicle_registration_img: '',driving_licence: '',car_images: '',car_type_image: '',scretch_image: '',emirates_id: ''};
         if (insurance_expired === 'Yes') {
@@ -49,16 +47,13 @@ export const addInsurance = asyncHandler(async (req, resp) => {
         }else{
             fileFields.forEach(field => {
                 uploadedFiles[field]?.forEach(file => {
-                    const filePath = path.join('uploads', 'insurance-images', file.filename);
-                    fs.unlink(filePath, (err) => {
-                        if (err) console.error(`Error deleting file ${filePath}:`, err);
-                    });
+                    deleteFile('insurance-images', file.filename);
                 });
             });
         }
         
         const insuranceId = 'EVI' + generateUniqueId({length:12});
-        const formattedInsuranceExpiry = insurance_expiry ? moment(insurance_expiry).format('YYYY-MM-DD') : null;
+        const fInsuranceExpiry = insurance_expiry ? moment(insurance_expiry, 'YYYY-MM-DD').format('YYYY-MM-DD') : '';
     
         const insert = await insertRecord('ev_insurance', [
             'insurance_id', 'rider_id', 'owner_name', 'date_of_birth', 'country', 'country_code', 'mobile_no', 'email', 'vehicle', 'registration_place', 'car_brand', 
@@ -66,7 +61,7 @@ export const addInsurance = asyncHandler(async (req, resp) => {
             'car_type_image', 'scretch_image', 'emirates_id', 
         ], [
             insuranceId, rider_id, owner_name, date_of_birth, country, country_code, mobile_no, email, vehicle, registration_place, car_brand, bank_loan, 
-            bank_name, type_of_insurance, formattedInsuranceExpiry, insurance_expired, fileNames['vehicle_registration_img'], fileNames['driving_licence'], fileNames['car_images'], 
+            bank_name, type_of_insurance || '', fInsuranceExpiry, insurance_expired, fileNames['vehicle_registration_img'], fileNames['driving_licence'], fileNames['car_images'], 
             fileNames['car_type_image'], fileNames['scretch_image'], fileNames['emirates_id'], 
         ]);
     
@@ -88,22 +83,18 @@ export const addInsurance = asyncHandler(async (req, resp) => {
             status: 1,
             code: 200,
             error: false,
-            message: ["Thank you for sharing your details. We will revert shortly."],
+            message: ["Request Submitted! Our customer care team will be in touch with you soon"],
         });
 
     }catch(err){
-        // console.log('Error : ', err);
-        const error = JSON.parse(err.message);
-        if (error.code === 422){
-            return resp.status(422).json({status: 0, code: 422, message: error.message });
-        }
+        console.log(err);
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 });
 
 export const insuranceList = asyncHandler(async (req, resp) => {
-    const {rider_id, page_no, mobile_no, vehicle } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, mobile_no, vehicle } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     let whereField = ['rider_id'];
@@ -145,8 +136,8 @@ export const insuranceList = asyncHandler(async (req, resp) => {
 });
 
 export const insuranceDetails = asyncHandler(async (req, resp) => {
-    const {rider_id, insurance_id } = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], insurance_id: ["required"]});
+    const {rider_id, insurance_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], insurance_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const insurance = await queryDB(`
