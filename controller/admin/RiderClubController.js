@@ -37,9 +37,11 @@ export const clubData = async (req, resp) => {
 
     const result = {
         status: 1,
+        code: 200,
         location,
         ageGroup,
         clubCategory,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/club-images/`
     }
     if(club_id){
         result.club = club;
@@ -63,14 +65,14 @@ export const clubCreate = async (req, resp) => {
             club_name: ["required"],
             location: ["required"],
             description: ["required"],
-            club_url: ["required"],
+            // club_url: ["required"],
             category: ["required"],
             age_group: ["required"],
 
         });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const clubId = `CLB${generateUniqueId({length:12})}`;
+        const clubId = `CLB${generateUniqueId({length:6})}`;
 
         const insert = await insertRecord('clubs', [
             'club_id', 'club_name', 'location', 'no_of_members', 'description', 'url_link', 'cover_img', 'category', 'age_group', 'preference', 'status'
@@ -102,20 +104,21 @@ export const clubUpdate = async (req, resp) => {
     }
     const club_gallery = uploadedFiles['club_gallery']?.map(file => file.filename) || [];
         
-    const { club_id, club_name, location, description, club_url, category, age_group, no_of_members='', url_link='', preference='', status='' } = req.body;
+    const { club_id, club_name, location, description, club_url, category, age_group, no_of_members='', url_link='', preference='', status=1 } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         club_name: ["required"],
         location: ["required"],
         description: ["required"],
-        club_url: ["required"],
+        // club_url: ["required"],
         category: ["required"],
         age_group: ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const club = await queryDB(`SELECT cover_img FROM clubs WHERE club_id = ?`, [club_id]);
-    if(!shop) return resp.json({status:0, message: "Club Data can not edit, or invalid club Id"});
-    const galleryData = await queryDB(`SELECT image_name FROM club_gallery WHERE club_id = ?`, [club_id]);
+    if(!club) return resp.json({status:0, message: "Club Data can not edit, or invalid club Id"});
+    const [gallery] = await db.execute(`SELECT image_name FROM club_gallery WHERE club_id = ?`, [club_id]);
+    const galleryData = gallery.map(img => img.image_name);
 
     const updates = {
         club_name, 
@@ -126,17 +129,18 @@ export const clubUpdate = async (req, resp) => {
         category, 
         age_group, 
         preference,
-        status: status ? 1 : 0
+        status
     };
-    const update = await updateRecord('service_shops', updates, ['club_id'], [club_id]);
+    const update = await updateRecord('clubs', updates, ['club_id'], [club_id]);
     
     if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
 
     if(club_gallery.length > 0){
-        const values = club_gallery.map(filename => [clubId, filename]);
+        const values = club_gallery.map(filename => [club_id, filename]);
         const placeholders = values.map(() => '(?, ?)').join(', ');
         await db.execute(`INSERT INTO club_gallery (club_id, image_name) VALUES ${placeholders}`, values.flat());
     }
+    console.log(galleryData);
     
     if (galleryData) {
         for (const img of galleryData) {
@@ -159,13 +163,13 @@ export const clubUpdate = async (req, resp) => {
         });
     }
 
-    return resp.json({statsu:1, message: "Club updated successfully"});
+    return resp.json({status:1, code: 200, message: "Club updated successfully"});
 };
 
 export const clubDelete = async (req, resp) => {
     const {club_id} = req.body;
 
-    const club = await queryDB(`SELECT cover_image FROM clubs WHERE club_id = ?`, [club_id]);
+    const club = await queryDB(`SELECT cover_img FROM clubs WHERE club_id = ?`, [club_id]);
     if (!club) return resp.json({ status: 0, msg: "Club Data cannot be deleted, or invalid" });
 
     const galleryData = await queryDB(`SELECT image_name FROM club_gallery WHERE club_id = ?`, [club_id]);

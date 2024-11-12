@@ -118,7 +118,7 @@ const adminRoutes = [
     { method: 'post',   path: '/club-data',       handler: clubData },
     { method: 'post',   path: '/add-club',        handler: clubCreate },
     { method: 'post',   path: '/edit-club',       handler: clubUpdate },
-    { method: 'delete', path: '/club-delete',     handler: clubDelete },
+    { method: 'post', path: '/club-delete',     handler: clubDelete },
     { method: 'delete', path: '/club-delete-img', handler: clubDeleteImg },
 
     /* Electric Cars Leasing */
@@ -212,7 +212,7 @@ adminRoutes.forEach(({ method, path, handler }) => {
         middlewares.push(handleFileUpload('charging-station-images', ['cover_image', 'shop_gallery'], 5));
     }
     if (path === '/add-club' || path === '/edit-club') {
-        middlewares.push(handleFileUpload('club-images', ['cover_image', 'shop_gallery'], 5));
+        middlewares.push(handleFileUpload('club-images', ['cover_image', 'club_gallery'], 5));
     }
     if (path === '/ev-guide-add' || path === '/ev-guide-update') {
         middlewares.push(handleFileUpload('vehicle-image', ['cover_image', 'vehicle_gallery'], 5));
