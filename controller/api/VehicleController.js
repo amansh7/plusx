@@ -3,7 +3,7 @@ import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
-import { asyncHandler, mergeParam } from '../../utils.js';
+import { asyncHandler, deleteFile, mergeParam } from '../../utils.js';
 import emailQueue from "../../emailQueue.js";
 
 export const vehicleList = asyncHandler(async (req, resp) => {
@@ -155,10 +155,8 @@ export const sellVehicle = asyncHandler(async (req, resp) => {
 });
 
 export const allSellVehicleList = asyncHandler(async (req, resp) => {
-    const {rider_id, page_no, search_text, sort_col, sort_by } = mergeParam(req);
-        
+    const { rider_id, page_no, search_text, sort_col, sort_by } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const result = await getPaginatedData({
@@ -170,9 +168,9 @@ export const allSellVehicleList = asyncHandler(async (req, resp) => {
         sortOrder: sort_by === 'd' ? 'DESC' : 'ASC',
         page_no,
         limit: 10,
-        whereField: ['vs.status'],
-        whereValue: [1],
-        whereOperator: ['!=']
+        whereField: ['vs.status', 'rv.vehicle_id'],
+        whereValue: [1, 'NULL'],
+        whereOperator: ['!=', '!=']
     });
 
     return resp.json({
@@ -201,9 +199,9 @@ export const sellVehicleList = asyncHandler(async (req, resp) => {
         sortOrder: sort_by === 'd' ? 'DESC' : 'ASC',
         page_no,
         limit: 10,
-        whereField: ['status', 'vs.rider_id'],
-        whereValue: [1, rider_id],
-        whereOperator: ['!=', '='],
+        whereField: ['status', 'vs.rider_id', 'rv.vehicle_id'],
+        whereValue: [1, rider_id, 'NULL'],
+        whereOperator: ['!=', '=', '!='],
     });
 
     return resp.json({
@@ -316,20 +314,15 @@ export const deleteSellVehicle = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
 
     try{
-        const vechile = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE rider_id=?, vehicle_id=?`,[rider_id, sell_id]);
-        const [del] = await db.execute(`DELETE FROM vehicle_sell WHERE rider_id=?, vehicle_id=?`,[rider_id, sell_id]);
+        const vehicle = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE rider_id=? AND sell_id=?`,[rider_id, sell_id]);
+        let del;
 
-        const oldImages = [vechile.car_images, vechile.car_tyre_image, vechile.other_images];
-        for (const img of oldImages) {
-            if(img){
-                const path = path.join('uploads', 'vehicle-image', img);
-                fs.unlink(path, (err) => {
-                    if (err) {
-                        console.error(`Failed to delete vehicle old image: ${path}`, err);
-                    }
-                });
-            }
+        if(vehicle){
+            const allOldImages = [...vehicle.car_images.split('*'), ...vehicle.car_tyre_image.split('*'), ...vehicle.other_images.split('*')];
+            allOldImages?.filter(Boolean).forEach(img => deleteFile('vehicle-image', img));
         }
+
+        [del] = await db.execute(`DELETE FROM vehicle_sell WHERE rider_id=? AND sell_id=?`,[rider_id, sell_id]);
         
         return resp.json({
             message: del.affectedRows > 0 ? ['Your Car for Sale deleted successfully!'] : ['Failed to delete. Please try again.'],
@@ -338,7 +331,7 @@ export const deleteSellVehicle = asyncHandler(async (req, resp) => {
         });
 
     }catch(err){
-        console.error('Error deleting sell vehicle account:', err.message);
+        console.error('Error deleting sell vehicle account:', err);
         return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
     }
 
