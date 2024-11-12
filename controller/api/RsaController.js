@@ -152,7 +152,12 @@ export const rsaUpdateProfile = asyncHandler(async (req, resp) => {
         }
         
         await updateRecord('rsa', { profile_img: profile_image }, ['rsa_id'], [rsa_id]);
-        return resp.json({status: 1, code: 200, message: ["RSA profile updated successfully"]});
+        return resp.json({
+            status: 1, 
+            code: 200, 
+            message: ["RSA profile updated successfully"],
+            image_url: `${req.protocol}://${req.get('host')}/uploads/rsa_images/${profile_image}`
+        });
         // return resp.json({ img : profile_image });
 
     }catch(err){
