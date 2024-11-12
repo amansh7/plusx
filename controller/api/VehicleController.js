@@ -3,7 +3,7 @@ import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
-import { asyncHandler, mergeParam} from '../../utils.js';
+import { asyncHandler, mergeParam } from '../../utils.js';
 import emailQueue from "../../emailQueue.js";
 
 export const vehicleList = asyncHandler(async (req, resp) => {
@@ -31,7 +31,7 @@ export const vehicleList = asyncHandler(async (req, resp) => {
         data: result.data,
         total_page: result.totalPage,
         total: result.total,
-        base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`
+        base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
     });
 });
 
@@ -51,7 +51,7 @@ export const vehicleDetail = asyncHandler(async (req, resp) => {
         message: ["Charging Station Details fetched successfully!"],
         data: vehicleData,
         gallery_data: imgName,
-        base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`,
     });
 
 });
@@ -188,10 +188,8 @@ export const allSellVehicleList = asyncHandler(async (req, resp) => {
 });
 
 export const sellVehicleList = asyncHandler(async (req, resp) => {
-    const {rider_id, page_no, search_text, sort_col, sort_by } = mergeParam(req);
-        
+    const {rider_id, page_no, search_text, sort_col, sort_by } = mergeParam(req);  
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const result = await getPaginatedData({
@@ -221,10 +219,8 @@ export const sellVehicleList = asyncHandler(async (req, resp) => {
 });
 
 export const sellVehicleDetail = asyncHandler(async (req, resp) => {
-    const { rider_id, sell_id } = mergeParam(req);
-        
+    const { rider_id, sell_id } = mergeParam(req);    
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], sell_id: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const data = await queryDB(`
@@ -251,7 +247,7 @@ export const sellVehicleDetail = asyncHandler(async (req, resp) => {
         code: 200,
         message: ["Charging Station Details fetched successfully!"],
         sale_data: data,
-        base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`,
     });
 
 });
@@ -263,7 +259,7 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
         const car_tyre_image = uploadedFiles['car_tyre_image']?.map(file => file.filename).join('*') || '';
         const other_images = uploadedFiles['other_images']?.map(file => file.filename).join('*') || '';
         
-        const { sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
+        const { sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type='', seat_capacity, engine_capacity, 
             warrenty, description, horse_power
         } = req.body;
             
@@ -277,7 +273,6 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
             interior_color: ["required"],
             doors: ["required"],
             body_type: ["required"],
-            owner_type: ["required"],
             seat_capacity: ["required"],
             engine_capacity: ["required"],
             warrenty: ["required"],
@@ -316,8 +311,8 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
 });
 
 export const deleteSellVehicle = asyncHandler(async (req, resp) => {
-    const {rider_id, sell_id} = req.body;
-    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], sell_id: ["required"]});
+    const {rider_id, sell_id} = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], sell_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
 
     try{

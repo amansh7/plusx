@@ -3,6 +3,7 @@ import axios from "axios";
 import multer from 'multer';
 import path from 'path';
 import puppeteer from 'puppeteer';
+// import puppeteer from 'puppeteer-core';
 import PDFKit from 'pdfkit';
 import htmlPdf from 'html-pdf-node';
 import ejs from 'ejs';
@@ -351,7 +352,7 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
                 'Content-Type': 'application/json',
             },
         });
-        console.log('Notification sent successfully:', message);
+        // console.log('Notification sent successfully:', message);
     } catch (error) {
         console.error('Error sending notification:', error.response ? error.response.data : error.message);
     }
@@ -401,7 +402,20 @@ export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req
   try{
     const html = await ejs.renderFile(templatePath, { ...pdfTemplateContext, imgUrl });
   
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ 
+      // headless: true,
+      // executablePath: '/usr/bin/google-chrome-stable',  // Use Chromium if needed
+      // args: [
+      //   '--no-sandbox',
+      //   '--disable-setuid-sandbox',
+      //   '--disable-gpu',
+      //   '--disable-dev-shm-usage',  // This is essential if you're running on WSL or Docker
+      //   '--remote-debugging-port=9222',
+      //   '--single-process',          // Keep single-process for stability
+      //   '--headless',                // Make sure headless mode is on
+      //   '--disable-software-rasterizer', // Avoid software rendering issues
+      // ],
+    });
     const page = await browser.newPage();
   
     await page.setContent(html, { waitUntil: 'networkidle0' });
