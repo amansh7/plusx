@@ -1,9 +1,9 @@
 # Node.js artifact files
 node_modules/
 dist/
-/public/firebase-files/
 uploads/
 build/
+/public/firebase-files/
 /public/charger-installation-invoice
 /public/ev-pre-sale-invoice
 /public/pick-drop-invoice
