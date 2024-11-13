@@ -245,22 +245,16 @@ export const sellVehicleDetail = asyncHandler(async (req, resp) => {
         code: 200,
         message: ["Charging Station Details fetched successfully!"],
         sale_data: data,
-        base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`,
+        image_path: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`,
     });
 
 });
 
 export const updateSellVehicle = asyncHandler(async (req, resp) => {
-    try{
-        const uploadedFiles = req.files;
-        const car_images = uploadedFiles['car_images']?.map(file => file.filename).join('*') || '';
-        const car_tyre_image = uploadedFiles['car_tyre_image']?.map(file => file.filename).join('*') || '';
-        const other_images = uploadedFiles['other_images']?.map(file => file.filename).join('*') || '';
-        
-        const { sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type='', seat_capacity, engine_capacity, 
-            warrenty, description, horse_power
-        } = req.body;
-            
+    try{   
+        const { 
+            sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type='', seat_capacity, engine_capacity, warrenty, description, horse_power 
+        } = req.body; 
         const { isValid, errors } = validateFields(req.body, {
             sell_id: ["required"],
             rider_id: ["required"],
@@ -277,34 +271,34 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
             description: ["required"],
             horse_power: ["required"],
         });
-        
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    
-        const data = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
-        const oldImages = [data.car_images,data.car_tyre_image,data.other_images];
-        for (const img of oldImages) {
-            if(img){
-                const path = path.join('uploads', 'vehicle-image', img);
-                fs.unlink(path, (err) => {
-                    if (err) {
-                        console.error(`Failed to delete vehicle old image: ${path}`, err);
-                    }
-                });
-            }
+        if(!req.files['car_images']) return resp.json({ status:0, code: 422, message: "car_images is required"});
+        if(!req.files['car_tyre_image']) return resp.json({ status:0, code: 422, message: "car_tyre_image is required"});
+        
+        const vehicle = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
+        const car_images = req.files['car_images']?.map(file => file.filename).join('*') || vehicle.car_images;
+        const car_tyre_image = req.files['car_tyre_image']?.map(file => file.filename).join('*') || vehicle.car_tyre_image;
+        const other_images = req.files['other_images']?.map(file => file.filename).join('*') || vehicle.other_images;
+        
+        if(vehicle){
+            const allOldImages = [...vehicle.car_images.split('*'), ...vehicle.car_tyre_image.split('*'), ...vehicle.other_images.split('*')];
+            allOldImages?.filter(Boolean).forEach(img => deleteFile('vehicle-image', img));
         }
-        const updates = { vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, 
-            warrenty, description, horse_power, car_images, car_tyre_image, other_images 
+        
+        const updates = { 
+            vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, warrenty, description, horse_power, car_images, car_tyre_image, other_images 
         };
-        const update = updateRecord('vehicle_sell', updates, ['sell_id', 'rider_id'], [sell_id, rider_id]);
+        
+        const update = await updateRecord('vehicle_sell', updates, ['sell_id', 'rider_id'], [sell_id, rider_id]);
     
         return resp.json({
             status: update.affectedRows > 0 ? 1 : 0,
             code: 200,
             error: update.affectedRows > 0 ? false: true,
-            message: update.affectedRows > 0 ? ["Your Car for  Sale  Successful Updated!"] : ["Oops! Something went wrong. Please try again."]
+            message: update.affectedRows > 0 ? ["Your Car for  Sale  Successful Updated!"] : ["Failed to update. Please try again."]
         });
     }catch(err){
-
+        return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
     }
 });
 

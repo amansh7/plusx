@@ -1,9 +1,9 @@
-import db from "../../config/db.js";
+import db, { commitTransaction, rollbackTransaction, startTransaction } from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import moment from "moment";
 import multer from 'multer';
-import { asyncHandler, mergeParam } from '../../utils.js';
+import { asyncHandler, createNotification, formatDateTimeInQuery, mergeParam, pushNotification } from '../../utils.js';
 import emailQueue from "../../emailQueue.js";
 
 const storage = multer.diskStorage({
@@ -23,17 +23,15 @@ export const upload = multer({ storage: storage });
 export const addRoadAssistance = asyncHandler(async (req, resp) => {
     const {
         rider_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, pickup_latitude, pickup_longitude, drop_latitude, drop_longitude, order_status=''
-    } = mergeParam;
-
-    const { isValid, errors } = validateFields(mergeParam, {
+    } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], name: ["required"], country_code: ["required"], contact_no: ["required"], types_of_issue: ["required"], pickup_address: ["required"], 
         drop_address: ["required"], price: ["required"], pickup_latitude: ["required"], pickup_longitude: ["required"], drop_latitude: ["required"], drop_longitude: ["required"]
     });
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
     const conn = await startTransaction();
     try{
-
         const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email, (SELECT MAX(id) FROM road_assistance) AS last_index FROM riders WHERE rider_id = ? LIMIT 1`, [rider_id]);
 
         const start = (!rider.last_index) ? 0 : rider.last_index; 
@@ -115,7 +113,7 @@ export const roadAssistanceList = asyncHandler(async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'road_assistance',
-        columns: 'request_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, order_status, created_at',
+        columns: `request_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, order_status, ${formatDateTimeInQuery(['created_at'])}`,
         sortColumn: 'id',
         sortOrder,
         page_no,
@@ -140,12 +138,15 @@ export const roadAssistanceDetail = asyncHandler(async (req, resp) => {
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const [roadAssistance] = await db.execute(`SELECT request_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, order_status, created_at
+    const [roadAssistance] = await db.execute(`SELECT request_id, name, country_code, contact_no, types_of_issue, pickup_address, drop_address, price, order_status, 
+            ${formatDateTimeInQuery(['created_at'])}
         FROM road_assistance WHERE rider_id = ? AND request_id = ? LIMIT 1
     `, [rider_id, order_id]);
 
     
-    const [history] = await db.execute(`SELECT order_status, cancel_by, cancel_reason as reason, rsa_id, created_at, (select rsa.rsa_name from rsa where rsa.rsa_id = order_history.rsa_id) as rsa_name
+    const [history] = await db.execute(`SELECT order_status, cancel_by, cancel_reason as reason, rsa_id, 
+            ${formatDateTimeInQuery(['created_at'])}, 
+            (select rsa.rsa_name from rsa where rsa.rsa_id = order_history.rsa_id) as rsa_name
         FROM order_history 
         WHERE order_id = ?
         ORDER BY id DESC
@@ -161,7 +162,7 @@ export const roadAssistanceDetail = asyncHandler(async (req, resp) => {
 
     return resp.json({
         message: ["Road Assistance Details fetched successfully!"],
-        order_data: roadAssistance,
+        order_data: roadAssistance[0],
         order_history: history,
         status: 1,
         code: 200,
@@ -351,7 +352,7 @@ const acceptOrder = async (req, resp) => {
             [order_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await db.execute('UPDATE rsa SET running_order = 1 WHERE rsa_id = ?', [rsa_id]);
         await db.execute('UPDATE order_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [order_id, rsa_id]);
@@ -393,7 +394,7 @@ const arrivedOrder = async (req, resp) => {
             [order_id, checkOrder.rider_id, rsa_id, remarks, lat, long, image]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('road_assistance', {order_status: 'AR', rsa_id}, 'request_id', order_id);
 
@@ -439,7 +440,7 @@ const workComplete = async (req, resp) => {
             [order_id, checkOrder.rider_id, remarks, rsa_id, '']
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('road_assistance', {order_status: 'WC', rsa_id}, 'request_id', order_id);
 
@@ -484,7 +485,7 @@ const esOrder = async (req, resp) => {
             [order_id, checkOrder.rider_id, rsa_ide]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('road_assistance', {order_status: 'ES', rsa_id}, 'request_id', order_id);
         await db.execute('DELETE FROM order_assign WHERE order_id = ? AND rsa_id = ?', [order_id, rsa_id]);
