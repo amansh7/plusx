@@ -133,7 +133,7 @@ export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
     const insert = await insertRecord('ev_pre_sale_testing_slot', [
         'slot_id', 'slot_name', 'start_time', 'end_time', 'booking_limit', 'status', 
     ], [
-        `PST${generateUniqueId({ length:12 })}`, slot_name, start, end, booking_limit, 1
+        `PST${generateUniqueId({ length:6 })}`, slot_name, start, end, booking_limit, 1
     ]);
 
     return resp.json({

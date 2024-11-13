@@ -38,7 +38,12 @@ export const login = async(req, resp) => {
         sameSite: 'None',
         maxAge: 3600000 
     });
-    resp.status(200).json({message:"Login successfull",code: 200, userDetails: users[0], Token: process.env.CUSTOM_TOKEN})
+    resp.status(200).json({
+      message:"Login successfull",
+      code: 200, 
+      userDetails: users[0], 
+      base_url: `${req.protocol}://${req.get('host')}/uploads/profile-image/`,
+      Token: process.env.CUSTOM_TOKEN})
 };
 
 export const logout = async (req, resp) => {
