@@ -204,7 +204,7 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
         middlewares.push(handleFileUpload('rider_profile', ['profile_image'], 1));
     }
     if(path === '/sell-vehicle' || path === '/edit-sell-vehicle'){
-        middlewares.push(handleFileUpload('vehicle-image', ['car_images', 'car_tyre_image', 'other_images'], ['car_images', 'car_tyre_image'], 5));
+        middlewares.push(handleFileUpload('vehicle-image', ['car_images', 'car_tyre_image', 'other_images'], 5));
     }
     if(path === '/add-discussion-board' || path === '/discussion-board-edit'){
         middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
