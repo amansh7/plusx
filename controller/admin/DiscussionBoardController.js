@@ -69,7 +69,13 @@ export const discussionBoardDetail = async (req, resp) => {
         LIMIT 1
     `, [board_id]);
 
-    return resp.status(200).json({status: 1, board, comments, message: "Discussion Board Detail fetch successfully!"});
+    return resp.status(200).json({
+        status: 1, 
+        code: 200, 
+        board, 
+        comments, 
+        base_url: `${req.protocol}://${req.get('host')}/uploads/discussion-board-images/`,
+        message: "Discussion Board Detail fetch successfully!"});
 };
 
 export const discussionBoardDelete = async (req, resp) => {
@@ -92,7 +98,7 @@ export const discussionBoardDelete = async (req, resp) => {
         
         if(board.image) deleteFile('discussion-board-images', board.image);
         
-        return resp.json({status: 1, message: "Discussion Board deleted successfully!"});
+        return resp.json({status: 1, code:200, message: "Discussion Board deleted successfully!"});
         
     }catch(err){
         await rollbackTransaction(conn);

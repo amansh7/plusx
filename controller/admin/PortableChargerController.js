@@ -819,13 +819,34 @@ export const subscriptionDetail = async (req, resp) => {
     const { subscription_id } = req.body;
     if (!subscription_id) return resp.json({ status: 0, code: 422, message: "Subscription Id is required" });
     
-    const subscription = await queryDB(`SELECT 
-        subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
-        (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
-        FROM portable_charger_subscriptions WHERE subscription_id = ?
-    `, [subscription_id]);
+    // const subscription = await queryDB(`SELECT 
+    //     subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date, created_at,
+    //     (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
+    //     FROM portable_charger_subscriptions WHERE subscription_id = ?
+    // `, [subscription_id]);
 
-    return resp.status(200).json({status: 1, data: subscription, message: "Subscription Detail fetch successfully!"});
+    const subscription = await queryDB(`
+        SELECT 
+          pcs.subscription_id, 
+          pcs.amount, 
+          pcs.expiry_date, 
+          pcs.booking_limit, 
+          pcs.total_booking, 
+          pcs.payment_date, 
+          pcs.created_at,
+          r.rider_name,
+          r.country_code,
+          r.rider_mobile
+        FROM 
+          portable_charger_subscriptions pcs
+        JOIN 
+          riders r ON r.rider_id = pcs.rider_id
+        WHERE 
+          pcs.subscription_id = ?
+      `, [subscription_id]);
+      
+
+    return resp.status(200).json({status: 1, code: 200, data: subscription, message: "Subscription Detail fetch successfully!"});
 };
 
 

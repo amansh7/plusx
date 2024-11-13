@@ -154,23 +154,23 @@ const adminRoutes = [
     { method: 'post',   path: '/coupon-data',     handler: couponDetail },
     { method: 'post',   path: '/add-coupan',      handler: couponAdd },
     { method: 'post',   path: '/edit-coupan',     handler: couponEdit },
-    { method: 'delete', path: '/delete-coupan',   handler: couponDelete },
+    { method: 'post', path: '/delete-coupan',   handler: couponDelete },
 
     /* Offer */
     { method: 'post',   path: '/offer-list',   handler: offerList },
     { method: 'post',   path: '/offer-detail', handler: offerDetail },
     { method: 'post',   path: '/add-offer',    handler: offerAdd },
     { method: 'post',   path: '/edit-offer',   handler: offerEdit },
-    { method: 'delete', path: '/delete-offer', handler: offerDelete },
+    { method: 'post', path: '/delete-offer', handler: offerDelete },
 
     /* Subscription */
-    { method: 'post',  path: '/subscription-lis',    handler: subscriptionList },
+    { method: 'post',  path: '/subscription-list',    handler: subscriptionList },
     { method: 'post',  path: '/subscription-detail', handler: subscriptionDetail },
     
     /* Discussion Board */
     { method: 'post',   path: '/discussion-board-list',   handler: discussionBoardList },
     { method: 'post',   path: '/discussion-board-detail', handler: discussionBoardDetail },
-    { method: 'delete', path: '/discussion-board-delete', handler: discussionBoardDelete },
+    { method: 'post',   path: '/discussion-board-delete', handler: discussionBoardDelete },
 
     /* Ev Guide Routes */
     { method: 'post',  path: '/ev-guide-list',    handler: guideList },
@@ -180,8 +180,8 @@ const adminRoutes = [
     { method: 'post',  path: '/ev-guide-delete',  handler: deleteGuide },
 
     /* EV Buy & Sell */
-    { method: 'post',  path: '/subscription-lis',    handler: sellVehicleList },
-    { method: 'post',  path: '/subscription-detail', handler: sellVehicleDetail },
+    { method: 'post',  path: '/buy-sell-list',    handler: sellVehicleList },
+    { method: 'post',  path: '/buy-sell-detail', handler: sellVehicleDetail },
 
     /* EV Insurance */
     { method: 'post',  path: '/ev-insurance-list',                 handler: evInsuranceList },

@@ -47,7 +47,7 @@ export const offerAdd = async (req, resp) => {
     const insert = await insertRecord('offer', [
         'offer_id', 'offer_name', 'offer_exp_date', 'offer_url', 'offer_image', 'status', 
     ], [
-        `OFR${generateUniqueId({ length:12 })}`, offer_name, moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD"), offer_url ? offer_url : '', offerImg, 1, 
+        `OFR${generateUniqueId({ length:6 })}`, offer_name, moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD"), offer_url ? offer_url : '', offerImg, 1, 
     ]);
 
     return resp.json({

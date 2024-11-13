@@ -15,9 +15,9 @@ export const sellVehicleList = async (req, resp) => {
         sortOrder: 'DESC',
         page_no,
         limit: 10,
-        whereField: ['status', 'vs.rider_id'],
-        whereValue: [1, rider_id],
-        whereOperator: ['!=', '='],
+        // whereField: ['status', 'vs.rider_id'],
+        // whereValue: [1, rider_id],
+        // whereOperator: ['!=', '='],
     });
 
     return resp.json({
