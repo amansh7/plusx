@@ -2,9 +2,9 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { formatOpenAndCloseTimings } from '../../utils.js';
+import { formatOpenAndCloseTimings, asyncHandler } from '../../utils.js';
 
-export const storeList = async (req, resp) => {
+export const storeList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'service_shops',
@@ -27,9 +27,9 @@ export const storeList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });
-};
+});
 
-export const storeData = async (req, resp) => {
+export const storeData = asyncHandler(async (req, resp) => {
     const { shop_id } = req.body;
     const shop = queryDB(`SELECT * FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]); 
     const days = [ 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' ];
@@ -51,9 +51,9 @@ export const storeData = async (req, resp) => {
     }
 
     return resp.status(200).json(result);
-};
+});
 
-export const storeAdd = async (req, resp) => {
+export const storeAdd = asyncHandler(async (req, resp) => {
     try{    
         const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
         const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
@@ -102,9 +102,9 @@ export const storeAdd = async (req, resp) => {
     } catch(err) {
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-};
+});
 
-export const storeView = async (req, resp) => {
+export const storeView = asyncHandler(async (req, resp) => {
     const { shop_id } = req.body;
     const store = await queryDB(`SELECT * FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
     store.schedule = getOpenAndCloseTimings(shop);
@@ -125,9 +125,9 @@ export const storeView = async (req, resp) => {
         galleryData,
         address,
     });
-};
+});
 
-export const storeUpdate = async (req, resp) => {
+export const storeUpdate = asyncHandler(async (req, resp) => {
     try{
         const { shop_name, contact_no , address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
         const { isValid, errors } = validateFields(req.body, {
@@ -208,9 +208,9 @@ export const storeUpdate = async (req, resp) => {
     }catch(err){
 
     }
-};
+});
 
-export const storeDelete = async (req, resp) => {
+export const storeDelete = asyncHandler(async (req, resp) => {
     const {shop_id} = req.body;
 
     const shop = await queryDB(`SELECT cover_image FROM shops WHERE shop_id = ?`, [shop_id]);
@@ -230,10 +230,10 @@ export const storeDelete = async (req, resp) => {
     await queryDB(`DELETE FROM shops WHERE shop_id = ?`, [shop_id]);
 
     return resp.json({ status: 1, msg: "Shop deleted successfully!" });
-};
+});
 
 /* Shop Service */
-export const serviceList = async (req, resp) => {
+export const serviceList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'store_services',
@@ -254,8 +254,8 @@ export const serviceList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });
-};
-export const serviceCreate = async (req, resp) => {
+});
+export const serviceCreate = asyncHandler(async (req, resp) => {
     const { service_name } = req.body;
     const { isValid, errors } = validateFields(req.body, { service_name: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -269,8 +269,8 @@ export const serviceCreate = async (req, resp) => {
         message: insert.affectedRows > 0 ? "Store Service Added successfully." : "Failed to insert, Please Try Again." ,
     });
 
-};
-export const serviceUpdate = async (req, resp) => {
+});
+export const serviceUpdate = asyncHandler(async (req, resp) => {
     const { service_name, service_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { service_name: ["required"], service_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -283,8 +283,8 @@ export const serviceUpdate = async (req, resp) => {
         code: 200 ,
         message: update.affectedRows > 0 ? "Store Service Updated successfully." : "Failed to update, Please Try Again." ,
     });
-};
-export const serviceDelete = async (req, resp) => {
+});
+export const serviceDelete = asyncHandler(async (req, resp) => {
     const { service_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { service_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -296,10 +296,10 @@ export const serviceDelete = async (req, resp) => {
         code: 200 ,
         message: del.affectedRows > 0 ? "Store Service Deleted successfully." : "Failed to delete, Please Try Again." ,
     });
-};
+});
 
 /* Shop Brand */
-export const brandList = async (req, resp) => {
+export const brandList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'store_brands',
@@ -320,8 +320,8 @@ export const brandList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });
-};
-export const brandCreate = async (req, resp) => {
+});
+export const brandCreate = asyncHandler(async (req, resp) => {
     const { brand_name } = req.body;
     const { isValid, errors } = validateFields(req.body, { brand_name: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -335,8 +335,8 @@ export const brandCreate = async (req, resp) => {
         message: insert.affectedRows > 0 ? "Store Brand Added successfully." : "Failed to insert, Please Try Again." ,
     });
 
-};
-export const brandUpdate = async (req, resp) => {
+});
+export const brandUpdate = asyncHandler(async (req, resp) => {
     const { brand_name, brand_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { brand_name: ["required"], brand_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -349,8 +349,8 @@ export const brandUpdate = async (req, resp) => {
         code: 200 ,
         message: update.affectedRows > 0 ? "Store Brand Updated successfully." : "Failed to update, Please Try Again." ,
     });
-};
-export const brandDelete = async (req, resp) => {
+});
+export const brandDelete = asyncHandler(async (req, resp) => {
     const { brand_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { brand_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -362,4 +362,4 @@ export const brandDelete = async (req, resp) => {
         code: 200 ,
         message: del.affectedRows > 0 ? "Store Brand Deleted successfully." : "Failed to delete, Please Try Again." ,
     });
-};
+});

@@ -2,8 +2,10 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import { asyncHandler } from '../../utils.js';
 
-export const interestList = async (req, resp) => {
+
+export const interestList = asyncHandler(async (req, resp) => {
     const {page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'interested_people',
@@ -24,7 +26,7 @@ export const interestList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
 
 

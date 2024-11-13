@@ -2,7 +2,7 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from '..
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat} from '../../utils.js';
+import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, asyncHandler} from '../../utils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
 import generateUniqueId from 'generate-unique-id';
@@ -73,7 +73,7 @@ export const guideList = async (req, resp) => {
 };
 
 
-export const addGuide = async (req, resp) => {
+export const addGuide = asyncHandler(async (req, resp) => {
     const{ vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         vehicle_type : ["required"],
@@ -115,7 +115,7 @@ export const addGuide = async (req, resp) => {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
     }
-};
+});
 
 export const guideDetail = async (req, resp) => {
     try {
@@ -157,7 +157,7 @@ export const guideDetail = async (req, resp) => {
         });
     }
 };
-export const editGuide = async (req, resp) => {
+export const editGuide = asyncHandler(async (req, resp) => {
     const{ vehicle_id, vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature, status } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         vehicle_id : ["required"],
@@ -200,7 +200,7 @@ export const editGuide = async (req, resp) => {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
     }
-};
+});
 
 export const deleteGuide = async (req, resp) => {
     try {

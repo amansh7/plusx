@@ -1,12 +1,12 @@
 import db from "../../config/db.js";
 import generateUniqueId from 'generate-unique-id';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-import { formatDateInQuery, formatDateTimeInQuery } from '../../utils.js';
+import { formatDateInQuery, formatDateTimeInQuery, asyncHandler } from '../../utils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
 
 // EV Insurance
-export const evInsuranceList = async (req, resp) => {
+export const evInsuranceList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'ev_insurance',
@@ -27,9 +27,9 @@ export const evInsuranceList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });   
-};
+});
 
-export const evInsuranceDetail = async (req, resp) => {
+export const evInsuranceDetail = asyncHandler(async (req, resp) => {
     const { insurance_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {insurance_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -43,10 +43,10 @@ export const evInsuranceDetail = async (req, resp) => {
         data: data,
         base_url: `${req.protocol}://${req.get('host')}/uploads/insurance-images/`,
     });
-};
+});
 
 // EV Pre-Sale Testing Booking
-export const evPreSaleList = async (req, resp) => {
+export const evPreSaleList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
 
     const result = await getPaginatedData({
@@ -70,9 +70,9 @@ export const evPreSaleList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });
-};
+});
 
-export const evPreSaleDetail = async (req, resp) => {
+export const evPreSaleDetail = asyncHandler(async (req, resp) => {
     const { booking_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {booking_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -95,11 +95,11 @@ export const evPreSaleDetail = async (req, resp) => {
         data: data,
         base_url: `${req.protocol}://${req.get('host')}/uploads/insurance-images/`,
     });
-};
+});
 
 
 // Time Slot 
-export const evPreSaleTimeSlot = async (req, resp) => {
+export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
     const { page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'ev_pre_sale_testing_slot',
@@ -118,9 +118,9 @@ export const evPreSaleTimeSlot = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     }); 
-};
+});
 
-export const evPreSaleTimeSlotAdd = async (req, resp) => {
+export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
     const { slot_name, start_time, end_time, booking_limit }  = req.body;
     const { isValid, errors } = validateFields(req.body, { slot_name: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -141,9 +141,9 @@ export const evPreSaleTimeSlotAdd = async (req, resp) => {
         status: insert.affectedRows > 0 ? 200 : 422,
         message: insert.affectedRows > 0 ? "Time Slot Added Successfully" : "Failed to add time slot.",
     });
-};
+});
 
-export const evPreSaleTimeSlotEdit = async (req, resp) => {
+export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
     const { slot_id, slot_name, start_time, end_time, booking_limit, status='' }  = req.body;
     const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_name: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -161,9 +161,9 @@ export const evPreSaleTimeSlotEdit = async (req, resp) => {
         status: update.affectedRows > 0 ? 200 : 422,
         message: update.affectedRows > 0 ? "Time Slot Updated Successfully" : "Failed to update time slot.",
     }); 
-};
+});
 
-export const evPreSaleTimeSlotDelete = async (req, resp) => {
+export const evPreSaleTimeSlotDelete = asyncHandler(async (req, resp) => {
     const { slot_id }  = req.body;
     if (!slot_id) return resp.json({ status: 0, code: 422, message: "Slot Id is required." });
 
@@ -174,5 +174,5 @@ export const evPreSaleTimeSlotDelete = async (req, resp) => {
         status: del.affectedRows > 0 ? 200 : 422,
         message: del.affectedRows > 0 ? "Time Slot Deleted Successfully" : "Failed to delete time slot.",
     }); 
-};
+});
 

@@ -2,7 +2,7 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from '..
 import dotenv from 'dotenv';
 import moment from 'moment';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
+import { mergeParam, asyncHandler, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
@@ -792,7 +792,7 @@ export const assignBooking = async (req, resp) => {
 
 
 /* Subscription */
-export const subscriptionList = async (req, resp) => {
+export const subscriptionList = asyncHandler(async (req, resp) => {
     const { page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'portable_charger_subscriptions',
@@ -813,9 +813,9 @@ export const subscriptionList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const subscriptionDetail = async (req, resp) => {
+export const subscriptionDetail = asyncHandler(async (req, resp) => {
     const { subscription_id } = req.body;
     if (!subscription_id) return resp.json({ status: 0, code: 422, message: "Subscription Id is required" });
     
@@ -847,7 +847,7 @@ export const subscriptionDetail = async (req, resp) => {
       
 
     return resp.status(200).json({status: 1, code: 200, data: subscription, message: "Subscription Detail fetch successfully!"});
-};
+});
 
 
 

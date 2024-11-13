@@ -1,10 +1,10 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { createNotification, pushNotification } from '../../utils.js';
+import { createNotification, pushNotification,asyncHandler } from '../../utils.js';
 
 /* RA Booking */
-export const bookingList = async (req, resp) => {
+export const bookingList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'road_assistance',
@@ -25,9 +25,9 @@ export const bookingList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const bookingData = async (req, resp) => {
+export const bookingData = asyncHandler(async (req, resp) => {
     const { request_id } = req.body;
     const booking = await queryDB(`SELECT * FROM road_assistance WHERE request_id = ?`, [request_id]);
 
@@ -46,9 +46,9 @@ export const bookingData = async (req, resp) => {
         message : ["Booking details fetched successfully!"],
         result
     });
-};
+});
 
-export const evRoadAssistanceConfirmBooking = async (req, resp) => {
+export const evRoadAssistanceConfirmBooking = asyncHandler(async (req, resp) => {
     const { request_id, latitude, longitude } = req.body;
 
     const order = await queryDB(`
@@ -87,9 +87,9 @@ export const evRoadAssistanceConfirmBooking = async (req, resp) => {
         await db.execute(`UPDATE road_assistance SET order_status = 'CNF' WHERE request_id = ?`, [request_id]);
         return resp.json({status: 1, message: "You have successfully Confirm roadside assistance request."});
     }
-};
+});
 
-export const evRoadAssistanceCancelBooking = async (req, resp) => {
+export const evRoadAssistanceCancelBooking = asyncHandler(async (req, resp) => {
     const { order_id, reason } = req.body;
     const { isValid, errors } = validateFields(req.body, { order_id : ["required"], reason : ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -114,11 +114,11 @@ export const evRoadAssistanceCancelBooking = async (req, resp) => {
     pushNotification(rsa.fcm_token, title, message, 'RDRFCM', href);
 
     return resp.json({status: 1, message: "Booking has been cancelled successfully!."});
-};
+});
 
 
 /* RA Invoie */
-export const invoiceList = async (req, resp) => {
+export const invoiceList = asyncHandler(async (req, resp) => {
     const { page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'road_assistance_invoice',
@@ -142,9 +142,9 @@ export const invoiceList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const invoiceData = async (req, resp) => {
+export const invoiceData = asyncHandler(async (req, resp) => {
     const { invoice_id } = req.body;
     const invoice = await queryDB(`
         SELECT rai.*, ra.name, ra.country_code, ra.contact_no
@@ -160,6 +160,6 @@ export const invoiceData = async (req, resp) => {
     };
 
     return resp.status(200).json(result);
-};
+});
 
 

@@ -3,9 +3,9 @@ import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
-import { deleteFile } from '../../utils.js';
+import { deleteFile, asyncHandler } from '../../utils.js';
 
-export const offerList = async (req, resp) => {
+export const offerList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'offer',
@@ -26,18 +26,18 @@ export const offerList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const offerDetail = async (req, resp) => {
+export const offerDetail = asyncHandler(async (req, resp) => {
     const { offer_id } = req.body;
     if (!offer_id) return resp.json({ status: 0, code: 422, message: "Offer Id is required" });
     
     const offer = await queryDB(`SELECT * FROM offer WHERE offer_id = ?`, [offer_id]);
 
     return resp.status(200).json({status: 1, data: offer, message: "Offer Data fetch successfully!"});
-};
+});
 
-export const offerAdd = async (req, resp) => {
+export const offerAdd = asyncHandler(async (req, resp) => {
     const { offer_name, expiry_date, offer_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { offer_name: ["required"], expiry_date: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -55,9 +55,9 @@ export const offerAdd = async (req, resp) => {
         message: insert.affectedRows > 0 ? "Offer added successfully" : "Failed to insert, Please try again.",
     });
     
-};
+});
 
-export const offerEdit = async (req, resp) => {
+export const offerEdit = asyncHandler(async (req, resp) => {
     const { offer_id, offer_name, expiry_date, offer_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { offer_id: ["required"], offer_name: ["required"], expiry_date: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -79,9 +79,9 @@ export const offerEdit = async (req, resp) => {
         message: update.affectedRows > 0 ? "Offer updated successfully" : "Failed to update, Please try again.",
     });
 
-};
+});
 
-export const offerDelete = async (req, resp) => {
+export const offerDelete = asyncHandler(async (req, resp) => {
     const { offer_id } = req.body;
     if (!offer_id) return resp.json({ status: 0, code: 422, message: "Offer Id is required" });
     
@@ -92,5 +92,5 @@ export const offerDelete = async (req, resp) => {
     await db.execute(`DELETE FROM offer WHERE offer_id = ?`, [offer_id]);
 
     return resp.json({ status: 1, code: 200, message: "Offer deleted successfully!" });
-};
+});
 

@@ -3,9 +3,9 @@ import moment from 'moment';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { deleteFile } from '../../utils.js';
+import { deleteFile,asyncHandler } from '../../utils.js';
 
-export const carsList = async (req, resp) => {
+export const carsList = asyncHandler(async (req, resp) => {
     const { search_text, start_date, end_date, page_no } = req.body;
     const whereFields = []
     const whereValues = []
@@ -43,9 +43,9 @@ export const carsList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const carDetail = async (req, resp) => {
+export const carDetail = asyncHandler(async (req, resp) => {
     const { rental_id } = req.body;
     if(!rental_id) return resp.json({status: 0, message: "Rental Id is required"});
 
@@ -61,9 +61,9 @@ export const carDetail = async (req, resp) => {
          galleryData,
          base_url: `${req.protocol}://${req.get('host')}/uploads/car-rental-images/`
         });
-};
+});
 
-export const carData = async (req, resp) => {
+export const carData = asyncHandler(async (req, resp) => {
     const {rental_id} = req.body;
     const contract = [ '1 Month', '6 Months', '1 Year'];
     const bikeType = [ 'Lease', 'Rent'];
@@ -80,9 +80,9 @@ export const carData = async (req, resp) => {
     }
 
     return resp.json(result);
-};
+});
 
-export const carAdd = async (req, resp) => {
+export const carAdd = asyncHandler(async (req, resp) => {
     const { car_name, available_on, description, car_type, price, contract, feature, lease_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         car_name: ["required"], 
@@ -116,9 +116,9 @@ export const carAdd = async (req, resp) => {
         status: insert.affectedRows > 0 ? 1 : 0,
         message: insert.affectedRows > 0 ? "Car rental added successfully" : "Failed to insert, Please try again.",
     });
-};
+});
 
-export const carEdit = async (req, resp) => {
+export const carEdit = asyncHandler(async (req, resp) => {
     const { rental_id, car_name, available_on, description, car_type, price, contract, feature, lease_url, status } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         rental_id: ["required"], 
@@ -163,9 +163,9 @@ export const carEdit = async (req, resp) => {
         status: update.affectedRows > 0 ? 1 : 0,
         message: update.affectedRows > 0 ? "Car rental updated successfully" : "Failed to update, Please try again.",
     });
-};
+});
 
-export const carDelete = async (req, resp) => {
+export const carDelete = asyncHandler(async (req, resp) => {
     const { rental_id } = req.body;
     if (!rental_id) return resp.json({ status: 0, code: 422, message: "Rental Id is required" });
     
@@ -184,9 +184,9 @@ export const carDelete = async (req, resp) => {
     await db.execute(`DELETE FROM electric_car_rental_gallery WHERE rental_id = ?`, [rental_id]);
 
     return resp.json({ status: 1, code: 200, message: "Car deleted successfully!" });
-};
+});
 
-export const carGalleryDelete = async (req, resp) => {
+export const carGalleryDelete = asyncHandler(async (req, resp) => {
     const { gallery_id } = req.body;
     if(!gallery_id) return resp.json({status:0, message: "Gallery Id is required"});
 
@@ -198,6 +198,6 @@ export const carGalleryDelete = async (req, resp) => {
     }
 
     return resp.json({status: 1, message: "Gallery Img deleted successfully"});
-};
+});
 
 

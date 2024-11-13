@@ -2,8 +2,9 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import { asyncHandler } from '../../utils.js';
 
-export const clubList = async (req, resp) => {
+export const clubList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'clubs',
@@ -24,9 +25,9 @@ export const clubList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const clubData = async (req, resp) => {
+export const clubData = asyncHandler(async (req, resp) => {
     const { club_id } = req.body;
     const club = await queryDB(`SELECT * FROM clubs WHERE club_id = ?`, [club_id]);
     const [gallery] = await db.execute(`SELECT image_name FROM club_gallery WHERE club_id = ? ORDER BY id DESC`, [club_id]);
@@ -49,9 +50,9 @@ export const clubData = async (req, resp) => {
     }
 
     return resp.status(200).json(result);
-};
+});
 
-export const clubCreate = async (req, resp) => {
+export const clubCreate = asyncHandler(async (req, resp) => {
     try{
         const uploadedFiles = req.files;
         let cover_image = '';
@@ -94,9 +95,9 @@ export const clubCreate = async (req, resp) => {
         // console.log(err);
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-};
+});
 
-export const clubUpdate = async (req, resp) => {
+export const clubUpdate = asyncHandler(async (req, resp) => {
     const uploadedFiles = req.files;
     let cover_image = '';
     if(req.files && req.files['cover_image']){
@@ -164,9 +165,9 @@ export const clubUpdate = async (req, resp) => {
     }
 
     return resp.json({status:1, code: 200, message: "Club updated successfully"});
-};
+});
 
-export const clubDelete = async (req, resp) => {
+export const clubDelete = asyncHandler(async (req, resp) => {
     const {club_id} = req.body;
 
     const club = await queryDB(`SELECT cover_img FROM clubs WHERE club_id = ?`, [club_id]);
@@ -199,9 +200,9 @@ export const clubDelete = async (req, resp) => {
     await queryDB(`DELETE FROM clubs WHERE club_id = ?`, [club_id]);
 
     return resp.json({ status: 1, msg: "Club deleted successfully!" });
-};
+});
 
-export const clubDeleteImg = async (req, resp) => {
+export const clubDeleteImg = asyncHandler(async (req, resp) => {
     const { gallery_id } = req.body;
 
     const galleryData = await queryDB(`SELECT image_name FROM club_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
@@ -222,4 +223,4 @@ export const clubDeleteImg = async (req, resp) => {
     }
 
     return resp.json({ status: 1, msg: "Club Image deleted successfully!" });
-};
+});

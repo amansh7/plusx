@@ -1,6 +1,7 @@
 import { getPaginatedData, queryDB } from '../../dbUtils.js';
+import { asyncHandler } from '../../utils.js';
 
-export const sellVehicleList = async (req, resp) => {
+export const sellVehicleList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
 
     const result = await getPaginatedData({
@@ -30,9 +31,9 @@ export const sellVehicleList = async (req, resp) => {
         image_path: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
     });
 
-};
+});
 
-export const sellVehicleDetail = async (req, resp) => {
+export const sellVehicleDetail = asyncHandler(async (req, resp) => {
     const { sell_id } = req.body;
     if (!sell_id) return resp.json({ status: 0, code: 422, message: "Sell Id is required." });
 
@@ -56,4 +57,4 @@ export const sellVehicleDetail = async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`,
     });
 
-};
+});
