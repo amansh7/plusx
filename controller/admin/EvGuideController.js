@@ -1,8 +1,8 @@
-import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
+import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat} from '../../utils.js';
+import { asyncHandler, deleteFile} from '../../utils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
 import generateUniqueId from 'generate-unique-id';
@@ -11,7 +11,7 @@ import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbU
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
-export const guideList = async (req, resp) => {
+export const guideList = asyncHandler(async (req, resp) => {
     try {
         const { page_no, search_text, start_date, end_date, sort_by = 'd' } = req.body; 
 
@@ -70,10 +70,9 @@ export const guideList = async (req, resp) => {
             message: 'Error fetching vehicle list'
         });
     }
-};
+});
 
-
-export const addGuide = async (req, resp) => {
+export const addGuide = asyncHandler(async (req, resp) => {
     const{ vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         vehicle_type : ["required"],
@@ -115,9 +114,9 @@ export const addGuide = async (req, resp) => {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
     }
-};
+});
 
-export const guideDetail = async (req, resp) => {
+export const guideDetail = asyncHandler(async (req, resp) => {
     try {
         const { vehicle_id } = req.body;
 
@@ -156,8 +155,9 @@ export const guideDetail = async (req, resp) => {
             message: 'Error fetching station details'
         });
     }
-};
-export const editGuide = async (req, resp) => {
+});
+
+export const editGuide = asyncHandler(async (req, resp) => {
     const{ vehicle_id, vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature, status } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         vehicle_id : ["required"],
@@ -173,40 +173,54 @@ export const editGuide = async (req, resp) => {
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    try {
-        const vehicleData = await queryDB(`SELECT image FROM vehicle WHERE vehicle_id = ?`, [vehicle_id]);
-        let cover_image = '';
-        if(req.files && req.files['cover_image']){
-            const files = req.files;
-            cover_image = files ? files['cover_image'][0].filename : '';
-        }
-        const updates = {vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, status, best_feature, image : cover_image};
-        
-        const update = await updateRecord('vehicle', updates, ['vehicle_id'], [vehicle_id]);
-        const profileImgPath = path.join(__dirname, 'public/uploads/vehicle-image', vehicleData.image);
-        if (req.file) {
-            fs.unlink(profileImgPath, (err) => {
-                if (err) {
-                    console.error(`Failed to delete rider old image: ${profileImgPath}`, err);
-                }
-            });
-        }
-        return resp.json({
-            status  : update.affectedRows > 0 ? 1 : 0, 
-            code    : 200, 
-            message : update.affectedRows > 0 ? "Vehicle updated successfully!" : "Failed to create, Please Try Again!", 
-        });
-    } catch (error) {
-        console.error('Something went wrong:', error);
-        resp.status(500).json({ message: 'Something went wrong' });
+    const vehicle = await queryDB(`SELECT image FROM vehicle WHERE vehicle_id = ?`, [vehicle_id]);
+    let cover_image = vehicle.image;
+    if(req.files && req.files['cover_image']){
+        cover_image = req.files ? req.files['cover_image'][0].filename : '';
+        deleteFile('vehicle-image', vehicle.image);
     }
-};
+    
+    const updates = {vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, status, best_feature, image : cover_image};
+    const update = await updateRecord('vehicle', updates, ['vehicle_id'], [vehicle_id]);
+    
+    return resp.json({
+        status  : update.affectedRows > 0 ? 1 : 0, 
+        code    : 200, 
+        message : update.affectedRows > 0 ? "Vehicle updated successfully!" : "Failed to create, Please Try Again!", 
+    });
+});
 
-export const deleteGuide = async (req, resp) => {
-    try {
-        
-    } catch (error) {
-        console.error('Something went wrong:', error);
-        resp.status(500).json({ message: 'Something went wrong' });
+export const deleteGuide = asyncHandler(async (req, resp) => {
+    const { vehicle_id } = req.body;
+    if (!vehicle_id) return resp.json({ status: 0, code: 422, message: "Vehicle Id is required" });
+    
+    const vehicle = await queryDB(`SELECT image FROM vehicle WHERE vehicle_id = ?`, [vehicle_id]);
+    if(!vehicle) return resp.json({ status: 0, code: 422, message: "Invalid Vehicle Id. Please Try Again." });
+    
+    const [gallery] = await db.execute(`SELECT image_name FROM vehicle_gallery WHERE vehicle_id = ?`, [vehicle_id]);
+    const galleryData = gallery.map(img => img.image_name);
+
+    if (vehicle.image) deleteFile('vehicle-image', vehicle.image);
+    if (galleryData.length > 0) {
+        galleryData.forEach(img => img && deleteFile('vehicle-image', img));
     }
-};
+
+    await db.execute(`DELETE FROM vehicle WHERE rental_id = ?`, [rental_id]);
+    await db.execute(`DELETE FROM vehicle_gallery WHERE rental_id = ?`, [rental_id]);
+
+    return resp.json({ status: 1, code: 200, message: "Vehicle deleted successfully!" });
+});
+
+export const deleteEvGuideGallery = asyncHandler(async (req, resp) => {
+    const { gallery_id } = req.body;
+    if(!gallery_id) return resp.json({status:0, message: "Gallery Id is required"});
+
+    const galleryData = await queryDB(`SELECT image_name FROM vehicle_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
+    
+    if(galleryData){
+        await db.execute('DELETE FROM electric_bike_rental_gallery WHERE id = ?', [gallery_id]);
+        deleteFile('vehicle-image', galleryData.image_name);
+    }
+
+    return resp.json({status: 1, message: "Vehicle Img deleted successfully"});
+});
