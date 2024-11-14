@@ -18,6 +18,8 @@ export const insertRecord = async (table, columns, values, connection = null) =>
   }
   const placeholders = columns.map(() => "?").join(", ");
   const sql = `INSERT INTO ${table} (${columns.join( ", " )}) VALUES (${placeholders})`;
+  console.log(sql, values);
+  
   try {
     const dbConn = connection ? connection : await db.getConnection();
     const [result] = await dbConn.execute(sql, values);
@@ -110,9 +112,80 @@ export const queryDB = async (query, params, connection = null) => {
  * 
  **/
 
+// export const getPaginatedData = async ({
+//   tableName,
+//   columns = '*',
+//   liveSearchFields = [],
+//   liveSearchTexts = [],
+//   searchFields = [],
+//   searchTexts = [],
+//   sortColumn = 'id',
+//   sortOrder = 'ASC',
+//   page_no = 1,
+//   limit = 10,
+//   whereField = '',
+//   whereValue = '',
+//   whereOperator = '=',
+// }) => {
+//   const start = parseInt((page_no * limit) - limit, 10);
+
+//   let whereCondition = '';
+//   let searchCondition = '';
+//   const queryParams = [];
+
+//   if (whereField.length > 0 && whereValue.length > 0) {
+//     whereField.forEach((field, index) => {
+//       const operator = whereOperator[index] || '=';
+//       if (operator.toUpperCase() === 'NOT IN') {
+//         const placeholders = whereValue[index].map(() => '?').join(', ');
+//         whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} NOT IN (${placeholders})`;
+//         queryParams.push(...whereValue[index]);
+//       } else {
+//         whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} ${operator} ?`;
+//         queryParams.push(whereValue[index]);
+//       }
+//     });
+//   }
+
+//   searchFields.forEach((field, index) => {
+//     if (searchTexts[index]) {
+//       searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' AND ') + `${field} LIKE ?`;
+//       queryParams.push(`%${searchTexts[index].trim()}%`);
+//     }
+//   });
+
+//   liveSearchFields.forEach((field, index) => {
+//     if (liveSearchTexts[index]) {
+//       searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' OR ') + `${field} LIKE ?`;
+//       queryParams.push(`%${liveSearchTexts[index].trim()}%`);
+//     }
+//   });
+
+//   // Final query
+//   let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
+//   // queryParams.push(start, parseInt(limit, 10));
+
+//   // console.log("Executing Query:", query, "With Params:", queryParams);
+
+//   const [rows] = await db.execute(query, queryParams);
+
+//   const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
+//   const totalPage = Math.max(Math.ceil(total / limit), 1);
+
+//   return {
+//     data: rows,
+//     total,
+//     totalPage
+//   };
+// };
+
+
+
 export const getPaginatedData = async ({
   tableName,
   columns = '*',
+  joinTable = '',
+  joinCondition = '',
   liveSearchFields = [],
   liveSearchTexts = [],
   searchFields = [],
@@ -159,11 +232,11 @@ export const getPaginatedData = async ({
     }
   });
 
-  // Final query
-  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
-  // queryParams.push(start, parseInt(limit, 10));
+  // Apply JOIN 
+  const joinClause = joinTable && joinCondition ? ` JOIN ${joinTable} ON ${joinCondition}` : '';
 
-  // console.log("Executing Query:", query, "With Params:", queryParams);
+  // Final query
+  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${joinClause}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
 
   const [rows] = await db.execute(query, queryParams);
 

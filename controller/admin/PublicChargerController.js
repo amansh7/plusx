@@ -3,14 +3,14 @@ import dotenv from 'dotenv';
 import moment from 'moment';
 import path from 'path';
 import fs from 'fs';
-import { getOpenAndCloseTimings, formatOpenAndCloseTimings, deleteFile} from '../../utils.js';
+import { getOpenAndCloseTimings, formatOpenAndCloseTimings, deleteFile, asyncHandler} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
 dotenv.config();
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
-export const stationList = async (req, resp) => {
+export const stationList = asyncHandler(async (req, resp) => {
     try {
         const { page_no, search, sort_by = 'd', start_date, end_date, search_text=''} = req.body; 
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
@@ -67,9 +67,9 @@ export const stationList = async (req, resp) => {
             message: 'Error fetching station list'
         });
     }
-};
+});
 
-export const stationData = async (req, resp) => {
+export const stationData = asyncHandler(async (req, resp) => {
     const { station_id } = req.body;
     const chargingFor = ['All EV`s', 'Tesla', 'BYD', 'Polestar', 'GMC', 'Porsche', 'Volvo', 'Audi', 'Chevrolet', 'BMW', 'Mercedes', 'Zeekr', 'Volkswagen', 'HiPhi', 'Kia', 'Hyundai', 'Lotus', 'Ford', 'Rabdan'];
     const chargerType = ['Level 2', 'Fast Charger', 'Super Charger'];
@@ -87,9 +87,9 @@ export const stationData = async (req, resp) => {
     }
 
     return resp.json({status: 1, code: 200, data: result});
-};
+});
 
-export const stationDetail = async (req, resp) => {
+export const stationDetail = asyncHandler(async (req, resp) => {
     const { station_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { station_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -132,9 +132,9 @@ export const stationDetail = async (req, resp) => {
         result,
         base_url: `${req.protocol}://${req.get('host')}/uploads/charging-station-images/`
     });
-};
+});
 
-export const addPublicCharger = async (req, resp) => {
+export const addPublicCharger = asyncHandler(async (req, resp) => {
     try {
         
         
@@ -186,9 +186,9 @@ export const addPublicCharger = async (req, resp) => {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
     }
-};
+});
 
-export const editPublicCharger = async (req, resp) => {
+export const editPublicCharger = asyncHandler(async (req, resp) => {
     try {
         console.log(req.body);
         const uploadedFiles = req.files;
@@ -261,9 +261,9 @@ export const editPublicCharger = async (req, resp) => {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
     }
-};
+});
 
-export const deletePublicCharger = async (req, resp) => {
+export const deletePublicCharger = asyncHandler(async (req, resp) => {
     const {station_id} = req.body;
 
     const charger = await queryDB(`SELECT station_image FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
@@ -295,9 +295,9 @@ export const deletePublicCharger = async (req, resp) => {
     await queryDB(`DELETE FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
 
     return resp.json({ status: 1, msg: "Shop deleted successfully!" });
-};
+});
 
-export const deletePublicChargerGallery = async (req, resp) => {
+export const deletePublicChargerGallery = asyncHandler(async (req, resp) => {
     const { gallery_id } = req.body;
     if(!gallery_id) return resp.json({status:0, message: "Gallery Id is required"});
 
@@ -309,4 +309,4 @@ export const deletePublicChargerGallery = async (req, resp) => {
     }
 
     return resp.json({status: 1, message: "Gallery Img deleted successfully"});
-};
+});

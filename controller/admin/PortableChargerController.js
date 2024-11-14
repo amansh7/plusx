@@ -2,7 +2,7 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from '..
 import dotenv from 'dotenv';
 import moment from 'moment';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
+import { mergeParam, asyncHandler, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
@@ -792,17 +792,47 @@ export const assignBooking = async (req, resp) => {
 
 
 /* Subscription */
-export const subscriptionList = async (req, resp) => {
-    const { page_no } = req.body;
+export const subscriptionList = asyncHandler(async (req, resp) => {
+    const { page_no, start_date, end_date, search_text = '' } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('expiry_date', 'expiry_date');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'portable_charger_subscriptions',
-        columns: `subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
-            (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
-        `,
+        // columns: `subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
+        //     (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
+        // `,
+        columns: `
+        subscription_id, 
+        amount, 
+        expiry_date, 
+        booking_limit, 
+        total_booking, 
+        payment_date,
+        (SELECT rider_name FROM riders AS r WHERE r.rider_id = portable_charger_subscriptions.rider_id LIMIT 1) AS rider_name,
+        (SELECT country_code FROM riders AS r WHERE r.rider_id = portable_charger_subscriptions.rider_id LIMIT 1) AS country_code,
+        (SELECT rider_mobile FROM riders AS r WHERE r.rider_id = portable_charger_subscriptions.rider_id LIMIT 1) AS rider_mobile
+    `,
         sortColumn: 'id',
         sortOrder: 'DESC',
+        liveSearchFields: ['subscription_id'],
+        liveSearchTexts: [search_text],
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({
@@ -813,20 +843,41 @@ export const subscriptionList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const subscriptionDetail = async (req, resp) => {
+export const subscriptionDetail = asyncHandler(async (req, resp) => {
     const { subscription_id } = req.body;
     if (!subscription_id) return resp.json({ status: 0, code: 422, message: "Subscription Id is required" });
     
-    const subscription = await queryDB(`SELECT 
-        subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
-        (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
-        FROM portable_charger_subscriptions WHERE subscription_id = ?
-    `, [subscription_id]);
+    // const subscription = await queryDB(`SELECT 
+    //     subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date, created_at,
+    //     (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
+    //     FROM portable_charger_subscriptions WHERE subscription_id = ?
+    // `, [subscription_id]);
 
-    return resp.status(200).json({status: 1, data: subscription, message: "Subscription Detail fetch successfully!"});
-};
+    const subscription = await queryDB(`
+        SELECT 
+          pcs.subscription_id, 
+          pcs.amount, 
+          pcs.expiry_date, 
+          pcs.booking_limit, 
+          pcs.total_booking, 
+          pcs.payment_date, 
+          pcs.created_at,
+          r.rider_name,
+          r.country_code,
+          r.rider_mobile
+        FROM 
+          portable_charger_subscriptions pcs
+        JOIN 
+          riders r ON r.rider_id = pcs.rider_id
+        WHERE 
+          pcs.subscription_id = ?
+      `, [subscription_id]);
+      
+
+    return resp.status(200).json({status: 1, code: 200, data: subscription, message: "Subscription Detail fetch successfully!"});
+});
 
 
 

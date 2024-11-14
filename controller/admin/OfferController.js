@@ -3,19 +3,36 @@ import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
-import { deleteFile } from '../../utils.js';
+import { deleteFile, asyncHandler } from '../../utils.js';
 
-export const offerList = async (req, resp) => {
-    const { search, page_no } = req.body;
+export const offerList = asyncHandler(async (req, resp) => {
+    const { start_date, end_date, search_text = '', page_no } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('offer_exp_date', 'offer_exp_date');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'offer',
         columns: `offer_id, offer_name, offer_exp_date, offer_image, status`,
-        searchFields: ['offer_name'],
-        searchTexts: [search],
+        liveSearchFields: ['offer_id', 'offer_name' ],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({
@@ -26,18 +43,18 @@ export const offerList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const offerDetail = async (req, resp) => {
+export const offerDetail = asyncHandler(async (req, resp) => {
     const { offer_id } = req.body;
     if (!offer_id) return resp.json({ status: 0, code: 422, message: "Offer Id is required" });
     
     const offer = await queryDB(`SELECT * FROM offer WHERE offer_id = ?`, [offer_id]);
 
     return resp.status(200).json({status: 1, data: offer, message: "Offer Data fetch successfully!"});
-};
+});
 
-export const offerAdd = async (req, resp) => {
+export const offerAdd = asyncHandler(async (req, resp) => {
     const { offer_name, expiry_date, offer_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { offer_name: ["required"], expiry_date: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -47,7 +64,7 @@ export const offerAdd = async (req, resp) => {
     const insert = await insertRecord('offer', [
         'offer_id', 'offer_name', 'offer_exp_date', 'offer_url', 'offer_image', 'status', 
     ], [
-        `OFR${generateUniqueId({ length:12 })}`, offer_name, moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD"), offer_url ? offer_url : '', offerImg, 1, 
+        `OFR${generateUniqueId({ length:6 })}`, offer_name, moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD"), offer_url ? offer_url : '', offerImg, 1, 
     ]);
 
     return resp.json({
@@ -55,9 +72,9 @@ export const offerAdd = async (req, resp) => {
         message: insert.affectedRows > 0 ? "Offer added successfully" : "Failed to insert, Please try again.",
     });
     
-};
+});
 
-export const offerEdit = async (req, resp) => {
+export const offerEdit = asyncHandler(async (req, resp) => {
     const { offer_id, offer_name, expiry_date, offer_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { offer_id: ["required"], offer_name: ["required"], expiry_date: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -79,9 +96,9 @@ export const offerEdit = async (req, resp) => {
         message: update.affectedRows > 0 ? "Offer updated successfully" : "Failed to update, Please try again.",
     });
 
-};
+});
 
-export const offerDelete = async (req, resp) => {
+export const offerDelete = asyncHandler(async (req, resp) => {
     const { offer_id } = req.body;
     if (!offer_id) return resp.json({ status: 0, code: 422, message: "Offer Id is required" });
     
@@ -92,5 +109,5 @@ export const offerDelete = async (req, resp) => {
     await db.execute(`DELETE FROM offer WHERE offer_id = ?`, [offer_id]);
 
     return resp.json({ status: 1, code: 200, message: "Offer deleted successfully!" });
-};
+});
 

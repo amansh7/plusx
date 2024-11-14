@@ -30,12 +30,28 @@ const validations = async (coupan_code, resp, coupon_id=null) => {
 };
 
 export const couponList = async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { start_date, end_date, search_text = '', page_no } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'coupon',
         columns: `id, coupan_name, coupan_code, user_per_user, coupan_percentage, end_date, status, booking_for`,
-        searchFields: ['coupan_name'],
-        searchTexts: [search],
+        // searchFields: ['coupan_name'],
+        // searchTexts: [search],
+        liveSearchFields: ['rsa_id', 'rsa_name', 'email', 'booking_type',],
+        liveSearchTexts: [search_text, search_text, search_text, search_text,],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
@@ -70,18 +86,23 @@ export const couponData = async (req, resp) => {
 };
 
 export const couponAdd = async (req, resp) => {
+    console.log(req.body);
+    
     const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type } = req.body;
     const { isValid, errors } = validateFields(req.body, { coupan_name: ["required"], coupan_code: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
     const validationErr = await validations(coupan_code, resp);
     if (validationErr) return validationErr;
-
+    const fExpiry = moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+    console.log(fExpiry);
+    // return false;
     const insert = await insertRecord('coupon', [
-        'coupan_name', 'coupan_code', 'coupan_percentage', 'end_date', 'user_per_user', 'booking_for', 'status'
+        'coupan_name', 'coupan_code', 'coupan_percentage', 'end_date', 'user_per_user', 'booking_for', 'status',
     ], [
-        coupan_name, coupan_code, coupan_percentage, moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD"), user_per_user, service_type, 1
+        coupan_name, coupan_code, coupan_percentage, fExpiry, user_per_user, service_type, 1
     ]);
+    
 
     return resp.json({
         status: insert.affectedRows > 0 ? 1 : 0,
@@ -100,7 +121,7 @@ export const couponEdit = async (req, resp) => {
     if (validationErr) return validationErr;
 
     const fExpiryDate = moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-    const updates = {coupan_name, coupan_percentage, end_date: fExpiryDate, user_per_user, booking_for: service_type, status: status ? 1 : 0 };
+    const updates = {coupan_name, coupan_percentage, end_date: fExpiryDate, user_per_user, booking_for: service_type, status: status };
     
     const update = await updateRecord('coupon', updates, ['coupan_code'], [coupan_code]);
     
@@ -113,7 +134,7 @@ export const couponEdit = async (req, resp) => {
 
 export const couponDelete = async (req, resp) => {
     const { coupan_code } = req.body;
-    if (!coupan_code) return resp.json({ status: 0, code: 422, message: "Coupan Code is required" });
+    if (!coupan_code) return resp.json({ status: 0, code: 422, message: "Coupon Code is required" });
     
     const del = await db.execute(`DELETE FROM coupon WHERE coupan_code = ?`, [coupan_code]);
 
