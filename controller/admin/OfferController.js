@@ -6,16 +6,33 @@ import moment from 'moment';
 import { deleteFile, asyncHandler } from '../../utils.js';
 
 export const offerList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { start_date, end_date, search_text = '', page_no } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('offer_exp_date', 'offer_exp_date');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'offer',
         columns: `offer_id, offer_name, offer_exp_date, offer_image, status`,
-        searchFields: ['offer_name'],
-        searchTexts: [search],
+        liveSearchFields: ['offer_id', 'offer_name' ],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({

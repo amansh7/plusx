@@ -30,12 +30,28 @@ const validations = async (coupan_code, resp, coupon_id=null) => {
 };
 
 export const couponList = async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { start_date, end_date, search_text = '', page_no } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'coupon',
         columns: `id, coupan_name, coupan_code, user_per_user, coupan_percentage, end_date, status, booking_for`,
-        searchFields: ['coupan_name'],
-        searchTexts: [search],
+        // searchFields: ['coupan_name'],
+        // searchTexts: [search],
+        liveSearchFields: ['rsa_id', 'rsa_name', 'email', 'booking_type',],
+        liveSearchTexts: [search_text, search_text, search_text, search_text,],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,

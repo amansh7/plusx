@@ -2,19 +2,43 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from "..
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import { createNotification, pushNotification,asyncHandler } from '../../utils.js';
+import moment from 'moment';
 
 /* RA Booking */
 export const bookingList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { start_date, end_date, search_text = '', status, page_no } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
+    if(status) {
+        whereFields.push('order_status');
+        whereValues.push(status);
+        whereOperators.push('=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'road_assistance',
         columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, price, order_status, created_at`,
-        searchFields: ['name'],
-        searchTexts: [search],
+        liveSearchFields: ['request_id', 'name'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({
@@ -119,7 +143,7 @@ export const evRoadAssistanceCancelBooking = asyncHandler(async (req, resp) => {
 
 /* RA Invoie */
 export const invoiceList = asyncHandler(async (req, resp) => {
-    const { page_no } = req.body;
+    const { page_no, search_text } = req.body;
     const result = await getPaginatedData({
         tableName: 'road_assistance_invoice',
         // columns: `vehicle_id, vehicle_name, vehicle_model, vehicle_type, horse_power, price`,
@@ -132,6 +156,8 @@ export const invoiceList = asyncHandler(async (req, resp) => {
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        liveSearchFields: ['invoice_id'],
+        liveSearchTexts: [search_text],
     });
 
     return resp.json({
@@ -143,6 +169,8 @@ export const invoiceList = asyncHandler(async (req, resp) => {
         total: result.total,
     });    
 });
+
+
 
 export const invoiceData = asyncHandler(async (req, resp) => {
     const { invoice_id } = req.body;

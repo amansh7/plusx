@@ -793,16 +793,46 @@ export const assignBooking = async (req, resp) => {
 
 /* Subscription */
 export const subscriptionList = asyncHandler(async (req, resp) => {
-    const { page_no } = req.body;
+    const { page_no, start_date, end_date, search_text = '' } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('expiry_date', 'expiry_date');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'portable_charger_subscriptions',
-        columns: `subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
-            (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
-        `,
+        // columns: `subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date,
+        //     (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
+        // `,
+        columns: `
+        subscription_id, 
+        amount, 
+        expiry_date, 
+        booking_limit, 
+        total_booking, 
+        payment_date,
+        (SELECT rider_name FROM riders AS r WHERE r.rider_id = portable_charger_subscriptions.rider_id LIMIT 1) AS rider_name,
+        (SELECT country_code FROM riders AS r WHERE r.rider_id = portable_charger_subscriptions.rider_id LIMIT 1) AS country_code,
+        (SELECT rider_mobile FROM riders AS r WHERE r.rider_id = portable_charger_subscriptions.rider_id LIMIT 1) AS rider_mobile
+    `,
         sortColumn: 'id',
         sortOrder: 'DESC',
+        liveSearchFields: ['subscription_id'],
+        liveSearchTexts: [search_text],
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({
