@@ -109,7 +109,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
             slot_id, fSlotDate, slot_time, address, latitude, longitude, 'CNF'
         ], conn);
     
-        if(insert.affectedRows = 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]});
+        if(insert.affectedRows == 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]});
     
         if(coupan_code){
             await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id'], [coupan_code, user_id, bookingId], conn);
@@ -413,7 +413,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
         'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id ) VALUES (?, ?, "C", ?)',
         [booking_id, checkOrder.rider_id, rsa_id ]
     );
-    if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+    if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
     await insertRecord('portable_charger_booking_rejected', ['booking_id', 'rsa_id', 'rider_id', 'reason'],[booking_id, rsa_id, checkOrder.rider_id, reason]);
     await db.execute(`DELETE FROM portable_charger_booking_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
@@ -479,7 +479,7 @@ const acceptBooking = async (req, resp) => {
             booking_id, checkOrder.rider_id, "A", rsa_id, latitude, longitude
         ]);
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await db.execute('UPDATE rsa SET running_order = running_order + 1 WHERE rsa_id = ?', [rsa_id]);
         await db.execute('UPDATE portable_charger_booking_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [booking_id, rsa_id]);
@@ -515,7 +515,7 @@ const driverEnroute = async (req, resp) => {
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "ER", ?, ?, ?)',
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'ER'}, ['booking_id' ], [booking_id ]);
 
@@ -555,7 +555,7 @@ const reachedLocation = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'RL', rsa_id}, ['booking_id'], [booking_id] );
 
@@ -597,7 +597,7 @@ const chargingStart = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'CS', rsa_id}, ['booking_id'], [booking_id] );
 
@@ -636,7 +636,7 @@ const chargingComplete = async (req, resp) => {
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "CC", ?, ?, ?)',
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'CC', rsa_id}, ['booking_id'], [booking_id] );
 
@@ -682,7 +682,7 @@ const chargerPickedUp = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
         );
         
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id] );
         await db.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
@@ -728,7 +728,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
         'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, cancel_by, cancel_reason) VALUES (?, ?, "C", ?, "User", ?)',
         [booking_id, rider_id, checkOrder.rsa_id, reason]
     );
-    if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+    if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
     await updateRecord('portable_charger_booking', {status : 'C'}, ['booking_id'], [booking_id]);
     const href    = `portable_charger_booking/${booking_id}`;

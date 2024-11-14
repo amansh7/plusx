@@ -163,7 +163,6 @@ export const evPreSaleBooking = asyncHandler(async (req, resp) => {
     const { rider_id, owner_name, country, country_code, mobile_no, email, vehicle, pickup_address, reason_of_testing, pickup_latitude, pickup_longitude, 
         slot_date, slot_time_id 
     } = req.body;
-
     const { isValid, errors } = validateFields(req.body, {
         rider_id: ["required"],
         owner_name: ["required"],
@@ -179,17 +178,17 @@ export const evPreSaleBooking = asyncHandler(async (req, resp) => {
         slot_date: ["required"],
         slot_time_id: ["required"],
     });
-
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const bookingId = 'EPTS' + generateUniqueId({length:11});
+    const fSlotDate = moment(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD');
 
     const insert = await insertRecord('ev_pre_sale_testing', [
         "booking_id", "rider_id", "owner_name", "country", "country_code", "mobile_no", "email", "vehicle", "pickup_address", "reason_of_testing", "pickup_latitude", 
         "pickup_longitude", "slot_date", "slot_time_id" 
     ],[
         bookingId, rider_id, owner_name, country, country_code, mobile_no, email, vehicle, pickup_address, reason_of_testing, pickup_latitude, pickup_longitude, 
-        moment(slot_date).format('YYYY-MM-DD'), slot_time_id 
+        fSlotDate, slot_time_id 
     ])
 
     if(insert.affectedRows === 0) return resp.json({status:0, code:200, error: true, message: ["Oops! Something went wrong. Please try again."]});
@@ -202,7 +201,7 @@ export const evPreSaleBooking = asyncHandler(async (req, resp) => {
     createNotification(heading, desc, 'EV-pre Sale', 'Rider', 'Admin','', rider_id, href);
     pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
 
-    const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+    const formattedDateTime = moment().format('DD MM YYYY hh:mm A');
 
     const htmlUser = `<html>
         <body>
@@ -234,7 +233,7 @@ export const evPreSaleBooking = asyncHandler(async (req, resp) => {
         status: 1,
         code: 200,
         error: false,
-        message: ["Thanks for booking EV presale testing! We`ll be in touch shortly. We appreciate your trust in PlusX electric"],
+        message: ["Thanks for Booking EV Pre Sale Testing! We`ll be in touch shortly. We appreciate your trust in PlusX electric"],
         request_id: bookingId,
     });
 });

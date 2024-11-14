@@ -1,7 +1,7 @@
 import db from "../../config/db.js";
 import generateUniqueId from 'generate-unique-id';
-import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-import { formatDateInQuery, formatDateTimeInQuery, asyncHandler } from '../../utils.js';
+import { getPaginatedData, queryDB, updateRecord } from '../../dbUtils.js';
+import { asyncHandler, convertTo24HourFormat, formatDateInQuery, formatDateTimeInQuery } from '../../utils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
 
@@ -121,25 +121,34 @@ export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
 });
 
 export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
-    const { slot_name, start_time, end_time, booking_limit }  = req.body;
-    const { isValid, errors } = validateFields(req.body, { slot_name: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
+    const { slot_date, start_time, end_time, booking_limit, status = 1 }  = req.body;
+    const { isValid, errors } = validateFields(req.body, { slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const start = moment(start_time, 'HH:mm:ss');
-    const end = moment(end_time, 'HH:mm:ss');
+    if (!Array.isArray(slot_date) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit)) {
+        return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
+    }
+    if (slot_date.length !== start_time.length || start_time.length !== end_time.length || end_time.length !== booking_limit.length) {
+        return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
+    }
 
-    if (end.isSameOrBefore(start)) return resp.status(422).json({ message: "End Time should be greater than Start Time!", status: 0 });
+    const values = []; const placeholders = [];
     
-    const insert = await insertRecord('ev_pre_sale_testing_slot', [
-        'slot_id', 'slot_name', 'start_time', 'end_time', 'booking_limit', 'status', 
-    ], [
-        `PST${generateUniqueId({ length:6 })}`, slot_name, start, end, booking_limit, 1
-    ]);
+    for (let i = 0; i < slot_date.length; i++) {
+        const slotId = `PST${generateUniqueId({ length:6 })}`;
+        const fSlotDate = moment(slot_date[i], "DD-MM-YYYY").format("YYYY-MM-DD");
+        values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
+        placeholders.push('(?, ?, ?, ?, ?, ?)');
+    }
+
+    const query = `INSERT INTO ev_pre_sale_testing_slot (slot_id, slot_date, start_time, end_time, booking_limit, status) VALUES ${placeholders.join(', ')}`;
+    const [insert] = await db.execute(query, values);
+
 
     return resp.json({
-        status: insert.affectedRows > 0 ? 1 : 0,
-        status: insert.affectedRows > 0 ? 200 : 422,
-        message: insert.affectedRows > 0 ? "Time Slot Added Successfully" : "Failed to add time slot.",
+        code: 200,
+        message: insert.affectedRows > 0 ? ['Time Slot added successfully!'] : ['Oops! Something went wrong. Please try again.'],
+        status: insert.affectedRows > 0 ? 1 : 0
     });
 });
 

@@ -333,7 +333,7 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
         [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
     );
 
-    if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+    if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
     await insertRecord('charging_service_rejected', ['booking_id', 'rsa_id', 'rider_id', 'reason'],[booking_id, rsa_id, checkOrder.rider_id, reason]);
     await db.execute(`DELETE FROM charging_service_assign WHERE order_id=? AND rsa_id=?`, [booking_id, rsa_id]);
@@ -395,7 +395,7 @@ const acceptBooking = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await db.execute('UPDATE rsa SET running_order = running_order + 1 WHERE rsa_id = ?', [rsa_id]);
         await db.execute('UPDATE charging_service_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [booking_id, rsa_id]);
@@ -437,7 +437,7 @@ const driverEnroute = async (req, resp) => {
             `INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "ER", ?, ?, ?)`,
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         return resp.json({ message: ['Booking Status changed successfully!'], status: 1, code: 200 });
     } else {
@@ -471,7 +471,7 @@ const vehiclePickUp = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, '']
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('charging_service', {order_status: 'VP', rsa_id}, ['request_id'], [booking_id]);
 
@@ -513,7 +513,7 @@ const reachedLocation = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('charging_service', {order_status: 'RS', rsa_id}, ['request_id'], [booking_id]);
 
@@ -555,7 +555,7 @@ const chargingComplete = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('charging_service', {order_status: 'CC', rsa_id}, ['request_id'], [booking_id]);
 
@@ -597,7 +597,7 @@ const vehicleDrop = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, '']
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('charging_service', {order_status: 'DO', rsa_id}, ['request_id'], [booking_id]);
 
@@ -642,7 +642,7 @@ const workComplete = async (req, resp) => {
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
         );
 
-        if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('charging_service', {order_status: 'WC', rsa_id}, ['request_id'], [booking_id]);
         await db.execute(`DELETE FROM charging_service_assign WHERE rsa_id=? AND order_id = ?`, [rsa_id, booking_id]);
@@ -689,7 +689,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
         'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, cancel_by, cancel_reason) VALUES (?, ?, "C", ?, "User", ?)',
         [booking_id, rider_id, checkOrder.rsa_id, reason]
     );
-    if(insert.affectedRows = 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+    if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
     await updateRecord('charging_service', {order_status: 'C'}, ['request_id'], [booking_id]);
     const href    = `charging_service/${booking_id}`;
