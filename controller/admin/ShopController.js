@@ -54,54 +54,50 @@ export const storeData = asyncHandler(async (req, resp) => {
 });
 
 export const storeAdd = asyncHandler(async (req, resp) => {
-    try{    
-        const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
-        const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
-        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
+    const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
-        const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
-    
-        const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
-        const storeId     = `STOR${generateUniqueId({length:12})}`;
-        const brandsArr   = (brands && brands.trim !== '') ? brands.join(",") : '';
-        const servicesArr = (services && services.trim !== '') ? services.join(",") : '';
-    
-        const insert = await insertRecord('service_shops', [
-            'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
-        ], [
-            storeId, shop_name, contact_no, store_website, store_email, coverImg, 1, always_open ? 1 : 0, fDays, fTiming, description, brandsArr, servicesArr
-        ]);
+    const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
+    const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
 
-        if(insert.affectedRows == 0) return resp.json({status:0, message: "Something went wrong! Please try again after some time."});
-    
-        if(shopGallery.length > 0){
-            const values = shopGallery.map(filename => [storeId, filename]);
-            const placeholders = values.map(() => '(?, ?)').join(', ');
-            await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
-        }
-        /* if(address && address.length > 0){
-            const allAddress = data.address.filter(Boolean);
-            const values = [];
-            const placeholders = [];
-            for (let k = 0; k < allAddress.length; k++) {
-                if (data.address[k]) {
-                    values.push(storeId);
-                    values.push(data.address[k]);
-                    values.push(data.area_name[k]);
-                    values.push(data.location[k]);
-                    values.push(data.latitude[k]);
-                    values.push(data.longitude[k]);
-    
-                    placeholders.push('(?, ?, ?, ?, ?, ?)');
-                }
-            }
-            await db.execute(`INSERT INTO store_address (store_id, address, area_name, location, latitude, longitude) VALUES ${placeholders.join(', ')}`, [values]);
-        } */
-        return resp.json({status: 1, message: "Store added successfully."});
-    } catch(err) {
-        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
+    const storeId     = `STOR${generateUniqueId({length:12})}`;
+    const brandsArr   = (brands && brands.trim !== '') ? brands.join(",") : '';
+    const servicesArr = (services && services.trim !== '') ? services.join(",") : '';
+
+    const insert = await insertRecord('service_shops', [
+        'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
+    ], [
+        storeId, shop_name, contact_no, store_website, store_email, coverImg, 1, always_open ? 1 : 0, fDays, fTiming, description, brandsArr, servicesArr
+    ]);
+
+    if(insert.affectedRows == 0) return resp.json({status:0, message: "Something went wrong! Please try again after some time."});
+
+    if(shopGallery.length > 0){
+        const values = shopGallery.map(filename => [storeId, filename]);
+        const placeholders = values.map(() => '(?, ?)').join(', ');
+        await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
     }
+    /* if(address && address.length > 0){
+        const allAddress = data.address.filter(Boolean);
+        const values = [];
+        const placeholders = [];
+        for (let k = 0; k < allAddress.length; k++) {
+            if (data.address[k]) {
+                values.push(storeId);
+                values.push(data.address[k]);
+                values.push(data.area_name[k]);
+                values.push(data.location[k]);
+                values.push(data.latitude[k]);
+                values.push(data.longitude[k]);
+
+                placeholders.push('(?, ?, ?, ?, ?, ?)');
+            }
+        }
+        await db.execute(`INSERT INTO store_address (store_id, address, area_name, location, latitude, longitude) VALUES ${placeholders.join(', ')}`, [values]);
+    } */
+    return resp.json({status: 1, message: "Store added successfully."});
 });
 
 export const storeView = asyncHandler(async (req, resp) => {
@@ -128,86 +124,82 @@ export const storeView = asyncHandler(async (req, resp) => {
 });
 
 export const storeUpdate = asyncHandler(async (req, resp) => {
-    try{
-        const { shop_name, contact_no , address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
-        const { isValid, errors } = validateFields(req.body, {
-            shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
-        });
-        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    const { shop_name, contact_no , address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
+    const { isValid, errors } = validateFields(req.body, {
+        shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
+    });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const shop = queryDB(`SELECT cover_image FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
-        if(!shop) return resp.json({status:0, message: "Shop Data can not edit, or invalid shop Id"});
-        const [gallery] = await db.execute(`SELECT image_name FROM store_gallery WHERE store_id = ?`, [shop_id]);
-        const galleryData = gallery.map(img => img.image_name);
+    const shop = queryDB(`SELECT cover_image FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
+    if(!shop) return resp.json({status:0, message: "Shop Data can not edit, or invalid shop Id"});
+    const [gallery] = await db.execute(`SELECT image_name FROM store_gallery WHERE store_id = ?`, [shop_id]);
+    const galleryData = gallery.map(img => img.image_name);
 
-        const brandsArr = (brands && brands.trim !== '') ? data.brands.join(",") : '';
-        const servicesArr = (services && services.trim !== '') ? data.services.join(",") : '';
-        const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
+    const brandsArr = (brands && brands.trim !== '') ? data.brands.join(",") : '';
+    const servicesArr = (services && services.trim !== '') ? data.services.join(",") : '';
+    const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
 
-        const updates = {
-            shop_name, 
-            contact_no, 
-            store_website, 
-            store_email, 
-            status:1, 
-            always_open: always_open ? 1 : 0, 
-            open_days: fDays, 
-            open_timing: fTiming, 
-            brands: brandsArr,
-            services: servicesArr,
-        };
+    const updates = {
+        shop_name, 
+        contact_no, 
+        store_website, 
+        store_email, 
+        status:1, 
+        always_open: always_open ? 1 : 0, 
+        open_days: fDays, 
+        open_timing: fTiming, 
+        brands: brandsArr,
+        services: servicesArr,
+    };
 
-        const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
-        const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
+    const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
+    const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
 
-        if (coverImg) updates.cover_image = coverImg;
+    if (coverImg) updates.cover_image = coverImg;
 
-        const update = await updateRecord('service_shops', updates, ['shop_id'], [shop_id]);
-        
-        if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
+    const update = await updateRecord('service_shops', updates, ['shop_id'], [shop_id]);
+    
+    if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
 
-        if(shopGallery.length > 0){
-            const values = shopGallery.map(filename => [storeId, filename]);
-            const placeholders = values.map(() => '(?, ?)').join(', ');
-            await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
-        }
-
-        if (shop.cover_image) deleteFile('shop-images', shop.cover_image);
-        if (req.files['shop_gallery'] && galleryData.length > 0) {
-            galleryData.forEach(img => img && deleteFile('shop-images', img));
-        }
-
-        /* if (address && address.length > 0) {
-            const allAddress = data.address.filter(Boolean);
-            const values = [];
-            const updateQueries = [];
-        
-            for (let k = 0; k < allAddress.length; k++) {
-                if (data.address[k]) {
-                    const id = data.id[k];
-                    updateQueries.push(`(?, ?, ?, ?, ?, ?)`);
-                    values.push(data.address[k]);  
-                    values.push(data.area_name[k]);
-                    values.push(data.location[k]); 
-                    values.push(data.latitude[k]); 
-                    values.push(data.longitude[k]);
-                    values.push(id);
-                }
-            }
-        
-            const sql = `UPDATE store_address SET address = ?, area_name = ?, location = ?, latitude = ?, longitude = ? WHERE id = ?`;
-        
-            for (let i = 0; i < allAddress.length; i++) {
-                if (data.address[i]) {
-                    await db.execute(sql, values.slice(i * 6, (i + 1) * 6));
-                }
-            }
-        } */
-
-        return resp.json({statsu:1, message: "Store updated successfully"});
-    }catch(err){
-
+    if(shopGallery.length > 0){
+        const values = shopGallery.map(filename => [storeId, filename]);
+        const placeholders = values.map(() => '(?, ?)').join(', ');
+        await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
     }
+
+    if (shop.cover_image) deleteFile('shop-images', shop.cover_image);
+    if (req.files['shop_gallery'] && galleryData.length > 0) {
+        galleryData.forEach(img => img && deleteFile('shop-images', img));
+    }
+
+    /* if (address && address.length > 0) {
+        const allAddress = data.address.filter(Boolean);
+        const values = [];
+        const updateQueries = [];
+    
+        for (let k = 0; k < allAddress.length; k++) {
+            if (data.address[k]) {
+                const id = data.id[k];
+                updateQueries.push(`(?, ?, ?, ?, ?, ?)`);
+                values.push(data.address[k]);  
+                values.push(data.area_name[k]);
+                values.push(data.location[k]); 
+                values.push(data.latitude[k]); 
+                values.push(data.longitude[k]);
+                values.push(id);
+            }
+        }
+    
+        const sql = `UPDATE store_address SET address = ?, area_name = ?, location = ?, latitude = ?, longitude = ? WHERE id = ?`;
+    
+        for (let i = 0; i < allAddress.length; i++) {
+            if (data.address[i]) {
+                await db.execute(sql, values.slice(i * 6, (i + 1) * 6));
+            }
+        }
+    } */
+
+    return resp.json({statsu:1, message: "Store updated successfully"});
 });
 
 export const storeDelete = asyncHandler(async (req, resp) => {
