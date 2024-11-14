@@ -23,7 +23,7 @@ import {
 import { interestList } from "../controller/admin/RegisterInterestController.js";
 import { couponData, couponDetail, couponList, couponAdd, couponEdit, couponDelete } from "../controller/admin/CouponController.js";
 import { offerDetail, offerList, offerAdd, offerEdit, offerDelete } from "../controller/admin/OfferController.js";
-import {guideList, addGuide, guideDetail, editGuide, deleteGuide} from "../controller/admin/EvGuideController.js";
+import {guideList, addGuide, guideDetail, editGuide, deleteGuide, deleteEvGuideGallery} from "../controller/admin/EvGuideController.js";
 import { 
     evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete 
 } from "../controller/admin/EvInsuranceController.js";
@@ -173,11 +173,12 @@ const adminRoutes = [
     { method: 'delete', path: '/discussion-board-delete', handler: discussionBoardDelete },
 
     /* Ev Guide Routes */
-    { method: 'post',  path: '/ev-guide-list',    handler: guideList },
-    { method: 'post',  path: '/ev-guide-add',     handler: addGuide },
-    { method: 'post',  path: '/ev-guide-details', handler: guideDetail },
-    { method: 'post',  path: '/ev-guide-update',  handler: editGuide },
-    { method: 'post',  path: '/ev-guide-delete',  handler: deleteGuide },
+    { method: 'post',  path: '/ev-guide-list',            handler: guideList },
+    { method: 'post',  path: '/ev-guide-add',             handler: addGuide },
+    { method: 'post',  path: '/ev-guide-details',         handler: guideDetail },
+    { method: 'post',  path: '/ev-guide-update',          handler: editGuide },
+    { method: 'post',  path: '/ev-guide-delete',          handler: deleteGuide },
+    { method: 'post',  path: '/ev-guide-gallery-delete',  handler: deleteEvGuideGallery },
 
     /* EV Buy & Sell */
     { method: 'post',  path: '/subscription-lis',    handler: sellVehicleList },
