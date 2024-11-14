@@ -1,6 +1,7 @@
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import { asyncHandler } from '../../utils.js';
 import moment from 'moment';
 
 const validations = async (coupan_code, resp, coupon_id=null) => {
@@ -29,7 +30,7 @@ const validations = async (coupan_code, resp, coupon_id=null) => {
     return null;
 };
 
-export const couponList = async (req, resp) => {
+export const couponList = asyncHandler(async (req, resp) => {
     const { start_date, end_date, search_text = '', page_no } = req.body;
 
     const whereFields = []
@@ -66,26 +67,26 @@ export const couponList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const couponDetail = async (req, resp) => {
+export const couponDetail = asyncHandler(async (req, resp) => {
     const { coupon_id } = req.body;
     if (!coupon_id) return resp.json({ status: 0, code: 422, message: "Coupon Id is required" });
     
     const coupon = await queryDB(`SELECT * FROM coupon WHERE id = ?`, [coupon_id]);
     
     return resp.status(200).json({status: 1, data: coupon, message: "Coupon Data fetch successfully!"});
-};
+});
 
-export const couponData = async (req, resp) => {
+export const couponData = asyncHandler(async (req, resp) => {
     const bookingType = [
         'Charger Installation', 'EV Pre-Sale', 'POD-On Demand Service', 'POD-Get Monthly Subscription',
         'Roadside Assistance', 'Valet Charging',   
     ];
     return resp.json({status: 1, message: "Coupon data fetch successfully!"}, bookingType );
-};
+});
 
-export const couponAdd = async (req, resp) => {
+export const couponAdd = asyncHandler(async (req, resp) => {
     console.log(req.body);
     
     const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type } = req.body;
@@ -109,9 +110,9 @@ export const couponAdd = async (req, resp) => {
         message: insert.affectedRows > 0 ? "Coupon added successfully" : "Failed to insert, Please try again.",
     });
     
-};
+});
 
-export const couponEdit = async (req, resp) => {
+export const couponEdit = asyncHandler(async (req, resp) => {
     const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type, status='' } = req.body;
     const { isValid, errors } = validateFields(req.body, { coupan_name: ["required"], coupan_code: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -130,9 +131,9 @@ export const couponEdit = async (req, resp) => {
         message: update.affectedRows > 0 ? "Coupon updated successfully" : "Failed to update, Please try again.",
     });
 
-};
+});
 
-export const couponDelete = async (req, resp) => {
+export const couponDelete = asyncHandler(async (req, resp) => {
     const { coupan_code } = req.body;
     if (!coupan_code) return resp.json({ status: 0, code: 422, message: "Coupon Code is required" });
     
@@ -143,5 +144,5 @@ export const couponDelete = async (req, resp) => {
         code: 200, 
         message: del.affectedRows > 0 ? "Coupon deleted successfully!" : "Coupon can not delete, or invalid" 
     });
-};
+});
 

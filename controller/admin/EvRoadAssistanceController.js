@@ -143,7 +143,21 @@ export const evRoadAssistanceCancelBooking = asyncHandler(async (req, resp) => {
 
 /* RA Invoie */
 export const invoiceList = asyncHandler(async (req, resp) => {
-    const { page_no, search_text } = req.body;
+    const { page_no, search_text,start_date, end_date } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'road_assistance_invoice',
         // columns: `vehicle_id, vehicle_name, vehicle_model, vehicle_type, horse_power, price`,
@@ -158,6 +172,9 @@ export const invoiceList = asyncHandler(async (req, resp) => {
         limit: 10,
         liveSearchFields: ['invoice_id'],
         liveSearchTexts: [search_text],
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({

@@ -1,8 +1,8 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { getPaginatedData, queryDB  } from '../../dbUtils.js';
-import { deleteFile } from '../../utils.js';
+import { deleteFile,asyncHandler } from '../../utils.js';
 
-export const discussionBoardList = async (req, resp) => {
+export const discussionBoardList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'discussion_board',
@@ -31,9 +31,9 @@ export const discussionBoardList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const discussionBoardDetail = async (req, resp) => {
+export const discussionBoardDetail = asyncHandler(async (req, resp) => {
     const { board_id } = req.body;
     if (!board_id) return resp.json({ status: 0, code: 422, message: "Board Id is required" });
     
@@ -76,9 +76,9 @@ export const discussionBoardDetail = async (req, resp) => {
         comments, 
         base_url: `${req.protocol}://${req.get('host')}/uploads/discussion-board-images/`,
         message: "Discussion Board Detail fetch successfully!"});
-};
+});
 
-export const discussionBoardDelete = async (req, resp) => {
+export const discussionBoardDelete = asyncHandler(async (req, resp) => {
     const conn = await startTransaction();
     try{
         const { board_id } = req.body;
@@ -107,4 +107,4 @@ export const discussionBoardDelete = async (req, resp) => {
     }finally{
         if (conn) conn.release();
     }
-};
+});

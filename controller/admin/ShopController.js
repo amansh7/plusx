@@ -31,7 +31,7 @@ export const storeList = asyncHandler(async (req, resp) => {
 
 export const storeData = asyncHandler(async (req, resp) => {
     const { shop_id } = req.body;
-    const shop = queryDB(`SELECT * FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]); 
+    const shop = await queryDB(`SELECT * FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]); 
     const days = [ 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' ];
     const location = await db.execute(`SELECT location_name FROM locations WHERE status = 1 ORDER BY location_name ASC`);
     const [services] = await db.execute(`SELECT service_name FROM store_services ORDER BY service_name ASC`);
@@ -41,10 +41,12 @@ export const storeData = asyncHandler(async (req, resp) => {
 
     const result = {
         status: 1,
+        code: 200,
         days: days,
         location: location,
         services: serviceNames,
         brands: brandNames,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/shop-images/`,
     }
     if(shop_id){
         result.shop = shop;

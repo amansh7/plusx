@@ -447,13 +447,27 @@ export const chargerBookingDetailsOld = async (req, resp) => {
 /* Invoice */
 export const invoiceList = async (req, resp) => {
     try {
-        const { page_no, search_text } = req.body;
+        const { page_no, start_date, end_date, search_text } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const whereFields = []
+        const whereValues = []
+        const whereOperators = []
+
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+    
+            whereFields.push('created_at', 'created_at');
+            whereValues.push(start, end);
+            whereOperators.push('>=', '<=');
+        }
+    
 
         const result = await getPaginatedData({
             tableName: 'portable_charger_invoice',
@@ -466,8 +480,9 @@ export const invoiceList = async (req, resp) => {
             limit: 10,
             liveSearchFields: ['invoice_id'],
             liveSearchTexts: [search_text],
-            // whereField,
-            // whereValue
+            whereField: whereFields,
+            whereValue: whereValues,
+            whereOperator: whereOperators
         });
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);

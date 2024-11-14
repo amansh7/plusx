@@ -116,13 +116,26 @@ export const bookingDetails = async (req, resp) => {
 /* Invoice */
 export const pdInvoiceList = async (req, resp) => {
     try {
-        const { page_no, search_text } = req.body;
+        const { page_no, start_date, end_date, search_text } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const whereFields = []
+        const whereValues = []
+        const whereOperators = []
+
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+    
+            whereFields.push('created_at', 'created_at');
+            whereValues.push(start, end);
+            whereOperators.push('>=', '<=');
+        }
 
         const result = await getPaginatedData({
             tableName: 'charging_service_invoice',
@@ -135,8 +148,9 @@ export const pdInvoiceList = async (req, resp) => {
             limit: 10,
             liveSearchFields: ['invoice_id'],
             liveSearchTexts: [search_text],
-            // whereField,
-            // whereValue
+            whereField: whereFields,
+            whereValue: whereValues,
+            whereOperator: whereOperators
         });
 
         return resp.json({
