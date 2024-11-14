@@ -257,8 +257,8 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
     const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
     const invoiceData = { ...data, numberToWords, formatNumber, imgUrl  }
     const pdfPath = path.join(__dirname,  '../public/portable-charger-invoice',`${invoiceId}-invoice.pdf`);
-    const htmlTemplate = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs');
-    const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req);
+    const templatePath = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs');
+    const pdf = await generatePDF(invoiceData, templatePath, pdfPath, req);
     
     return resp.json({pdf, templatePath, pdfPath, invoiceData});
 

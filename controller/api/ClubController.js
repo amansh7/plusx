@@ -5,9 +5,7 @@ import { asyncHandler, mergeParam} from '../../utils.js';
 
 export const clubList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no, preference, search_text, age_group, location, category } = mergeParam(req);
-        
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     let query = `SELECT club_id, club_name, location, no_of_members, cover_img, category, age_group, preference FROM clubs WHERE status = ?`;
@@ -44,10 +42,12 @@ export const clubList = asyncHandler(async (req, resp) => {
     const total = totalResult[0].total;
     const total_page = Math.ceil(total / limit) || 1;
 
-    query += ` ORDER BY club_name ASC LIMIT ?, ?`;
-    queryParams.push(start, limit);
-
+    query += ` ORDER BY club_name ASC LIMIT ${parseInt(start)}, ${parseInt(limit)}`;
+    
     const [clubData] = await db.execute(query, queryParams);
+    console.log('query', query);
+    console.log('queryParams', queryParams);
+    console.log('clubData', clubData);
     return resp.json({
         message: ["Club List fetched successfully!"],
         data: clubData,
@@ -62,22 +62,20 @@ export const clubList = asyncHandler(async (req, resp) => {
 
 export const clubDetail = asyncHandler(async (req, resp) => {
     const {rider_id, club_id } = mergeParam(req);
-    let galleryData = [];
-        
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], club_id: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    let gallery = [];
 
     const clubData = await queryDB(`SELECT * FROM clubs WHERE club_id= ? LIMIT 1`, [1, club_id]);
-    [galleryData] = await queryDB(`SELECT * FROM club_gallery WHERE club_id = ? ORDER BY id DESC LIMIT 5`, [club_id]);
-    const imgName = galleryData.map(row => row.image_name);
+    [gallery] = await db.execute(`SELECT * FROM club_gallery WHERE club_id = ? ORDER BY id DESC LIMIT 5`, [club_id]);
+    const galleryData = gallery ? gallery.map(row => row.image_name) : '';
     
     return resp.json({
         status: 1,
         code: 200,
         message: ["Bike Rental Details fetched successfully!"],
         data: clubData,
-        gallery_data: imgName,
+        gallery_data: galleryData,
         base_url: `${req.protocol}://${req.get('host')}/uploads/bike-rental-images/`,
     });
 
