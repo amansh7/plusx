@@ -1,15 +1,11 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, asyncHandler} from '../../utils.js';
+import { asyncHandler, deleteFile} from '../../utils.js';
 import validateFields from "../../validation.js";
 dotenv.config();
 import generateUniqueId from 'generate-unique-id';
 import moment from 'moment';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 export const guideList = asyncHandler(async (req, resp) => {
     try {
@@ -204,8 +200,6 @@ export const deleteGuide = asyncHandler(async (req, resp) => {
     if (galleryData.length > 0) {
         galleryData.forEach(img => img && deleteFile('vehicle-image', img));
     }
-});
-
 
     await db.execute(`DELETE FROM vehicle WHERE rental_id = ?`, [rental_id]);
     await db.execute(`DELETE FROM vehicle_gallery WHERE rental_id = ?`, [rental_id]);
