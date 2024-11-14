@@ -100,25 +100,83 @@ export const evPreSaleDetail = asyncHandler(async (req, resp) => {
 
 // Time Slot 
 export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
-    const { page_no } = req.body;
-    const result = await getPaginatedData({
+    const { page_no, search_text= '', start_date, end_date, } = req.body;
+    const params = {
         tableName: 'ev_pre_sale_testing_slot',
-        columns: `slot_id, slot_name, start_time, end_time, booking_limit, status`,
+        // columns: `slot_id, slot_name, start_time, end_time, booking_limit, status`,
+        columns: `slot_id, start_time, end_time, booking_limit, status, created_at, slot_date`,
         sortColumn: 'id',
-        sortOrder: 'ASC',
+        sortOrder: 'DESC',
         page_no,
         limit: 10,
-    });
+        liveSearchFields: ['slot_id',],
+        liveSearchTexts: [search_text,],
+        whereField: [],
+        whereValue: [],
+        whereOperator: []
+    };
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        params.whereField.push('slot_date', 'slot_date');
+        params.whereValue.push(start, end);
+        params.whereOperator.push('>=', '<=');
+    }
+    const result = await getPaginatedData(params);
+
+    const formattedData = result.data.map((item) => ({
+        slot_id            : item.slot_id,
+        slot_date          : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+        booking_limit      : item.booking_limit,
+        status             : item.status,
+        slot_booking_count : item.slot_booking_count,
+        timing             : `${item.start_time} - ${item.end_time}`
+    }));
 
     return resp.json({
         status: 1,
         code: 200,
         message: ["EV Time Slot List fetch successfully!"],
-        data: result.data,
+        data: formattedData,
         total_page: result.totalPage,
         total: result.total,
     }); 
 });
+
+export const evPreSaleTimeSlotDetails = async (req, resp) => {
+    try {
+        const { slot_id, } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            slot_id: ["required"]
+        });
+
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const [slotDetails] = await db.execute(`
+            SELECT 
+                slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
+            FROM 
+                ev_pre_sale_testing_slot 
+            WHERE 
+                slot_id = ?`, 
+            [slot_id]
+        );
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: ["EV Time Slot Details fetch successfully!"],
+            data: slotDetails[0],
+            
+        });
+    } catch (error) {
+        console.error('Error fetching slot list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger lists' });
+    }
+};
 
 export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
     const { slot_date, start_time, end_time, booking_limit, status = 1 }  = req.body;
@@ -153,34 +211,69 @@ export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
 });
 
 export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
-    const { slot_id, slot_name, start_time, end_time, booking_limit, status='' }  = req.body;
-    const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_name: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    // const { slot_id, slot_name, start_time, end_time, booking_limit, status='' }  = req.body;
+    // const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_name: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
+    // if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const start = moment(start_time, 'HH:mm:ss');
-    const end = moment(end_time, 'HH:mm:ss');
+    // const start = moment(start_time, 'HH:mm:ss');
+    // const end = moment(end_time, 'HH:mm:ss');
 
-    if (end.isSameOrBefore(start)) return resp.status(422).json({ message: "End Time should be greater than Start Time!", status: 0 });
+    // if (end.isSameOrBefore(start)) return resp.status(422).json({ message: "End Time should be greater than Start Time!", status: 0 });
     
-    const updates = {slot_name, start_time: start, end_time: end, booking_limit, status: status ? 1 : 0};
-    const update = await updateRecord('ev_pre_sale_testing_slot', updates, ['slot_id'], [slot_id]);
+    // const updates = {slot_name, start_time: start, end_time: end, booking_limit, status: status ? 1 : 0};
+    // const update = await updateRecord('ev_pre_sale_testing_slot', updates, ['slot_id'], [slot_id]);
 
-    return resp.json({
-        status: update.affectedRows > 0 ? 1 : 0,
-        status: update.affectedRows > 0 ? 200 : 422,
-        message: update.affectedRows > 0 ? "Time Slot Updated Successfully" : "Failed to update time slot.",
-    }); 
+    // return resp.json({
+    //     status: update.affectedRows > 0 ? 1 : 0,
+    //     status: update.affectedRows > 0 ? 200 : 422,
+    //     message: update.affectedRows > 0 ? "Time Slot Updated Successfully" : "Failed to update time slot.",
+    // }); 
+
+    const { slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
+
+        const { isValid, errors } = validateFields({ 
+            slot_id, slot_date, start_time, end_time, booking_limit, status
+        }, {
+            slot_id : ["required"],
+            slot_date : ["required"],
+            start_time: ["required"],
+            end_time: ["required"],
+            booking_limit: ["required"],
+            status: ["required"],
+        });
+
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    
+        const startTime24 = convertTo24HourFormat(start_time);
+        const endTime24 = convertTo24HourFormat(end_time);
+
+        const updates = {
+            slot_date : moment(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+            start_time : startTime24, 
+            end_time : endTime24, 
+            booking_limit, 
+            status,
+        };
+    
+        const update = await updateRecord('ev_pre_sale_testing_slot', updates, ['slot_id'], [slot_id]);
+        
+        return resp.json({
+            status: update.affectedRows > 0 ? 1 : 0,
+            code: 200,
+            message: update.affectedRows > 0 ? ['Slot updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
+        });
 });
 
 export const evPreSaleTimeSlotDelete = asyncHandler(async (req, resp) => {
     const { slot_id }  = req.body;
     if (!slot_id) return resp.json({ status: 0, code: 422, message: "Slot Id is required." });
 
-    const del = await db.execute('DELETE FROM ev_pre_sale_testing_slot WHERE slot_id = ?', [slot_id]);
+    const [del] = await db.execute('DELETE FROM ev_pre_sale_testing_slot WHERE slot_id = ?', [slot_id]);
+console.log('del',[del]);
 
     return resp.json({
         status: del.affectedRows > 0 ? 1 : 0,
-        status: del.affectedRows > 0 ? 200 : 422,
+        code: del.affectedRows > 0 ? 200 : 422,
         message: del.affectedRows > 0 ? "Time Slot Deleted Successfully" : "Failed to delete time slot.",
     }); 
 });

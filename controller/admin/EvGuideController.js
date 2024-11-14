@@ -201,8 +201,8 @@ export const deleteGuide = asyncHandler(async (req, resp) => {
         galleryData.forEach(img => img && deleteFile('vehicle-image', img));
     }
 
-    await db.execute(`DELETE FROM vehicle WHERE rental_id = ?`, [rental_id]);
-    await db.execute(`DELETE FROM vehicle_gallery WHERE rental_id = ?`, [rental_id]);
+    await db.execute(`DELETE FROM vehicle WHERE vehicle_id = ?`, [vehicle_id]);
+    await db.execute(`DELETE FROM vehicle_gallery WHERE vehicle_id = ?`, [vehicle_id]);
 
     return resp.json({ status: 1, code: 200, message: "Vehicle deleted successfully!" });
 });

@@ -25,7 +25,8 @@ import { couponData, couponDetail, couponList, couponAdd, couponEdit, couponDele
 import { offerDetail, offerList, offerAdd, offerEdit, offerDelete } from "../controller/admin/OfferController.js";
 import {guideList, addGuide, guideDetail, editGuide, deleteGuide, deleteEvGuideGallery} from "../controller/admin/EvGuideController.js";
 import { 
-    evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete 
+    evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete, 
+    evPreSaleTimeSlotDetails
 } from "../controller/admin/EvInsuranceController.js";
 import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleController.js";
 import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
@@ -193,6 +194,7 @@ const adminRoutes = [
     { method: 'post',  path: '/ev-pre-sale-detail',                handler: evPreSaleDetail },
     { method: 'post',  path: '/ev-pre-sale-time-slot-list',        handler: evPreSaleTimeSlot },
     { method: 'post',  path: '/ev-pre-sale-add-time-slot-list',    handler: evPreSaleTimeSlotAdd },
+    { method: 'post',  path: '/ev-pre-sale-time-slot-details',     handler: evPreSaleTimeSlotDetails },
     { method: 'post',  path: '/ev-pre-sale-edit-time-slot-list',   handler: evPreSaleTimeSlotEdit },
     { method: 'post',  path: '/ev-pre-sale-delete-time-slot-list', handler: evPreSaleTimeSlotDelete },
 ]; 
