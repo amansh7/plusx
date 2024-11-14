@@ -2,7 +2,7 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from '..
 import dotenv from 'dotenv';
 import moment from 'moment';
 import crypto from 'crypto';
-import { mergeParam, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
+import { mergeParam, asyncHandler, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
@@ -154,7 +154,7 @@ export const pdInvoiceList = async (req, resp) => {
     }
 };
 
-export const pdInvoiceDetails = async (req, resp) => {
+export const pdInvoiceDetails = asyncHandler(async (req, resp) => {
     const { invoice_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { invoice_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -197,7 +197,7 @@ export const pdInvoiceDetails = async (req, resp) => {
         status: 1,
         code: 200,
     });
-};
+});
 /* Invoice */
 
 /* Slot */

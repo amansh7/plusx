@@ -1,20 +1,44 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { createNotification, pushNotification } from '../../utils.js';
+import { createNotification, pushNotification,asyncHandler } from '../../utils.js';
+import moment from 'moment';
 
 /* RA Booking */
-export const bookingList = async (req, resp) => {
-    const { search, page_no } = req.body;
+export const bookingList = asyncHandler(async (req, resp) => {
+    const { start_date, end_date, search_text = '', status, page_no } = req.body;
+
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
+    if(status) {
+        whereFields.push('order_status');
+        whereValues.push(status);
+        whereOperators.push('=');
+    }
+
     const result = await getPaginatedData({
         tableName: 'road_assistance',
         columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, price, order_status, created_at`,
-        searchFields: ['name'],
-        searchTexts: [search],
+        liveSearchFields: ['request_id', 'name'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({
@@ -25,9 +49,9 @@ export const bookingList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const bookingData = async (req, resp) => {
+export const bookingData = asyncHandler(async (req, resp) => {
     const { request_id } = req.body;
     const booking = await queryDB(`SELECT * FROM road_assistance WHERE request_id = ?`, [request_id]);
 
@@ -46,9 +70,9 @@ export const bookingData = async (req, resp) => {
         message : ["Booking details fetched successfully!"],
         result
     });
-};
+});
 
-export const evRoadAssistanceConfirmBooking = async (req, resp) => {
+export const evRoadAssistanceConfirmBooking = asyncHandler(async (req, resp) => {
     const { request_id, latitude, longitude } = req.body;
 
     const order = await queryDB(`
@@ -87,9 +111,9 @@ export const evRoadAssistanceConfirmBooking = async (req, resp) => {
         await db.execute(`UPDATE road_assistance SET order_status = 'CNF' WHERE request_id = ?`, [request_id]);
         return resp.json({status: 1, message: "You have successfully Confirm roadside assistance request."});
     }
-};
+});
 
-export const evRoadAssistanceCancelBooking = async (req, resp) => {
+export const evRoadAssistanceCancelBooking = asyncHandler(async (req, resp) => {
     const { order_id, reason } = req.body;
     const { isValid, errors } = validateFields(req.body, { order_id : ["required"], reason : ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -114,12 +138,12 @@ export const evRoadAssistanceCancelBooking = async (req, resp) => {
     pushNotification(rsa.fcm_token, title, message, 'RDRFCM', href);
 
     return resp.json({status: 1, message: "Booking has been cancelled successfully!."});
-};
+});
 
 
 /* RA Invoie */
-export const invoiceList = async (req, resp) => {
-    const { page_no } = req.body;
+export const invoiceList = asyncHandler(async (req, resp) => {
+    const { page_no, search_text } = req.body;
     const result = await getPaginatedData({
         tableName: 'road_assistance_invoice',
         // columns: `vehicle_id, vehicle_name, vehicle_model, vehicle_type, horse_power, price`,
@@ -132,6 +156,8 @@ export const invoiceList = async (req, resp) => {
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        liveSearchFields: ['invoice_id'],
+        liveSearchTexts: [search_text],
     });
 
     return resp.json({
@@ -142,9 +168,11 @@ export const invoiceList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const invoiceData = async (req, resp) => {
+
+
+export const invoiceData = asyncHandler(async (req, resp) => {
     const { invoice_id } = req.body;
     const invoice = await queryDB(`
         SELECT rai.*, ra.name, ra.country_code, ra.contact_no
@@ -160,6 +188,6 @@ export const invoiceData = async (req, resp) => {
     };
 
     return resp.status(200).json(result);
-};
+});
 
 

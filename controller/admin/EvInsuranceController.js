@@ -144,6 +144,7 @@ export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
     const query = `INSERT INTO ev_pre_sale_testing_slot (slot_id, slot_date, start_time, end_time, booking_limit, status) VALUES ${placeholders.join(', ')}`;
     const [insert] = await db.execute(query, values);
 
+
     return resp.json({
         code: 200,
         message: insert.affectedRows > 0 ? ['Time Slot added successfully!'] : ['Oops! Something went wrong. Please try again.'],

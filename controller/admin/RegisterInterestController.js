@@ -2,14 +2,16 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import { asyncHandler } from '../../utils.js';
 
-export const interestList = async (req, resp) => {
-    const {page_no } = req.body;
+
+export const interestList = asyncHandler(async (req, resp) => {
+    const {page_no,search_text } = req.body;
     const result = await getPaginatedData({
         tableName: 'interested_people',
         columns: `user_id, rider_id, name, country_code, mobile, address, vehicle, region_specification`,
-        searchFields: [],
-        searchTexts: [],
+        liveSearchFields: ['user_id', 'name',],
+        liveSearchTexts: [search_text, search_text,],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
@@ -24,7 +26,7 @@ export const interestList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
 
 

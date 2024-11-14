@@ -2,9 +2,9 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { deleteFile } from '../../utils.js';
+import { deleteFile, asyncHandler } from '../../utils.js';
 
-export const bikesList = async (req, resp) => {
+export const bikesList = asyncHandler(async (req, resp) => {
     const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'electric_bike_rental',
@@ -25,9 +25,9 @@ export const bikesList = async (req, resp) => {
         total_page: result.totalPage,
         total: result.total,
     });    
-};
+});
 
-export const bikeDetail = async (req, resp) => {
+export const bikeDetail = asyncHandler(async (req, resp) => {
     const { rental_id } = req.body;
     if(!rental_id) return resp.json({status: 0, message: "Rental Id is required"});
 
@@ -43,9 +43,9 @@ export const bikeDetail = async (req, resp) => {
         galleryData,
         base_url: `${req.protocol}://${req.get('host')}/uploads/bike-rental-images/`
     });
-};
+});
 
-export const bikeData = async (req, resp) => {
+export const bikeData = asyncHandler(async (req, resp) => {
     const {rental_id} = req.body;
     const contract = [ '1 Month', '6 Months', '1 Year'];
     const bikeType = [ 'Lease', 'Rent'];
@@ -62,9 +62,9 @@ export const bikeData = async (req, resp) => {
     }
 
     return resp.json(result);
-};
+});
 
-export const bikeAdd = async (req, resp) => {
+export const bikeAdd = asyncHandler(async (req, resp) => {
     const { bike_name, available_on, description, bike_type, price, contract, feature, lease_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         bike_name: ["required"], 
@@ -98,9 +98,9 @@ export const bikeAdd = async (req, resp) => {
         status: insert.affectedRows > 0 ? 1 : 0,
         message: insert.affectedRows > 0 ? "Bike rental added successfully" : "Failed to insert, Please try again.",
     });
-};
+});
 
-export const bikeEdit = async (req, resp) => {
+export const bikeEdit = asyncHandler(async (req, resp) => {
     const { rental_id, bike_name, available_on, description, bike_type, price, contract, feature, lease_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         rental_id: ["required"], 
@@ -145,7 +145,7 @@ export const bikeEdit = async (req, resp) => {
         status: update.affectedRows > 0 ? 1 : 0,
         message: update.affectedRows > 0 ? "Bike rental updated successfully" : "Failed to update, Please try again.",
     });
-};
+});
 
 export const bikeDelete = async (req, resp) => {
     const { rental_id } = req.body;
@@ -168,7 +168,7 @@ export const bikeDelete = async (req, resp) => {
     return resp.json({ status: 1, code: 200, message: "Bike deleted successfully!" });
 };
 
-export const bikeGalleryDelete = async (req, resp) => {
+export const bikeGalleryDelete = asyncHandler(async (req, resp) => {
     const { gallery_id } = req.body;
     if(!gallery_id) return resp.json({status:0, message: "Gallery Id is required"});
 
@@ -180,6 +180,6 @@ export const bikeGalleryDelete = async (req, resp) => {
     }
 
     return resp.json({status: 1, message: "Gallery Img deleted successfully"});
-};
+});
 
 

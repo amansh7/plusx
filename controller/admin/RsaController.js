@@ -1,7 +1,8 @@
 import generateUniqueId from 'generate-unique-id';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
-import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
+import { getPaginatedData, insertRecord, queryDB, updateRecord, } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import { asyncHandler } from '../../utils.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -11,7 +12,7 @@ import moment from 'moment';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const rsaList = async (req, resp) => {
+export const rsaList = asyncHandler(async (req, resp) => {
     const{ rsa_id, rsa_name, rsa_email, rsa_mobile, page = 1, list, service_type, start_date, end_date, search_text = ''} = req.body;
 
     const searchField = [];
@@ -74,10 +75,10 @@ export const rsaList = async (req, resp) => {
         total: result.total,
     });
 
-};
+});
 
 
-export const rsaData = async (req, resp) => {
+export const rsaData = asyncHandler(async (req, resp) => {
     const { rsa_id } = req.body; 
     const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging'];
@@ -111,10 +112,10 @@ export const rsaData = async (req, resp) => {
         bookingType,
         bookingHistory 
     });
-};
+});
 
 
-export const rsaAdd = async (req, resp) => {
+export const rsaAdd = asyncHandler(async (req, resp) => {
     const{ rsa_name, rsa_email, mobile, service_type, password, confirm_password } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         rsa_name: ["required"],
@@ -149,9 +150,9 @@ export const rsaAdd = async (req, resp) => {
         
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-};
+});
 
-export const rsaUpdate = async (req, resp) => {
+export const rsaUpdate = asyncHandler(async (req, resp) => {
     const{ rsa_id, rsa_name, rsa_email, mobile, service_type, password, confirm_password } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         rsa_id: ["required"],
@@ -202,9 +203,9 @@ export const rsaUpdate = async (req, resp) => {
         
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
-};
+});
 
-export const rsaDelete = async (req, resp) => {
+export const rsaDelete = asyncHandler(async (req, resp) => {
     const { rsa_id } = req.body;    
     const rsaData = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     if(!rsaData) return resp.json({status:0, message: "RSA Data can not delete, or invalid "});
@@ -234,9 +235,9 @@ export const rsaDelete = async (req, resp) => {
         if (conn) conn.release();
     }
 
-};
+});
 
-export const rsaStatusChange = async (req, resp) => {
+export const rsaStatusChange = asyncHandler(async (req, resp) => {
     try{
         const{ id, status } = req.body;
     
@@ -255,4 +256,4 @@ export const rsaStatusChange = async (req, resp) => {
     }catch(err){
         return resp.status(500).json({status:0, message: "Oops! Something went wrong! Please Try Again."});
     }
-};
+});

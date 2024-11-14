@@ -7,7 +7,6 @@ import generateUniqueId from 'generate-unique-id';
 import moment from 'moment';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 
-
 export const guideList = asyncHandler(async (req, resp) => {
     try {
         const { page_no, search_text, start_date, end_date, sort_by = 'd' } = req.body; 
