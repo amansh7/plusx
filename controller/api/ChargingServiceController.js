@@ -167,11 +167,13 @@ export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
     formatCols.shift();
     const [history] = await db.execute(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service_history WHERE service_id = ?`, [service_id]);
 
-    // order.invoice_url = '';
-    order.slot = 'Schedule';
-    if (order.order_status == 'WC') {
-        const invoiceId = order.request_id.replace('CS', 'INVCS');
-        order.invoice_url = `${req.protocol}://${req.get('host')}/public/pick-drop-invoice/${invoiceId}-invoice.pdf`;
+    if(order){
+        order.invoice_url = '';
+        order.slot = 'Schedule';
+        if (order.order_status == 'WC') {
+            const invoiceId = order.request_id.replace('CS', 'INVCS');
+            order.invoice_url = `${req.protocol}://${req.get('host')}/public/pick-drop-invoice/${invoiceId}-invoice.pdf`;
+        }
     }
 
     return resp.json({
