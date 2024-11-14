@@ -129,27 +129,21 @@ export const rsaAdd = asyncHandler(async (req, resp) => {
     if(password.length <= 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
     if(password != confirm_password) return resp.json({ status: 0, code: 422, message: ['Password and confirm password not matched!'] });
 
-    try{
-        let profile_image = '';
-        if(req.files && req.files['profile_image']){
-            const files = req.files;
-            profile_image = files ? files['profile_image'][0].filename : '';
-        }
-        const insert = await insertRecord('rsa', [
-            'rsa_id', 'rsa_name', 'email', 'country_code', 'mobile', 'booking_type', 'password', 'status', 'running_order', 'profile_img'
-        ], [
-            `RSA-${generateUniqueId({length:8})}`, rsa_name, rsa_email, '+971', mobile, service_type, password, 0, 0, profile_image
-        ]);
-        return resp.json({
-            status: insert.affectedRows > 0 ? 1 : 0, 
-            code: 200, 
-            message: insert.affectedRows > 0 ? "RSA created successfully" : "Failed to create, Please Try Again!", 
-        });
-    }catch(err){
-        // console.log(err);
-        
-        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    let profile_image = '';
+    if(req.files && req.files['profile_image']){
+        const files = req.files;
+        profile_image = files ? files['profile_image'][0].filename : '';
     }
+    const insert = await insertRecord('rsa', [
+        'rsa_id', 'rsa_name', 'email', 'country_code', 'mobile', 'booking_type', 'password', 'status', 'running_order', 'profile_img'
+    ], [
+        `RSA-${generateUniqueId({length:8})}`, rsa_name, rsa_email, '+971', mobile, service_type, password, 0, 0, profile_image
+    ]);
+    return resp.json({
+        status: insert.affectedRows > 0 ? 1 : 0, 
+        code: 200, 
+        message: insert.affectedRows > 0 ? "RSA created successfully" : "Failed to create, Please Try Again!", 
+    });
 });
 
 export const rsaUpdate = asyncHandler(async (req, resp) => {
@@ -169,40 +163,33 @@ export const rsaUpdate = asyncHandler(async (req, resp) => {
     if (emailCheck?.length > 0) return resp.json({status:1, code: 200, message:["Email already exists"]});
     if (mobileCheck?.length > 0) return resp.json({status:1, code: 200, message:["Mobile number already exists"]});
     
-    try{
-        const rsaData = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id = ?`, [rsa_id]);
-    
-        let profile_image = rsaData.profile_img;
-        if(req.files && req.files['profile_image']){
-            const files = req.files;
-            profile_image = files ? files['profile_image'][0].filename : '';
-        }
-    
-        const updates = {rsa_name, email: rsa_email, mobile, booking_type: service_type, profile_img: profile_image};
-        if(password){
-            const hashedPswd = await bcrypt.hash(password, 10);
-            updates.password = hashedPswd;
-        } 
-        const update = await updateRecord('rsa', updates, ['rsa_id'], [rsa_id]);
-        const profileImgPath = path.join(__dirname, `public/uploads/rsa_images/${rsaData.profile_img}`, rsaData.profile_img);
-        if (req.file) {
-            fs.unlink(profileImgPath, (err) => {
-                if (err) {
-                    console.error(`Failed to delete rider old image: ${profileImgPath}`, err);
-                }
-            });
-        }
-        return resp.json({
-            status: update.affectedRows > 0 ? 1 : 0, 
-            code: 200, 
-            message: update.affectedRows > 0 ? "RSA updated successfully" : "Failed to update, Please Try Again!", 
-        });
+    const rsaData = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id = ?`, [rsa_id]);
 
-    }catch(err){
-        // console.log('err',err);
-        
-        return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
+    let profile_image = rsaData.profile_img;
+    if(req.files && req.files['profile_image']){
+        const files = req.files;
+        profile_image = files ? files['profile_image'][0].filename : '';
     }
+
+    const updates = {rsa_name, email: rsa_email, mobile, booking_type: service_type, profile_img: profile_image};
+    if(password){
+        const hashedPswd = await bcrypt.hash(password, 10);
+        updates.password = hashedPswd;
+    } 
+    const update = await updateRecord('rsa', updates, ['rsa_id'], [rsa_id]);
+    const profileImgPath = path.join(__dirname, `public/uploads/rsa_images/${rsaData.profile_img}`, rsaData.profile_img);
+    if (req.file) {
+        fs.unlink(profileImgPath, (err) => {
+            if (err) {
+                console.error(`Failed to delete rider old image: ${profileImgPath}`, err);
+            }
+        });
+    }
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0, 
+        code: 200, 
+        message: update.affectedRows > 0 ? "RSA updated successfully" : "Failed to update, Please Try Again!", 
+    });
 });
 
 export const rsaDelete = asyncHandler(async (req, resp) => {
@@ -238,22 +225,18 @@ export const rsaDelete = asyncHandler(async (req, resp) => {
 });
 
 export const rsaStatusChange = asyncHandler(async (req, resp) => {
-    try{
-        const{ id, status } = req.body;
-    
-        if(status == 4){
-            const orderCheck = queryDB(`SELECT COUNT(*) AS check_order FROM order_assign WHERE rsa_id = ? AND order_status IN ('AR', 'EN')`, [id]);
-            if (orderCheck.check_order > 0) return resp.status(422).json({status: 0, msg: "You cannot deactivate this RSA because an order is currently active."});    
-        }
-    
-        const update = await updateRecord('rsa', {status, access_token:''}, ['id'], [id]);
-        
-        return resp.json({
-            status: update.affectedRows > 0 ? 1 : 0, 
-            code: 200, 
-            message: update.affectedRows > 0 ? "RSA status changed successfully." : "Failed to update, Please Try Again!", 
-        });
-    }catch(err){
-        return resp.status(500).json({status:0, message: "Oops! Something went wrong! Please Try Again."});
+    const{ id, status } = req.body;
+
+    if(status == 4){
+        const orderCheck = queryDB(`SELECT COUNT(*) AS check_order FROM order_assign WHERE rsa_id = ? AND order_status IN ('AR', 'EN')`, [id]);
+        if (orderCheck.check_order > 0) return resp.status(422).json({status: 0, msg: "You cannot deactivate this RSA because an order is currently active."});    
     }
+
+    const update = await updateRecord('rsa', {status, access_token:''}, ['id'], [id]);
+    
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0, 
+        code: 200, 
+        message: update.affectedRows > 0 ? "RSA status changed successfully." : "Failed to update, Please Try Again!", 
+    });
 });
