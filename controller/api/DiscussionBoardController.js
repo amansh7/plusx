@@ -218,7 +218,7 @@ export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
             GROUP BY 
                 bc.comment_id
             ORDER BY 
-                bc.comment_id DESC;
+                bc.id DESC;
         `, [rider_id, board_id]);
         
         const [polls] = await db.execute(`
@@ -738,7 +738,7 @@ export const deleteReplyComment = asyncHandler(async (req, resp) => {
                 
         if(comment.riderDetails){
             const riderData = comment.riderDetails.split(",");
-            const href = 'disscussion_board/' + board_id;
+            const href = 'disscussion_board/' + comment.board_id;
             const heading = 'Reply Comment deleted';
             const desc = `One reply Comment deleted by rider!`;
             pushNotification(riderData[1], heading, desc, 'RDRFCM', href);
