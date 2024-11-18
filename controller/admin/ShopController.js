@@ -82,24 +82,25 @@ export const storeAdd = asyncHandler(async (req, resp) => {
         const placeholders = values.map(() => '(?, ?)').join(', ');
         await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
     }
-    /* if(address && address.length > 0){
-        const allAddress = data.address.filter(Boolean);
+    
+    const allAddress = data.address ? data.address.filter(Boolean) : [];
+    if(allAddress.length > 0){
         const values = [];
         const placeholders = [];
         for (let k = 0; k < allAddress.length; k++) {
             if (data.address[k]) {
                 values.push(storeId);
                 values.push(data.address[k]);
-                values.push(data.area_name[k]);
-                values.push(data.location[k]);
-                values.push(data.latitude[k]);
-                values.push(data.longitude[k]);
+                values.push(data.area_name[k] || '');
+                values.push(data.location[k]  || '');
+                values.push(data.latitude[k]  || '');
+                values.push(data.longitude[k] || '');
 
                 placeholders.push('(?, ?, ?, ?, ?, ?)');
             }
         }
         await db.execute(`INSERT INTO store_address (store_id, address, area_name, location, latitude, longitude) VALUES ${placeholders.join(', ')}`, [values]);
-    } */
+    }
     return resp.json({status: 1, message: "Store added successfully."});
 });
 
@@ -176,32 +177,28 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
         galleryData.forEach(img => img && deleteFile('shop-images', img));
     }
 
-    /* if (address && address.length > 0) {
-        const allAddress = data.address.filter(Boolean);
-        const values = [];
-        const updateQueries = [];
+    const allAddress = data.address ? data.address.filter(Boolean) : [];
+    if (allAddress.length > 0) {
+        const updateValues = [];
+        const updateQuery = allAddress.map((_, index) => {
+            return `UPDATE store_address SET address = ?, area_name = ?, location = ?, latitude = ?, longitude = ? WHERE id = ?`;
+        }).join('; '); 
     
         for (let k = 0; k < allAddress.length; k++) {
-            if (data.address[k]) {
-                const id = data.id[k];
-                updateQueries.push(`(?, ?, ?, ?, ?, ?)`);
-                values.push(data.address[k]);  
-                values.push(data.area_name[k]);
-                values.push(data.location[k]); 
-                values.push(data.latitude[k]); 
-                values.push(data.longitude[k]);
-                values.push(id);
-            }
+            updateValues.push(
+                data.address[k],
+                data.area_name[k],
+                data.location[k],
+                data.latitude[k],
+                data.longitude[k],
+                data.id[k]
+            );
         }
     
-        const sql = `UPDATE store_address SET address = ?, area_name = ?, location = ?, latitude = ?, longitude = ? WHERE id = ?`;
-    
-        for (let i = 0; i < allAddress.length; i++) {
-            if (data.address[i]) {
-                await db.execute(sql, values.slice(i * 6, (i + 1) * 6));
-            }
+        if (updateQueries.length > 0) {
+            await db.execute(updateQuery, updateValues);
         }
-    } */
+    }
 
     return resp.json({status:1, message: "Store updated successfully"});
 });
