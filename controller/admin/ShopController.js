@@ -56,6 +56,7 @@ export const storeData = asyncHandler(async (req, resp) => {
 });
 
 export const storeAdd = asyncHandler(async (req, resp) => {
+    const data    = req.body;
     const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
     const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -64,9 +65,9 @@ export const storeAdd = asyncHandler(async (req, resp) => {
     const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
     const data = req.body;
     const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
-    const storeId     = `STOR${generateUniqueId({length:12})}`;
-    const brandsArr   = (brands && brands.trim !== '') ? brands.join(",") : '';
-    const servicesArr = (services && services.trim !== '') ? services.join(",") : '';
+    const storeId     = `STOR${generateUniqueId({length:6})}`;
+    const brandsArr   = (brands && brands.trim !== '') ? brands : '';
+    const servicesArr = (services && services.trim !== '') ? services : '';
 
     const insert = await insertRecord('service_shops', [
         'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
@@ -127,6 +128,7 @@ export const storeView = asyncHandler(async (req, resp) => {
 });
 
 export const storeUpdate = asyncHandler(async (req, resp) => {
+    const data = req.body;
     const { shop_name, contact_no , address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
@@ -195,7 +197,7 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
         await db.execute(`INSERT INTO store_address (store_id, address, area_name, location, latitude, longitude) VALUES ${placeholders.join(', ')}`, values);
     }
 
-    return resp.json({statsu:1, message: "Store updated successfully"});
+    return resp.json({status:1, message: "Store updated successfully"});
 });
 
 export const storeDelete = asyncHandler(async (req, resp) => {
