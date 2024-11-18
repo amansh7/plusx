@@ -295,7 +295,7 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
             status: update.affectedRows > 0 ? 1 : 0,
             code: 200,
             error: update.affectedRows > 0 ? false: true,
-            message: update.affectedRows > 0 ? ["Your Car for  Sale  Successful Updated!"] : ["Failed to update. Please try again."]
+            message: update.affectedRows > 0 ? ["Thank you! Your request for Edit Car has been submitted."] : ["Failed to update. Please try again."]
         });
     }catch(err){
         return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
