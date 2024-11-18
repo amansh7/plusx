@@ -256,27 +256,28 @@ export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
 
 export const editBoard = asyncHandler(async (req, resp) => {
     try{
-        const { rider_id, board_id, blog_title, description='', hyper_link='' } = mergeParam(req);
-        const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"], blog_title: ["required"]});
+        const { rider_id, board_id, blog_title, description='', hyper_link='', board_type } = mergeParam(req);
+        const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], board_id: ["required"], blog_title: ["required"], board_type: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         
         const board = await queryDB(`SELECT rider_id, image FROM discussion_board WHERE board_id = ? AND rider_id = ?`, [board_id, rider_id]);
         if(!board) return resp.json({status:0, code:422, error: true, message:["Board Id is not matching with our records"]});
         
-        let updatedImage = board.image;
+        let updatedImage = '';
+        const fBoardType = parseInt(board_type);
         if (req.files && req.files['image']) {
             updatedImage = req.files['image'] ? req.files.image.map(file => file.filename).join('*') : '';
             const imageArray = board.image.split("*");
             imageArray.forEach(img => img && deleteFile('discussion-board-images', img));
         }
 
-        const update = await updateRecord('discussion_board', {blog_title, description, image: updatedImage, hyper_link}, ['board_id', 'rider_id'], [board_id, rider_id]);
+        const update = await updateRecord('discussion_board', {blog_title, description, image: updatedImage, hyper_link, board_type: fBoardType}, ['board_id', 'rider_id'], [board_id, rider_id]);
         if(update.affectedRows === 0) return resp.json({ status: 0, code: 422, message: ["Failed to update baord. Please Try Again."] });
 
         return resp.json({ 
             status: 1, 
             code: 200, 
-            message: ["Board updated successfully!"] 
+            message: ["Discussion board updated successfully!"] 
         });
     }catch(err){
         console.error('Error updating board:', err);
@@ -737,10 +738,10 @@ export const deleteReplyComment = asyncHandler(async (req, resp) => {
                 
         if(comment.riderDetails){
             const riderData = comment.riderDetails.split(",");
-            // const href = 'disscussion_board/' + board_id;
-            // const heading = 'Reply Comment deleted';
-            // const desc = `One reply Comment deleted by rider!`;
-            // pushNotification(riderData[1], heading, desc, 'RDRFCM', href);
+            const href = 'disscussion_board/' + board_id;
+            const heading = 'Reply Comment deleted';
+            const desc = `One reply Comment deleted by rider!`;
+            pushNotification(riderData[1], heading, desc, 'RDRFCM', href);
         }
 
         return resp.json({

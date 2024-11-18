@@ -154,9 +154,8 @@ export const forgotPassword = asyncHandler(async (req, resp) => {
     }
     const password = generateRandomPassword(6);
     const hashedPswd = await bcrypt.hash(password, 10);
-    // console.log(hashedPswd);
     await db.execute('UPDATE riders SET password=? WHERE rider_email=?', [hashedPswd, email]);
-    // await updateRecord
+    
     try {
         const html = `<html>
           <body>
@@ -173,10 +172,9 @@ export const forgotPassword = asyncHandler(async (req, resp) => {
         </html>`;
         emailQueue.addEmail(email, `Forgot Password Request - PlusX Electric App`, html);
     
-        resp.status(200).json({ status: 1, code: 200, message: ["An email has been sent to your given email address. Kindly check your email"] });
+        resp.status(200).json({ status: 1, code: 200, message: "An email has been sent to your given email address. Kindly check your email" });
     } catch (error) {
-        // console.log(error);
-        resp.status(500).json({ status: 0, code: 500, message: ["Failed to send email."] });
+        resp.status(500).json({ status: 0, code: 500, message: "Failed to send email." });
     }
 });
 

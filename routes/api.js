@@ -209,7 +209,7 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
     if(path === '/add-discussion-board' || path === '/discussion-board-edit'){
         middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
     }
-    if(path === '/ev-pre-sale-testing'){
+    if(path === '/ev-pre-sale-testing' || path === '/board-vote-edit'){
         const noUpload1 = multer(); middlewares.push(noUpload1.none()); 
     }
     if(path === '/add-insurance'){

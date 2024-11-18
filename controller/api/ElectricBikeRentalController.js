@@ -1,3 +1,4 @@
+import db from "../../config/db.js";
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData } from '../../dbUtils.js';
 import { asyncHandler, formatDateTimeInQuery, mergeParam } from '../../utils.js';
@@ -37,14 +38,13 @@ export const bikeList = asyncHandler(async (req, resp) => {
 
 export const bikeDetail = asyncHandler(async (req, resp) => {
     const {rider_id, rental_id } = mergeParam(req);
-        
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], rental_id: ["required"]});
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    let gallery = [];
 
     const rentalData = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM electric_bike_rental WHERE status = ? AND rental_id= ? LIMIT 1`, [1, rental_id]);
-    const galleryData = await queryDB(`SELECT * FROM electric_bike_rental_gallery WHERE rental_id = ? ORDER BY id DESC LIMIT 5`, [rental_id]);
-    const imgName = galleryData.map(row => row.image_name);
+    [gallery] = await db.execute(`SELECT * FROM electric_bike_rental_gallery WHERE rental_id = ? ORDER BY id DESC LIMIT 5`, [rental_id]);
+    const imgName = gallery.map(row => row.image_name);
     
     return resp.json({
         status: 1,
@@ -54,5 +54,4 @@ export const bikeDetail = asyncHandler(async (req, resp) => {
         gallery_data: imgName,
         base_url: `${req.protocol}://${req.get('host')}/uploads/bike-rental-images/`,
     });
-
 });
