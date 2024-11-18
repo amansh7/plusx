@@ -1,10 +1,10 @@
-import db from "../../config/db.js";
-import validateFields from "../../validation.js";
-import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
-import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
-import { asyncHandler, deleteFile, mergeParam } from '../../utils.js';
+import db from "../../config/db.js";
 import emailQueue from "../../emailQueue.js";
+import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
+import { asyncHandler, deleteFile, mergeParam } from '../../utils.js';
+import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 
 export const vehicleList = asyncHandler(async (req, resp) => {
     const {vehicle_type, page_no, vehicle_name, vehicle_model } = mergeParam(req);
@@ -272,8 +272,8 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
             horse_power: ["required"],
         });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        if(!req.files['car_images']) return resp.json({ status:0, code: 422, message: "car_images is required"});
-        if(!req.files['car_tyre_image']) return resp.json({ status:0, code: 422, message: "car_tyre_image is required"});
+        // if(!req.files['car_images'] && req.body['car_images']) return resp.json({ status:0, code: 422, message: "car_images is required"});
+        // if(!req.files['car_tyre_image'] && req.body['car_tyre_image']) return resp.json({ status:0, code: 422, message: "car_tyre_image is required"});
         
         const vehicle = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
         const car_images = req.files['car_images']?.map(file => file.filename).join('*') || vehicle.car_images;

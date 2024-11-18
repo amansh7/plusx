@@ -1,6 +1,6 @@
 import db from "../../config/db.js";
-import validateFields from "../../validation.js";
 import { queryDB } from '../../dbUtils.js';
+import validateFields from "../../validation.js";
 import { mergeParam, getOpenAndCloseTimings, asyncHandler} from '../../utils.js';
 
 export const shopList = asyncHandler(async (req, resp) => {

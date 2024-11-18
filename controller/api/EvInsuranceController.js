@@ -1,10 +1,10 @@
-import db from "../../config/db.js";
-import validateFields from "../../validation.js";
-import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import moment from "moment";
-import generateUniqueId from 'generate-unique-id';
-import { asyncHandler, createNotification, deleteFile, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+import db from "../../config/db.js";
 import emailQueue from "../../emailQueue.js";
+import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
+import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
+import { asyncHandler, createNotification, deleteFile, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 
 export const addInsurance = asyncHandler(async (req, resp) => {
     try{

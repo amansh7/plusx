@@ -1,15 +1,15 @@
+import fs from 'fs';
+import path from "path";
+import moment from "moment";
+import crypto from 'crypto';
+import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import db from "../../config/db.js";
-import dotenv from "dotenv";
-import crypto from 'crypto';
-import path from "path";
-import fs from 'fs';
-import validateFields from "../../validation.js";
-import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery, asyncHandler } from '../../utils.js';
-import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-import generateUniqueId from 'generate-unique-id';
-import moment from "moment";
 import emailQueue from "../../emailQueue.js";
+import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
+import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
+import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery, asyncHandler } from '../../utils.js';
 dotenv.config();
 
 /* Rider Auth */

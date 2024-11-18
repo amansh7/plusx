@@ -1,10 +1,10 @@
-import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import validateFields from "../../validation.js";
-import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
-import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
+import validateFields from "../../validation.js";
+import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
+import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
+import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 
 export const chargerList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no } = mergeParam(req);

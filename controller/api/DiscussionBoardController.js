@@ -1,8 +1,8 @@
-import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
+import moment from "moment";
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
-import moment from "moment";
+import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
+import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { asyncHandler, createNotification, deleteFile, mergeParam, pushNotification } from "../../utils.js";
 
 export const addDiscussionBoard = asyncHandler(async (req, resp) => {
