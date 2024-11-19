@@ -27,6 +27,7 @@ const corsOptions = {
         // 'http://192.168.1.21:3434/admin/driver-list'
         'http://192.168.1.21:1112',
         'http://192.168.1.87:3434',
+        'http://192.168.1.19:3000',
         'http://localhost:1112',
         'https://plusx.shunyaekai.com',
     ],

@@ -116,13 +116,14 @@ export const couponEdit = asyncHandler(async (req, resp) => {
     const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type, status='' } = req.body;
     const { isValid, errors } = validateFields(req.body, { coupan_name: ["required"], coupan_code: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    
+    console.log(req.body);
+    // return false
     const {coupon_id} = await queryDB(`SELECT id AS coupon_id FROM coupon WHERE coupan_code = ? `, [coupan_code]);
     const validationErr = await validations(coupan_code, resp, coupon_id);
     if (validationErr) return validationErr;
 
     const fExpiryDate = moment(expiry_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-    const updates = {coupan_name, coupan_percentage, end_date: fExpiryDate, user_per_user, booking_for: service_type, status: status };
+    const updates = {coupan_name, coupan_percentage, end_date: fExpiryDate, user_per_user: user_per_user, booking_for: service_type, status: status };
     
     const update = await updateRecord('coupon', updates, ['coupan_code'], [coupan_code]);
     
