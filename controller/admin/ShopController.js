@@ -2,7 +2,7 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { formatOpenAndCloseTimings, asyncHandler } from '../../utils.js';
+import { formatOpenAndCloseTimings, asyncHandler, deleteFile, getOpenAndCloseTimings } from '../../utils.js';
 
 export const storeList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
@@ -32,12 +32,14 @@ export const storeList = asyncHandler(async (req, resp) => {
 export const storeData = asyncHandler(async (req, resp) => {
     const { shop_id } = req.body;
     const shop = await queryDB(`SELECT * FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]); 
+    //  shop.schedule = getOpenAndCloseTimings(shop);
     const days = [ 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' ];
     const location = await db.execute(`SELECT location_name FROM locations WHERE status = 1 ORDER BY location_name ASC`);
     const [services] = await db.execute(`SELECT service_name FROM store_services ORDER BY service_name ASC`);
     const serviceNames = services.map(service => service.service_name);
     const [brands] = await db.execute(`SELECT brand_name FROM store_brands ORDER BY brand_name ASC`);
     const brandNames = brands.map(brand => brand.brand_name);
+    const [address] = await db.execute(`SELECT address, area_name, location, latitude, longitude FROM store_address WHERE store_id = ?`, [shop_id]);
 
     const result = {
         status: 1,
@@ -50,6 +52,7 @@ export const storeData = asyncHandler(async (req, resp) => {
     }
     if(shop_id){
         result.shop = shop;
+        result.address = address
     }
 
     return resp.status(200).json(result);
@@ -57,13 +60,15 @@ export const storeData = asyncHandler(async (req, resp) => {
 
 export const storeAdd = asyncHandler(async (req, resp) => {
     const data    = req.body;
+    console.log("DATA",data);
+    // return false;
     const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
     const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
     const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
-    const data = req.body;
+    // const data = req.body;
     const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
     const storeId     = `STOR${generateUniqueId({length:6})}`;
     const brandsArr   = (brands && brands.trim !== '') ? brands : '';
@@ -72,7 +77,7 @@ export const storeAdd = asyncHandler(async (req, resp) => {
     const insert = await insertRecord('service_shops', [
         'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
     ], [
-        storeId, shop_name, contact_no, store_website, store_email, coverImg, 1, always_open ? 1 : 0, fDays, fTiming, description, brandsArr, servicesArr
+        storeId, shop_name, contact_no, store_website, store_email, coverImg, 1, always_open , fDays, fTiming, description, brandsArr, servicesArr
     ]);
 
     if(insert.affectedRows == 0) return resp.json({status:0, message: "Something went wrong! Please try again after some time."});
@@ -82,6 +87,7 @@ export const storeAdd = asyncHandler(async (req, resp) => {
         const placeholders = values.map(() => '(?, ?)').join(', ');
         await db.execute(`INSERT INTO store_gallery (store_id, image_name) VALUES ${placeholders}`, values.flat());
     }
+    
     
     const allAddress = data.address ? data.address.filter(Boolean) : [];
     if(allAddress.length > 0){
@@ -106,42 +112,48 @@ export const storeAdd = asyncHandler(async (req, resp) => {
 
 export const storeView = asyncHandler(async (req, resp) => {
     const { shop_id } = req.body;
+    const location = await db.execute(`SELECT location_name FROM locations WHERE status = 1 ORDER BY location_name ASC`);
     const store = await queryDB(`SELECT * FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
-    store.schedule = getOpenAndCloseTimings(shop);
+    store.schedule = getOpenAndCloseTimings(store);
     if(!store) return resp.json({status:0, message:"Shop Id is invalid"});
 
-    const [address] = await db.execute(`SELECT address, area_name, location, latitude, longitude FROM StoreAddress WHERE store_id = ?`, [shop_id]);
-    const [gallery] = await queryDB(`SELECT * FROM store_gallery WHERE shop_id = ? ORDER BY id DESC`, [shop_id]);
+    const [address] = await db.execute(`SELECT address, area_name, location, latitude, longitude FROM store_address WHERE store_id = ?`, [shop_id]);
+    const [gallery] = await db.execute(`SELECT * FROM store_gallery WHERE store_id = ? ORDER BY id DESC`, [shop_id]);
     
-    const galleryData = {};
-    gallery.forEach(row => {
-        galleryData[row.id] = row.image_name;
-    });
+    const galleryData = gallery.map(image => image.image_name);
+    // gallery.forEach(row => {
+    //     galleryData[row.id] = row.image_name;
+    // });
       
     return resp.json({
         status:1,
+        code: 200,
         message:"Shop Detail fetch successfully",
         store,
+        location,
         galleryData,
         address,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/shop-images/`,
     });
 });
 
 export const storeUpdate = asyncHandler(async (req, resp) => {
     const data = req.body;
+    console.log("data",data);
+    // return false
     const { shop_name, contact_no , address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    const data = req.body;
+    // const data = req.body;
 
     const shop = queryDB(`SELECT cover_image FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
     if(!shop) return resp.json({status:0, message: "Shop Data can not edit, or invalid shop Id"});
     const [gallery] = await db.execute(`SELECT image_name FROM store_gallery WHERE store_id = ?`, [shop_id]);
     const galleryData = gallery.map(img => img.image_name);
-    const brandsArr = (brands && brands.trim !== '') ? data.brands.join(",") : '';
-    const servicesArr = (services && services.trim !== '') ? data.services.join(",") : '';
+    const brandsArr = (brands && brands.trim !== '') ? data.brands : '';
+    const servicesArr = (services && services.trim !== '') ? data.services : '';
     const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
 
     const updates = {
@@ -149,8 +161,9 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
         contact_no, 
         store_website, 
         store_email, 
+        description,
         status:1, 
-        always_open: always_open ? 1 : 0, 
+        always_open: always_open, 
         open_days: fDays, 
         open_timing: fTiming, 
         brands: brandsArr,
@@ -203,7 +216,7 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
 export const storeDelete = asyncHandler(async (req, resp) => {
     const {shop_id} = req.body;
 
-    const shop = await queryDB(`SELECT cover_image FROM shops WHERE shop_id = ?`, [shop_id]);
+    const shop = await queryDB(`SELECT cover_image FROM service_shops WHERE shop_id = ?`, [shop_id]);
     if (!shop) return resp.json({ status: 0, msg: "Shop Data cannot be deleted, or invalid" });
     const [gallery] = await db.execute(`SELECT image_name FROM store_gallery WHERE store_id = ?`, [shop_id]);
     const galleryData = gallery.map(img => img.image_name);
@@ -215,11 +228,11 @@ export const storeDelete = asyncHandler(async (req, resp) => {
         galleryData.forEach(img => img && deleteFile('shop-images', img));
     }
     
-    await queryDB(`DELETE FROM store_gallery WHERE store_id = ?`, [shop_id]);
-    await queryDB(`DELETE FROM store_address WHERE store_id = ?`, [shop_id]);
-    await queryDB(`DELETE FROM shops WHERE shop_id = ?`, [shop_id]);
+    await db.execute(`DELETE FROM store_gallery WHERE store_id = ?`, [shop_id]);
+    await db.execute(`DELETE FROM store_address WHERE store_id = ?`, [shop_id]);
+    await db.execute(`DELETE FROM service_shops WHERE shop_id = ?`, [shop_id]);
 
-    return resp.json({ status: 1, msg: "Shop deleted successfully!" });
+    return resp.json({ status: 1, code: 200, message: "Shop deleted successfully!" });
 });
 
 /* Shop Service */
