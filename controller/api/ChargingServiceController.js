@@ -72,15 +72,26 @@ export const requestService = asyncHandler(async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-        /* 
+        
         const htmlUser = `<html>
             <body>
                 <h4>Dear ${name},</h4>
-                <p>Thank you for booking our Valet Charging Service for your EV. We have successfully received your booking request. Below are the details of your booking. Additionally, please find the attached invoice for your reference.</p> 
+                <p>Thank you for booking our Valet Charging Service for your EV. We have successfully received your booking request. Below are the details of your booking.</p>
+                <p>Booking ID: ${requestId}</p>
+                <p>Pickup & Drop Address : ${pickup_address}</p>
+                <p>Scheduled Service Time : ${slotDateTime}</p>
+                <p>What's Next:</p> <br />          
+                <p>Your valet driver will call or message you to confirm he is on the way.</p>
+                <p>Your valet driver will identify himself with our plus X Badge.</p> 
+                <p>Your valet driver will fill out a brief vehicle condition report and take pictures of your car for reference.</p> 
+                <p>Your valet driver will charge your car at the nearest available supercharging station.</p> 
+                <p>Your valet driver will return your car with a minimum 80% charge within 3 hours.</p> 
+                <p>Thank you once again for choosing PlusX for your EV car charging needs and if you have any questions please feel free to email us back on support@plusxelectric.com.</p>  
+                <br /> <br />     
                 <p> Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
-        emailQueue.addEmail(rider.rider_email, 'Your Valet Charge Booking Confirmation', htmlUser); */
+        emailQueue.addEmail(rider.rider_email, 'Your Valet Charge Booking Confirmation', htmlUser);
         
         const htmlAdmin = `<html>
             <body>

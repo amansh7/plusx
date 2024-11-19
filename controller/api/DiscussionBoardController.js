@@ -825,7 +825,7 @@ export const replyCommentLike = asyncHandler(async (req, resp) => {
             FROM
                board_comment_reply
             WHERE 
-                id = ?
+                comment_id = ?
             LIMIT 1
         `, [comment_id, rider_id, comment_id]);
     

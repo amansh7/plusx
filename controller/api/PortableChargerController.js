@@ -130,14 +130,17 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-        /* const htmlUser = `<html>
+        const htmlUser = `<html>
             <body>
                 <h4>Dear ${rider.rider_name},</h4>
-                <p>Thank you for using the PlusX Electric App to book your portable charger for charging your EV. We have successfully received your booking request. Below are the details of your booking. Additionally, please find the attached invoice for your reference.</p> 
-                <p> Regards,<br/> PlusX Electric App Team </p>
+                <p>Thank you for using the PlusX Electric App for Portable Charger Booking. We have successfully received your booking request. Below are the details of your Portable Charger Booking:</p>
+                <p>Address: ${address}</p> 
+                <p>Scheduled Date & Time: ${slot_date} | ${moment(slot_time, 'HH:mm').format('h:mm A')}</p>
+                <p>Vehicle Details: ${vechile.vehicle_data}</p> <br/>   
+                <p>Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
-        emailQueue.addEmail(rider.rider_email, 'Your Portable Charger Confirmation - PlusX Electric App', htmlUser); */
+        emailQueue.addEmail(rider.rider_email, 'Your Portable Charger Confirmation - PlusX Electric App', htmlUser);
         
         const htmlAdmin = `<html>
             <body>
@@ -145,12 +148,12 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 <p>We have received a new booking for our Portable Charger service. Below are the details:</p> 
                 <p>Customer Name  : ${rider.rider_name}</p>
                 <p>Address : ${address}</p>
-                <p>Booking Time : ${formattedDateTime}</p> <br/>                        
+                <p>Booking Time : ${formattedDateTime}</p>                    
                 <p>Vechile Details : ${vechile.vehicle_data}</p> <br/>                        
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
-        // emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
+        emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
        
         const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
         let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will be there at the scheduled time."; 
