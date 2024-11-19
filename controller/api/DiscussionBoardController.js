@@ -223,8 +223,8 @@ export const getDiscussionBoardDetail = asyncHandler(async (req, resp) => {
         
         const [polls] = await db.execute(`
             SELECT 
-                bp.poll_id, bp.option_one, bp.option_two, bp.option_three, bp.option_four, bp.expiry_date, r.rider_name, r.profile_img, bpv.id AS vote_id, 
-                bpv.option AS voted_option,
+                bp.poll_id, bp.option_one, bp.option_two, bp.option_three, bp.option_four, DATE_FORMAT(bp.expiry_date, '%Y-%m-%d %H:%i:%s') AS expiry_date, 
+                r.rider_name, r.profile_img, bpv.id AS vote_id, bpv.option AS voted_option,
                 (SELECT r2.rider_name FROM riders AS r2 WHERE r2.rider_id = bpv.rider_id) AS vote_rider_name,
                 (SELECT r2.profile_img FROM riders AS r2 WHERE r2.rider_id = bpv.rider_id) AS vote_profile_img
             FROM 

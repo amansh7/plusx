@@ -280,35 +280,10 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
         const newCarImg     = req.files['car_images']?.map(file => file.filename).join('*') || '';
         const newCarTyreImg = req.files['car_tyre_image']?.map(file => file.filename).join('*') || '';
         const newOtherImg   = req.files['other_images']?.map(file => file.filename).join('*') || vehicle.other_images;
-        let carImgArr       = vehicle.car_images ? vehicle.car_images.split('*').filter(Boolean) : [];
-        let carTyreImgArr   = vehicle.car_tyre_image ? vehicle.car_tyre_image.split('*').filter(Boolean) : [];
-        
-        console.log('old_img  => ', old_img);
-        console.log('is array => ', Array.isArray(old_img));
-        if(old_img && Array.isArray(old_img)){
-            old_img.forEach(oldImageToReplace => {
-                console.log('inside loop');
-                if (carImgArr.includes(oldImageToReplace)) {
-                  carImgArr = carImgArr.filter(img => img !== oldImageToReplace);
-                  deleteFile('vehicle-image', oldImageToReplace);
-                }
-                
-                if (carTyreImgArr.includes(oldImageToReplace)) {
-                  carTyreImgArr = carTyreImgArr.filter(img => img !== oldImageToReplace);
-                  deleteFile('vehicle-image', oldImageToReplace);
-                }
-                console.log('oldImageToReplace => ', oldImageToReplace);
-            });
-        }
-        
-        const updatedCarImg     = [...carImgArr, newCarImg].filter(Boolean).join('*');
-        const updatedCarTyreImg = [...carTyreImgArr, newCarTyreImg].filter(Boolean).join('*');
-        console.log('updatedCarImg => ', updatedCarImg);
-        console.log('updatedCarTyreImg => ', updatedCarTyreImg);
 
         const updates = { 
             vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, warrenty, description, horse_power, 
-            car_images: updatedCarImg, car_tyre_image: updatedCarTyreImg, other_images: newOtherImg 
+            car_images: newCarImg, car_tyre_image: newCarTyreImg, other_images: newOtherImg 
         };
         
         const update = await updateRecord('vehicle_sell', updates, ['sell_id', 'rider_id'], [sell_id, rider_id]);
@@ -335,8 +310,13 @@ export const deleteSellVehicle = asyncHandler(async (req, resp) => {
         let del;
 
         if(vehicle){
-            const allOldImages = [...vehicle.car_images.split('*'), ...vehicle.car_tyre_image.split('*'), ...vehicle.other_images.split('*')];
-            allOldImages?.filter(Boolean).forEach(img => deleteFile('vehicle-image', img));
+            const carImgArr = vehicle.car_images ? vehicle.car_images.split('*') : [];
+            const carTyreImgArr = vehicle.car_tyre_image ? vehicle.car_tyre_image.split('*') : [];
+            const otherImgArr = vehicle.other_images ? vehicle.other_images.split('*') : [];
+            const allOldImages = [...carImgArr, ...carTyreImgArr, ...otherImgArr].filter(Boolean);
+            allOldImages.forEach(img => {
+                deleteFile('vehicle-image', img);
+            });
         }
 
         [del] = await db.execute(`DELETE FROM vehicle_sell WHERE rider_id=? AND sell_id=?`,[rider_id, sell_id]);
