@@ -37,10 +37,6 @@ router.get('/generate-pdf-pdfkit', async (req, res) => {
     }
 });
   
-  
-/* pdf test e */
-
-/* pdf test e */
 
 
 export default router;
