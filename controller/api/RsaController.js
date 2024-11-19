@@ -1,12 +1,12 @@
-import db from "../../config/db.js";
-import validateFields from "../../validation.js";
-import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
-import { asyncHandler, formatDateInQuery, formatDateTimeInQuery, generateRandomPassword, mergeParam } from "../../utils.js";
+import fs from "fs";
+import path from "path";
 import crypto from 'crypto';
 import bcrypt from "bcryptjs";
+import db from "../../config/db.js";
 import emailQueue from "../../emailQueue.js";
-import path from "path";
-import fs from "fs";
+import validateFields from "../../validation.js";
+import { queryDB, updateRecord } from '../../dbUtils.js';
+import { asyncHandler, formatDateInQuery, formatDateTimeInQuery, generateRandomPassword, mergeParam } from "../../utils.js";
 
 export const rsaLogin = asyncHandler(async (req, resp) => {
     const { mobile, password ,fcm_token , latitude, longitude } = mergeParam(req);

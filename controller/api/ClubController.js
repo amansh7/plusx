@@ -1,6 +1,6 @@
 import db from "../../config/db.js";
-import validateFields from "../../validation.js";
 import { queryDB } from '../../dbUtils.js';
+import validateFields from "../../validation.js";
 import { asyncHandler, mergeParam} from '../../utils.js';
 
 export const clubList = asyncHandler(async (req, resp) => {

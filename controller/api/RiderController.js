@@ -1,15 +1,15 @@
+import fs from 'fs';
+import path from "path";
+import moment from "moment";
+import crypto from 'crypto';
+import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import db from "../../config/db.js";
-import dotenv from "dotenv";
-import crypto from 'crypto';
-import path from "path";
-import fs from 'fs';
-import validateFields from "../../validation.js";
-import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery, asyncHandler } from '../../utils.js';
-import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-import generateUniqueId from 'generate-unique-id';
-import moment from "moment";
 import emailQueue from "../../emailQueue.js";
+import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
+import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
+import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery, asyncHandler, deleteFile } from '../../utils.js';
 dotenv.config();
 
 /* Rider Auth */
@@ -456,15 +456,9 @@ export const deleteAccount = asyncHandler(async (req, resp) => {
     try{
         await connection.beginTransaction();
         
-        const [rider] = await connection.execute('SELECT profile_img FROM riders WHERE rider_id = ?', [riderId]);
-        if(rider.length === 0) return resp.json({status:0, message: 'Rider not found.'});
-
-        const oldImagePath = path.join('uploads', 'rider_profile', rider.profile_img || '');
-        fs.unlink(oldImagePath, (err) => {
-            if (err) {
-                console.error(`Failed to delete rider old image: ${oldImagePath}`, err);
-            }
-        });
+        const rider = await queryDB('SELECT profile_img FROM riders WHERE rider_id = ?', [riderId]);
+        if(rider) return resp.json({status:0, message: 'Rider not found.'});
+        deleteFile('rider_profile', rider.profile_img);
 
         const deleteQueries = [
             'DELETE FROM notifications                         WHERE receive_id = ?',
@@ -476,6 +470,8 @@ export const deleteAccount = asyncHandler(async (req, resp) => {
             'DELETE FROM charging_service                      WHERE rider_id   = ?',
             'DELETE FROM charging_service_history              WHERE rider_id   = ?',
             'DELETE FROM portable_charger_booking              WHERE rider_id   = ?',
+            'DELETE FROM portable_charger_booking_assign       WHERE rider_id   = ?',
+            'DELETE FROM portable_charger_booking_rejected     WHERE rider_id   = ?',
             'DELETE FROM portable_charger_history              WHERE rider_id   = ?',
             'DELETE FROM discussion_board                      WHERE rider_id   = ?',
             'DELETE FROM board_comment                         WHERE rider_id   = ?',

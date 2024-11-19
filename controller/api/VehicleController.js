@@ -1,10 +1,10 @@
-import db from "../../config/db.js";
-import validateFields from "../../validation.js";
-import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
-import generateUniqueId from 'generate-unique-id';
 import moment from "moment";
-import { asyncHandler, deleteFile, mergeParam } from '../../utils.js';
+import db from "../../config/db.js";
 import emailQueue from "../../emailQueue.js";
+import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
+import { asyncHandler, deleteFile, mergeParam } from '../../utils.js';
+import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 
 export const vehicleList = asyncHandler(async (req, resp) => {
     const {vehicle_type, page_no, vehicle_name, vehicle_model } = mergeParam(req);
@@ -253,7 +253,8 @@ export const sellVehicleDetail = asyncHandler(async (req, resp) => {
 export const updateSellVehicle = asyncHandler(async (req, resp) => {
     try{   
         const { 
-            sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type='', seat_capacity, engine_capacity, warrenty, description, horse_power 
+            sell_id, rider_id, vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type='', seat_capacity, engine_capacity, warrenty, 
+            description, horse_power, old_img
         } = req.body; 
         const { isValid, errors } = validateFields(req.body, {
             sell_id: ["required"],
@@ -272,21 +273,42 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
             horse_power: ["required"],
         });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        if(!req.files['car_images']) return resp.json({ status:0, code: 422, message: "car_images is required"});
-        if(!req.files['car_tyre_image']) return resp.json({ status:0, code: 422, message: "car_tyre_image is required"});
-        
+
         const vehicle = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
-        const car_images = req.files['car_images']?.map(file => file.filename).join('*') || vehicle.car_images;
-        const car_tyre_image = req.files['car_tyre_image']?.map(file => file.filename).join('*') || vehicle.car_tyre_image;
-        const other_images = req.files['other_images']?.map(file => file.filename).join('*') || vehicle.other_images;
+        if(!vehicle) return resp.json({status: 0, code:422, message: "Invalid sell id"});
         
-        if(vehicle){
-            const allOldImages = [...vehicle.car_images.split('*'), ...vehicle.car_tyre_image.split('*'), ...vehicle.other_images.split('*')];
-            allOldImages?.filter(Boolean).forEach(img => deleteFile('vehicle-image', img));
+        const newCarImg     = req.files['car_images']?.map(file => file.filename).join('*') || '';
+        const newCarTyreImg = req.files['car_tyre_image']?.map(file => file.filename).join('*') || '';
+        const newOtherImg   = req.files['other_images']?.map(file => file.filename).join('*') || vehicle.other_images;
+        let carImgArr       = vehicle.car_images ? vehicle.car_images.split('*').filter(Boolean) : [];
+        let carTyreImgArr   = vehicle.car_tyre_image ? vehicle.car_tyre_image.split('*').filter(Boolean) : [];
+        
+        console.log('old_img  => ', old_img);
+        console.log('is array => ', Array.isArray(old_img));
+        if(old_img && Array.isArray(old_img)){
+            old_img.forEach(oldImageToReplace => {
+                console.log('inside loop');
+                if (carImgArr.includes(oldImageToReplace)) {
+                  carImgArr = carImgArr.filter(img => img !== oldImageToReplace);
+                  deleteFile('vehicle-image', oldImageToReplace);
+                }
+                
+                if (carTyreImgArr.includes(oldImageToReplace)) {
+                  carTyreImgArr = carTyreImgArr.filter(img => img !== oldImageToReplace);
+                  deleteFile('vehicle-image', oldImageToReplace);
+                }
+                console.log('oldImageToReplace => ', oldImageToReplace);
+            });
         }
         
+        const updatedCarImg     = [...carImgArr, newCarImg].filter(Boolean).join('*');
+        const updatedCarTyreImg = [...carTyreImgArr, newCarTyreImg].filter(Boolean).join('*');
+        console.log('updatedCarImg => ', updatedCarImg);
+        console.log('updatedCarTyreImg => ', updatedCarTyreImg);
+
         const updates = { 
-            vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, warrenty, description, horse_power, car_images, car_tyre_image, other_images 
+            vehicle_id, region, milage, price, interior_color, exterior_color, doors, body_type, owner_type, seat_capacity, engine_capacity, warrenty, description, horse_power, 
+            car_images: updatedCarImg, car_tyre_image: updatedCarTyreImg, other_images: newOtherImg 
         };
         
         const update = await updateRecord('vehicle_sell', updates, ['sell_id', 'rider_id'], [sell_id, rider_id]);
@@ -294,10 +316,11 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
         return resp.json({
             status: update.affectedRows > 0 ? 1 : 0,
             code: 200,
-            error: update.affectedRows > 0 ? false: true,
+            error: update.affectedRows > 0 ? false : true,
             message: update.affectedRows > 0 ? ["Thank you! Your request for Edit Car has been submitted."] : ["Failed to update. Please try again."]
         });
     }catch(err){
+        console.log(err);
         return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
     }
 });

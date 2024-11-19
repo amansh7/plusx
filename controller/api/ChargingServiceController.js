@@ -1,10 +1,10 @@
-import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import validateFields from "../../validation.js";
-import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import moment from "moment";
 import 'moment-duration-format';
-import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler } from "../../utils.js";
 import emailQueue from "../../emailQueue.js";
+import validateFields from "../../validation.js";
+import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
+import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
+import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler } from "../../utils.js";
 
 export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const [slot] = await db.execute(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}  FROM pick_drop_slot WHERE status = ?`, [1]);

@@ -65,14 +65,13 @@ export const storeAdd = asyncHandler(async (req, resp) => {
     const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
     const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
     const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
     const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
-    // const data = req.body;
     const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
     const storeId     = `STOR${generateUniqueId({length:6})}`;
     const brandsArr   = (brands && brands.trim !== '') ? brands : '';
     const servicesArr = (services && services.trim !== '') ? services : '';
+    const data    = req.body;
 
     const insert = await insertRecord('service_shops', [
         'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
@@ -146,8 +145,6 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
         shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    // const data = req.body;
-
     const shop = queryDB(`SELECT cover_image FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
     if(!shop) return resp.json({status:0, message: "Shop Data can not edit, or invalid shop Id"});
     const [gallery] = await db.execute(`SELECT image_name FROM store_gallery WHERE store_id = ?`, [shop_id]);
