@@ -78,7 +78,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 (SELECT MAX(id) FROM portable_charger_booking) AS last_index,
                 (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
                 (SELECT booking_limit FROM portable_charger_slot AS pcs WHERE pcs.slot_id = ?) AS booking_limit,
-                (select count(id) from portable_charger_booking as pod where pod.slot=? and pod.slot_date=? and status NOT IN ("PU", "C") ) as slot_booking_count 
+                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot=? and pod.slot_date=? and status NOT IN ("PU", "C") ) as slot_booking_count 
             FROM riders AS r
             WHERE r.rider_id = ?
         `, [charger_id, slot_id, slot_id, fSlotDate, rider_id], conn);
@@ -100,6 +100,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         const start     = (!rider.last_index) ? 0 : rider.last_index; 
         const nextId    = start + 1;
         const bookingId = 'PCB' + String(nextId).padStart(4, '0');
+        const vechile = await queryDB(`SELECT CONCAT(vehicle_make, "-", vehicle_model) AS vehicle_data FROM riders_vehicles WHERE vehicle_id = ?`, [vehicle_id]);
         
         const insert = await insertRecord('portable_charger_booking', [
             'booking_id', 'rider_id', 'charger_id', 'vehicle_id', 'service_name', 'service_price', 'service_type', 'service_feature', 'user_name', 'country_code', 
@@ -145,10 +146,11 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 <p>Customer Name  : ${rider.rider_name}</p>
                 <p>Address : ${address}</p>
                 <p>Booking Time : ${formattedDateTime}</p> <br/>                        
+                <p>Vechile Details : ${vechile.vehicle_data}</p> <br/>                        
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
-        emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
+        // emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
        
         const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
         let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will be there at the scheduled time."; 
@@ -165,8 +167,6 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
             const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
             createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider_id, rsa.rsa_id, href);
             pushNotification(rsa.fcm_token, heading, desc, 'RSAFCM', href);
-    
-            // respMsg = "You have successfully placed Portable Charger booking. You will be notified soon."
         }
 
         await commitTransaction(conn);
@@ -704,7 +704,6 @@ const chargerPickedUp = async (req, resp) => {
 export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     const { rider_id, booking_id, reason } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
-
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const checkOrder = await queryDB(`
@@ -763,7 +762,6 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
             <p>Best regards,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
-
     emailQueue.addEmail(checkOrder.rider_email, `Booking Cancellation Confirmation - PlusX Electric Portable Charger Service (Booking ID : ${booking_id} )`, html);
 
     const adminHtml = `<html>
