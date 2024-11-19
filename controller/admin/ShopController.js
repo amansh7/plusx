@@ -71,7 +71,6 @@ export const storeAdd = asyncHandler(async (req, resp) => {
     const storeId     = `STOR${generateUniqueId({length:6})}`;
     const brandsArr   = (brands && brands.trim !== '') ? brands : '';
     const servicesArr = (services && services.trim !== '') ? services : '';
-    const data    = req.body;
 
     const insert = await insertRecord('service_shops', [
         'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
