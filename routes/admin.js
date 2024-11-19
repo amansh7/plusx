@@ -96,7 +96,7 @@ const adminRoutes = [
     { method: 'post',   path: '/shop-add',            handler: storeAdd },
     { method: 'post',   path: '/shop-view',           handler: storeView },
     { method: 'post',   path: '/shop-update',         handler: storeUpdate },
-    { method: 'delete', path: '/shop-delete',         handler: storeDelete },
+    { method: 'post', path: '/shop-delete',         handler: storeDelete },
     { method: 'post',   path: '/shop-service-list',   handler: serviceList },
     { method: 'post',   path: '/shop-service-create', handler: serviceCreate },
     { method: 'post',   path: '/shop-service-update', handler: serviceUpdate },
