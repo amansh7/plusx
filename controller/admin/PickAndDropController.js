@@ -218,37 +218,21 @@ export const pdInvoiceDetails = asyncHandler(async (req, resp) => {
 export const pdSlotList = async (req, resp) => {
     try {
         const { page_no, search_text='', start_date, end_date } = req.body;
-
-        const { isValid, errors } = validateFields(req.body, {
-            page_no: ["required"]
-        });
-
+        const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        let slot_date = moment().format("YYYY-MM-DD");
-        // const result = await getPaginatedData({
-        //     tableName: 'pick_drop_slot',
-        //     columns: 'slot_id, start_time, end_time, booking_limit, status, created_at',
-        //     sortColumn: 'created_at',
-        //     sortOrder: 'DESC',
-        //     page_no,
-        //     limit: 10,
-        //     whereField: 'status',
-        //     whereValue: 1,
-        //     liveSearchFields: ['slot_id'],
-        //     liveSearchTexts: [search_text],
-        // });
 
+        let slot_date = moment().format("YYYY-MM-DD");
         const params = {
             tableName: 'pick_drop_slot',
-            columns: 'slot_id, start_time, end_time, booking_limit, status, created_at, slot_date',
+            columns: `slot_id, start_time, end_time, booking_limit, status, slot_date, created_at, 
+                (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
+            `,
             sortColumn : 'created_at',
             sortOrder  : 'DESC',
             page_no,
             limit      : 10,
             liveSearchFields: ['slot_id',],
             liveSearchTexts: [search_text,],
-            // searchFields: ['added_from', 'emirates'],
-            // searchTexts: [addedFrom, emirates],
             whereField: [],
             whereValue: [],
             whereOperator: []
@@ -263,20 +247,19 @@ export const pdSlotList = async (req, resp) => {
         }
         const result = await getPaginatedData(params);
 
-        // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
-            slot_id       : item.slot_id,
-            slot_date     : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
-            booking_limit : item.booking_limit,
-            status        : item.status,
-            created_at    : item.created_at,
-            timing        : `${item.start_time} - ${item.end_time}`
+            slot_id            : item.slot_id,
+            slot_date          : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+            booking_limit      : item.booking_limit,
+            status             : item.status,
+            created_at         : moment(item.created_at, "DD-MM-YYYY").format('YYYY-MM-DD HH:mm:ss'),
+            timing             : `${item.start_time} - ${item.end_time}`,
+            slot_booking_count : item.slot_booking_count 
         }));
         return resp.json({
             status: 1,
             code: 200,
             message: ["Pick & Drop Slot List fetched successfully!"],
-            // data: result.data,
             data : formattedData,
             total_page: result.totalPage,
             total: result.total,
@@ -291,16 +274,14 @@ export const pdSlotList = async (req, resp) => {
 export const pdSlotDetails = async (req, resp) => {
     try {
         const { slot_id, } = req.body;
-
-        const { isValid, errors } = validateFields(req.body, {
-            slot_id: ["required"]
-        });
-
+        const { isValid, errors } = validateFields(req.body, { slot_id: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
+        
+        let slot_date = moment().format("YYYY-MM-DD");
         const [slotDetails] = await db.execute(`
             SELECT 
-                id, slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
+                id, slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])},
+                (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
             FROM 
                 pick_drop_slot 
             WHERE 
