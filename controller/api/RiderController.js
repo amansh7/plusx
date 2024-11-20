@@ -636,7 +636,7 @@ export const riderVehicleList = asyncHandler(async (req, resp) => {
         if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
         
         let query = ` SELECT vehicle_id, vehicle_type, vehicle_number, vehicle_code, year_manufacture, owner, vehicle_model, vehicle_make, leased_from, owner_type, 
-            vehicle_specification, emirates FROM riders_vehicles WHERE rider_id = ?
+            vehicle_specification, regional_specification, emirates FROM riders_vehicles WHERE rider_id = ?
         `;
         let queryParams = [rider_id];
     
@@ -660,7 +660,7 @@ export const riderVehicleList = asyncHandler(async (req, resp) => {
 });
 
 export const addRiderVehicle = asyncHandler(async (req, resp) => {
-    const {rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner=''} = mergeParam(req);
+    const {rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner='', regional_specification=''} = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], vehicle_type: ["required"], vehicle_make: ["required"], vehicle_model: ["required"], year_manufacture: ["required"], owner_type: ["required"], emirates: ["required"]
@@ -669,9 +669,9 @@ export const addRiderVehicle = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
     
     const insert = await insertRecord('riders_vehicles', [
-        'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 'vehicle_specification', 'emirates', 'owner'
+        'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 'vehicle_specification', 'emirates', 'owner', 'regional_specification'
     ],[
-        'RDV'+generateUniqueId({length:13}), rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, vehicle_specification, emirates, owner
+        'RDV'+generateUniqueId({length:13}), rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, vehicle_specification, emirates, owner, regional_specification
     ]);
 
     return resp.json({
@@ -682,7 +682,7 @@ export const addRiderVehicle = asyncHandler(async (req, resp) => {
 });
 
 export const editRiderVehicle = asyncHandler(async (req, resp) => {
-    const {rider_id, vehicle_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner=''} = mergeParam(req);
+    const {rider_id, vehicle_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner='', regional_specification=''} = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
         rider_id: ["required"], vehicle_id: ["required"], vehicle_type: ["required"], vehicle_make: ["required"], vehicle_model: ["required"], year_manufacture: ["required"], owner_type: ["required"], emirates: ["required"]
@@ -690,7 +690,7 @@ export const editRiderVehicle = asyncHandler(async (req, resp) => {
     
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
     
-    const updates = {vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code, vehicle_number, leased_from, vehicle_specification, owner};
+    const updates = {vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code, vehicle_number, leased_from, vehicle_specification, owner, regional_specification};
     const update = await updateRecord('riders_vehicles', updates, ['rider_id', 'vehicle_id'], [rider_id, vehicle_id]);
 
     return resp.json({

@@ -277,8 +277,8 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
         const vehicle = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
         if(!vehicle) return resp.json({status: 0, code:422, message: "Invalid sell id"});
         
-        const newCarImg     = req.files['car_images']?.map(file => file.filename).join('*') || '';
-        const newCarTyreImg = req.files['car_tyre_image']?.map(file => file.filename).join('*') || '';
+        const newCarImg     = req.files['car_images']?.map(file => file.filename).join('*') || vehicle.car_images;
+        const newCarTyreImg = req.files['car_tyre_image']?.map(file => file.filename).join('*') || vehicle.car_tyre_image;
         const newOtherImg   = req.files['other_images']?.map(file => file.filename).join('*') || vehicle.other_images;
 
         const updates = { 
