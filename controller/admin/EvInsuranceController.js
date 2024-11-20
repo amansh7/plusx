@@ -101,10 +101,14 @@ export const evPreSaleDetail = asyncHandler(async (req, resp) => {
 // Time Slot 
 export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
     const { page_no, search_text= '', start_date, end_date, } = req.body;
+
+    let slot_date = moment().format("YYYY-MM-DD");
+
     const params = {
         tableName: 'ev_pre_sale_testing_slot',
-        // columns: `slot_id, slot_name, start_time, end_time, booking_limit, status`,
-        columns: `slot_id, start_time, end_time, booking_limit, status, created_at, slot_date`,
+        columns: `slot_id, start_time, end_time, booking_limit, status, created_at, slot_date,
+            (SELECT COUNT(id) FROM ev_pre_sale_testing AS evpst WHERE evpst.slot_time_id=ev_pre_sale_testing_slot.slot_id AND evpst.slot_date='${slot_date}') AS slot_booking_count
+        `,
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
@@ -119,11 +123,11 @@ export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
     if (start_date && end_date) {
         const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
         const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-
         params.whereField.push('slot_date', 'slot_date');
         params.whereValue.push(start, end);
         params.whereOperator.push('>=', '<=');
     }
+
     const result = await getPaginatedData(params);
 
     const formattedData = result.data.map((item) => ({
@@ -148,16 +152,14 @@ export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
 export const evPreSaleTimeSlotDetails = async (req, resp) => {
     try {
         const { slot_id, } = req.body;
-
-        const { isValid, errors } = validateFields(req.body, {
-            slot_id: ["required"]
-        });
-
+        const { isValid, errors } = validateFields(req.body, { slot_id: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+        let slot_date = moment().format("YYYY-MM-DD");
 
         const [slotDetails] = await db.execute(`
             SELECT 
-                slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
+                id, slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])},
+                (SELECT COUNT(id) FROM ev_pre_sale_testing AS evpst WHERE evpst.slot_time_id=ev_pre_sale_testing_slot.slot_id AND evpst.slot_date='${slot_date}') AS slot_booking_count
             FROM 
                 ev_pre_sale_testing_slot 
             WHERE 
@@ -165,13 +167,7 @@ export const evPreSaleTimeSlotDetails = async (req, resp) => {
             [slot_id]
         );
 
-        return resp.json({
-            status: 1,
-            code: 200,
-            message: ["EV Time Slot Details fetch successfully!"],
-            data: slotDetails[0],
-            
-        });
+        return resp.json({ status: 1, code: 200, message: ["EV Time Slot Details fetch successfully!"], data: slotDetails[0] });
     } catch (error) {
         console.error('Error fetching slot list:', error);
         return resp.status(500).json({ status: 0, message: 'Error fetching charger lists' });
@@ -183,25 +179,23 @@ export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
     const { isValid, errors } = validateFields(req.body, { slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    if (!Array.isArray(slot_date) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit)) {
+    if ( !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
         return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
     }
-    if (slot_date.length !== start_time.length || start_time.length !== end_time.length || end_time.length !== booking_limit.length) {
+    if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
         return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
     }
 
     const values = []; const placeholders = [];
-    
-    for (let i = 0; i < slot_date.length; i++) {
-        const slotId = `PST${generateUniqueId({ length:6 })}`;
-        const fSlotDate = moment(slot_date[i], "DD-MM-YYYY").format("YYYY-MM-DD");
-        values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
+    const slotId = `PST${generateUniqueId({ length:6 })}`;
+    const fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD");
+    for (let i = 0; i < start_time.length; i++) {
+        values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i]);
         placeholders.push('(?, ?, ?, ?, ?, ?)');
     }
 
     const query = `INSERT INTO ev_pre_sale_testing_slot (slot_id, slot_date, start_time, end_time, booking_limit, status) VALUES ${placeholders.join(', ')}`;
     const [insert] = await db.execute(query, values);
-
 
     return resp.json({
         code: 200,
@@ -211,57 +205,39 @@ export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
 });
 
 export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
-    // const { slot_id, slot_name, start_time, end_time, booking_limit, status='' }  = req.body;
-    // const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_name: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"]  });
-    // if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
-    // const start = moment(start_time, 'HH:mm:ss');
-    // const end = moment(end_time, 'HH:mm:ss');
-
-    // if (end.isSameOrBefore(start)) return resp.status(422).json({ message: "End Time should be greater than Start Time!", status: 0 });
+    const { id, slot_id, slot_date, slot_name, start_time, end_time, booking_limit, status } = req.body;
+    const { isValid, errors } = validateFields(req.body, { id: ["required"], slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
-    // const updates = {slot_name, start_time: start, end_time: end, booking_limit, status: status ? 1 : 0};
-    // const update = await updateRecord('ev_pre_sale_testing_slot', updates, ['slot_id'], [slot_id]);
+    if ( !Array.isArray(id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
+        return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
+    }
+    if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
+        return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
+    }
 
-    // return resp.json({
-    //     status: update.affectedRows > 0 ? 1 : 0,
-    //     status: update.affectedRows > 0 ? 200 : 422,
-    //     message: update.affectedRows > 0 ? "Time Slot Updated Successfully" : "Failed to update time slot.",
-    // }); 
-
-    const { slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
-
-        const { isValid, errors } = validateFields({ 
-            slot_id, slot_date, start_time, end_time, booking_limit, status
-        }, {
-            slot_id : ["required"],
-            slot_date : ["required"],
-            start_time: ["required"],
-            end_time: ["required"],
-            booking_limit: ["required"],
-            status: ["required"],
-        });
-
-        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    
-        const startTime24 = convertTo24HourFormat(start_time);
-        const endTime24 = convertTo24HourFormat(end_time);
-
+    let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult;
+    for (let i = 0; i < start_time.length; i++) {
         const updates = {
-            slot_date : moment(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
-            start_time : startTime24, 
-            end_time : endTime24, 
-            booking_limit, 
-            status,
+            slot_date: fSlotDate,
+            start_time: convertTo24HourFormat(start_time[i]),
+            end_time: convertTo24HourFormat(end_time[i]),
+            booking_limit: booking_limit[i],
+            status: status[i]
         };
-    
-        const update = await updateRecord('ev_pre_sale_testing_slot', updates, ['slot_id'], [slot_id]);
+
+        updateResult = await updateRecord("ev_pre_sale_testing_slot", updates, ["id"], [id[i]]);
+
+        if (updateResult.affectedRows === 0) {
+            return resp.json({
+                status: 0,
+                code: 404,
+                message: `Slot with start_time ${start_time[i]} not found for slot_id ${slot_id}.`
+            });
+        }
+    }
         
-        return resp.json({
-            status: update.affectedRows > 0 ? 1 : 0,
-            code: 200,
-            message: update.affectedRows > 0 ? ['Slot updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
-        });
+    return resp.json({ code: 200, message: "Slots updated successfully!", status: 1 });
 });
 
 export const evPreSaleTimeSlotDelete = asyncHandler(async (req, resp) => {

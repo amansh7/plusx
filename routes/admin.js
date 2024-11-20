@@ -196,8 +196,8 @@ const adminRoutes = [
     { method: 'post',  path: '/ev-pre-sale-list',                  handler: evPreSaleList },
     { method: 'post',  path: '/ev-pre-sale-detail',                handler: evPreSaleDetail },
     { method: 'post',  path: '/ev-pre-sale-time-slot-list',        handler: evPreSaleTimeSlot },
-    { method: 'post',  path: '/ev-pre-sale-add-time-slot-list',    handler: evPreSaleTimeSlotAdd },
     { method: 'post',  path: '/ev-pre-sale-time-slot-details',     handler: evPreSaleTimeSlotDetails },
+    { method: 'post',  path: '/ev-pre-sale-add-time-slot-list',    handler: evPreSaleTimeSlotAdd },
     { method: 'post',  path: '/ev-pre-sale-edit-time-slot-list',   handler: evPreSaleTimeSlotEdit },
     { method: 'post',  path: '/ev-pre-sale-delete-time-slot-list', handler: evPreSaleTimeSlotDelete },
 

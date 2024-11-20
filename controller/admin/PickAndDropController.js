@@ -372,7 +372,7 @@ export const pdEditSlot = async (req, resp) => {
             }
         }
 
-        return resp.json({ updateResult, code: 200, message: "Slots updated successfully!", status: 1 });
+        return resp.json({ code: 200, message: "Slots updated successfully!", status: 1 });
     } catch (error) {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
