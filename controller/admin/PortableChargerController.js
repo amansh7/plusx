@@ -682,7 +682,7 @@ export const editSlot = async (req, resp) => {
         const { isValid, errors } = validateFields(req.body, { id: ["required"], slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         
-        if ( !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
+        if ( !Array.isArray(id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
             return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
         }
         if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
@@ -710,12 +710,7 @@ export const editSlot = async (req, resp) => {
             }
         }
 
-        return resp.json({
-            updateResult,
-            code: 200,
-            message: "Slots updated successfully!",
-            status: 1
-        });
+        return resp.json({ updateResult, code: 200, message: "Slots updated successfully!", status: 1 });
     } catch (error) {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });

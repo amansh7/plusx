@@ -326,29 +326,28 @@ export const pdAddSlot = async (req, resp) => {
         const { slot_date, start_time, end_time, booking_limit, status = 1 } = req.body;
         const { isValid, errors } = validateFields(req.body, { slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
-        if (!Array.isArray(slot_date) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit)) {
+        
+        if ( !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
             return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
         }
-        if (slot_date.length !== start_time.length || start_time.length !== end_time.length || end_time.length !== booking_limit.length) {
+        if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
             return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
         }
 
         const values = []; const placeholders = [];
-
-        for (let i = 0; i < slot_date.length; i++) {
-            const slotId = `PDS${generateUniqueId({ length:6 })}`;
-            const fSlotDate = moment(slot_date[i], "DD-MM-YYYY").format("YYYY-MM-DD");
-            values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status);
+        const slotId = `PDS${generateUniqueId({ length:6 })}`;
+        const fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD");
+        for (let i = 0; i < start_time.length; i++) {            
+            values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i]);
             placeholders.push('(?, ?, ?, ?, ?, ?)');
         }
-
+        
         const query = `INSERT INTO pick_drop_slot (slot_id, slot_date, start_time, end_time, booking_limit, status) VALUES ${placeholders.join(', ')}`;
         const [insert] = await db.execute(query, values);
-    
+        
         return resp.json({
             code: 200,
-            message: insert.affectedRows > 0 ? ['Slot added successfully!'] : ['Oops! Something went wrong. Please try again.'],
+            message: insert.affectedRows > 0 ? ['Slots added successfully!'] : ['Oops! Something went wrong. Please try again.'],
             status: insert.affectedRows > 0 ? 1 : 0
         });
     } catch (error) {
@@ -359,39 +358,39 @@ export const pdAddSlot = async (req, resp) => {
 
 export const pdEditSlot = async (req, resp) => {
     try {
-        const { slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
-
-        const { isValid, errors } = validateFields({ 
-            slot_id, slot_date, start_time, end_time, booking_limit, status
-        }, {
-            slot_id : ["required"],
-            slot_date : ["required"],
-            start_time: ["required"],
-            end_time: ["required"],
-            booking_limit: ["required"],
-            status: ["required"],
-        });
-
+        const { id, slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
+        const { isValid, errors } = validateFields(req.body, { id: ["required"], slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    
-        const startTime24 = convertTo24HourFormat(start_time);
-        const endTime24 = convertTo24HourFormat(end_time);
-
-        const updates = {
-            slot_date : moment(slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
-            start_time : startTime24, 
-            end_time : endTime24, 
-            booking_limit, 
-            status,
-        };
-    
-        const update = await updateRecord('pick_drop_slot', updates, ['slot_id'], [slot_id]);
         
-        return resp.json({
-            status: update.affectedRows > 0 ? 1 : 0,
-            code: 200,
-            message: update.affectedRows > 0 ? ['Slot updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
-        });
+        if ( !Array.isArray(id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
+            return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
+        }
+        if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
+            return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
+        }
+
+        let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult;
+        for (let i = 0; i < start_time.length; i++) {
+            const updates = {
+                slot_date: fSlotDate,
+                start_time: convertTo24HourFormat(start_time[i]),
+                end_time: convertTo24HourFormat(end_time[i]),
+                booking_limit: booking_limit[i],
+                status: status[i]
+            };
+
+            updateResult = await updateRecord("pick_drop_slot", updates, ["id"], [id[i]]);
+
+            if (updateResult.affectedRows === 0) {
+                return resp.json({
+                    status: 0,
+                    code: 404,
+                    message: `Slot with start_time ${start_time[i]} not found for slot_id ${slot_id}.`
+                });
+            }
+        }
+
+        return resp.json({ updateResult, code: 200, message: "Slots updated successfully!", status: 1 });
     } catch (error) {
         console.error('Something went wrong:', error);
         resp.status(500).json({ message: 'Something went wrong' });
