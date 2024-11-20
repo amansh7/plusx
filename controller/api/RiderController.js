@@ -56,7 +56,8 @@ export const login = asyncHandler(async (req, resp) => {
 
 export const register = asyncHandler(async (req, resp) => {
     const { password, country_code, rider_name, rider_email, rider_mobile, country, emirates, vehicle_type, date_of_birth, fcm_token,
-        area, added_from ,vehicle_make='', vehicle_model='', year_manufacture='', vehicle_code='', vehicle_number='', owner_type='', leased_from='', specification='' 
+        area, added_from ,vehicle_make='', vehicle_model='', year_manufacture='', vehicle_code='', vehicle_number='', owner_type='', leased_from='', vehicle_specification='',
+        regional_specification='' 
     } = mergeParam(req);
     
     let validationRules = {
@@ -118,13 +119,16 @@ export const register = asyncHandler(async (req, resp) => {
     if(!rider) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true});
 
     const riderId = 'ER' + String(rider.insertId).padStart(4, '0');
+    const vehicleId = 'RDV' + generateUniqueId({length:13});
     await db.execute('UPDATE riders SET rider_id = ? WHERE id = ?', [riderId, rider.insertId]);
 
     if (vehicle_type && vehicle_type != "None") { 
         const vehicle = await insertRecord('riders_vehicles', [
-            'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 'vehicle_specification' 
+            'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 
+            'vehicle_specification', 'regional_specification' 
         ],[
-            'RDV' + generateUniqueId({length:13}), riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, specification,
+            vehicleId, riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, 
+            vehicle_specification, regional_specification
         ]); 
         if(vehicle.affectedRows == 0) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
     }
@@ -180,11 +184,7 @@ export const forgotPassword = asyncHandler(async (req, resp) => {
 
 export const createOTP = asyncHandler(async (req, resp) => {
     const { mobile, user_type, country_code } = mergeParam(req);
-
-    const { isValid, errors } = validateFields(mergeParam(req), {
-        mobile: ["required"], user_type: ["required"], country_code: ["required"],
-    });
-
+    const { isValid, errors } = validateFields(mergeParam(req), {mobile: ["required"], user_type: ["required"], country_code: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const res = checkNumber(country_code, mobile);
@@ -204,14 +204,16 @@ export const createOTP = asyncHandler(async (req, resp) => {
     
     const fullMobile = `${country_code}${mobile}`;
     let otp = generateOTP(4);
-    storeOTP(fullMobile, otp);
-
+    // storeOTP(fullMobile, otp);
+    
+    storeOTP(fullMobile, '0587');
+    return resp.json({ status: 1, code: 200, data: '0587', message: ['OTP sent successfully!'] });
+    
     /* sendOtp(
         fullMobile,
         `Your One-Time Password (OTP) for sign-up is: ${otp}. Do not share this OTP with anyone. Thank you for choosing PlusX Electric App!`
-    ); */
-    return resp.json({ status: 1, code: 200, data: '0587', message: ['OTP sent successfully!'] });
-    /* .then(result => {
+    )
+    .then(result => {
         if (result.status === 0) return resp.json(result);
         return resp.json({ status: 1, code: 200, data: otp, message: ['OTP sent successfully!'] });
     })
