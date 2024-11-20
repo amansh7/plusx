@@ -690,7 +690,7 @@ export const editSlot = async (req, resp) => {
             return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
         }
 
-        let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult;
+        let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult, insertResult, errMsg = [];
         for (let i = 0; i < start_time.length; i++) {
             const updates = {
                 slot_date: fSlotDate,
@@ -700,15 +700,19 @@ export const editSlot = async (req, resp) => {
                 status: status[i]
             };
 
-            updateResult = await updateRecord("portable_charger_slot", updates, ["id"], [id[i]]);
-
-            if (updateResult.affectedRows === 0) {
-                return resp.json({
-                    status: 0,
-                    code: 404,
-                    message: `Slot with start_time ${start_time[i]} not found for slot_id ${slot_id}.`
-                });
+            if(id[i]){
+                updateResult = await updateRecord("portable_charger_slot", updates, ["id"], [id[i]]);
+                if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_id ${slot_id}.`);
+            }else{
+                insertResult = await insertRecord("portable_charger_slot", ["slot_id", "slot_date", "start_time", "end_time", "booking_limit", "status"],[
+                    slot_id, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
+                ]);
+                if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_id ${slot_id}.`);
             }
+        }
+
+        if (errMsg.length > 0) {
+            return resp.json({ status: 0, code: 400, message: errMsg.join(" | ") });
         }
 
         return resp.json({ code: 200, message: "Slots updated successfully!", status: 1 });

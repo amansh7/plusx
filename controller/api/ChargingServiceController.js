@@ -7,13 +7,21 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from "..
 import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler } from "../../utils.js";
 
 export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
-    const [slot] = await db.execute(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}  FROM pick_drop_slot WHERE status = ?`, [1]);
-    return resp.json({
-        message: [ "Slot List fetch successfully!" ], 
-        data: slot,
-        status: 1,
-        code: 200
-    });
+    const { slot_date } = mergeParam(req);
+    if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
+    
+    const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
+    let query = `SELECT slot_id, slot_date, start_time, end_time, booking_limit`;
+    
+    if(fSlotDate >=  moment().format('YYYY-MM-DD')){
+        query += `,(SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count`;
+    }
+
+    query += ` FROM pick_drop_slot WHERE status = ? ORDER BY id ASC`;
+
+    const [slot] = await db.execute(query, [1]);
+
+    return resp.json({ message: [ "Slot List fetch successfully!" ],  data: slot, status: 1, code: 200 });
 });
 
 export const requestService = asyncHandler(async (req, resp) => {

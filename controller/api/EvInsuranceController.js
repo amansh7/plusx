@@ -334,4 +334,15 @@ export const preSaleSlotList = asyncHandler(async (req, resp) => {
         status: 1,
         code: 200
     });
+
+    /* const { slot_date } = mergeParam(req);
+    if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
+    const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
+    let query = `SELECT slot_id, slot_date, start_time, end_time, booking_limit`;
+    if(fSlotDate >=  moment().format('YYYY-MM-DD')){
+        query += `,(SELECT COUNT(id) FROM ev_pre_sale_testing AS evpst WHERE evpst.slot_time_id=ev_pre_sale_testing_slot.slot_id AND evpst.slot_date='${slot_date}') AS slot_booking_count`;
+    }
+    query += ` FROM ev_pre_sale_testing_slot WHERE status = ? ORDER BY id ASC`;
+    const [slot] = await db.execute(query, [1]);
+    return resp.json({ message: [ "Slot List fetch successfully!" ],  data: slot, status: 1, code: 200 }); */
 });

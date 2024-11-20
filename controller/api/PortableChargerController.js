@@ -37,13 +37,21 @@ export const chargerList = asyncHandler(async (req, resp) => {
 });
 
 export const getPcSlotList = asyncHandler(async (req, resp) => {
-    const [slot] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
-    return resp.json({
-        message: [ "Slot List fetch successfully!" ], 
-        data: slot,
-        status: 1,
-        code: 200
-    });
+    const { slot_date } = mergeParam(req);
+    if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
+    
+    const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
+    let query = `SELECT slot_id, slot_date, start_time, end_time, booking_limit`;
+    
+    if(fSlotDate >=  moment().format('YYYY-MM-DD')){
+        query += `,(SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date='${slot_date}' AND status NOT IN ("PU", "C")) AS slot_booking_count`;
+    }
+
+    query += ` FROM portable_charger_slot WHERE status = ? ORDER BY id ASC`;
+
+    const [slot] = await db.execute(query, [1]);
+
+    return resp.json({ message: [ "Slot List fetch successfully!" ],  data: slot, status: 1, code: 200 });
 });
 
 export const chargerBooking = asyncHandler(async (req, resp) => {
