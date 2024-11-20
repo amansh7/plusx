@@ -281,8 +281,8 @@ export const chargerBookingDetails = async (req, resp) => {
 
         const [bookingResult] = await db.execute(`
             SELECT 
-                booking_id, created_at, user_name, country_code, contact_no, status, address, 
-                service_name, service_price, service_type, service_feature, slot_date, slot_time,
+                booking_id, created_at, user_name, country_code, contact_no, status, address, latitude,
+                longitude, service_name, service_price, service_type, service_feature, slot_date, slot_time,
                 
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, 
                 (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data

@@ -77,7 +77,7 @@ export const bookingDetails = async (req, resp) => {
         }
         const result = await db.execute(`SELECT 
                 cs.request_id, cs.name, cs.country_code, cs.contact_no, cs.order_status, cs.pickup_address, cs.price, 
-                cs.parking_number, cs.parking_floor,
+                cs.parking_number, cs.parking_floor, cs.pickup_latitude, cs.pickup_longitude, 
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = cs.rsa_id) as rsa_data,
                 (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = cs.vehicle_id) as vehicle_data,
                 ${formatDateTimeInQuery(['cs.slot_date_time', 'cs.created_at'])}
