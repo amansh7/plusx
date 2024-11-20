@@ -312,7 +312,7 @@ export const pdSlotDetails = async (req, resp) => {
             status: 1,
             code: 200,
             message: ["Portable And Drop Slot Details fetched successfully!"],
-            data: slotDetails[0],
+            data: slotDetails,
             
         });
     } catch (error) {
