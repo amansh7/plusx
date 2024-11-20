@@ -167,7 +167,7 @@ export const evPreSaleTimeSlotDetails = async (req, resp) => {
             [slot_id]
         );
 
-        return resp.json({ status: 1, code: 200, message: ["EV Time Slot Details fetch successfully!"], data: slotDetails[0] });
+        return resp.json({ status: 1, code: 200, message: ["EV Time Slot Details fetch successfully!"], data: slotDetails });
     } catch (error) {
         console.error('Error fetching slot list:', error);
         return resp.status(500).json({ status: 0, message: 'Error fetching charger lists' });
