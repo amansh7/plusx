@@ -556,11 +556,12 @@ export const slotList = async (req, resp) => {
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         let slot_date = moment().format("YYYY-MM-DD");
-        console.log('count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count', slot_date)  
 
         const params = {
             tableName  : 'portable_charger_slot',
-            columns    : 'slot_id, slot_date, start_time, end_time, booking_limit, status, (select count(id) from portable_charger_booking as pod where pod.slot=portable_charger_slot.slot_id and pod.slot_date="'+slot_date+'" and status NOT IN ("PU", "C") ) as slot_booking_count',
+            columns    : `slot_id, slot_date, start_time, end_time, booking_limit, status, 
+                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date='${slot_date}' AND status NOT IN ("PU", "C")) AS slot_booking_count
+            `,
             sortColumn : 'created_at',
             sortOrder  : 'DESC',
             page_no,
@@ -611,16 +612,15 @@ export const slotList = async (req, resp) => {
 export const slotDetails = async (req, resp) => {
     try {
         const { slot_id, } = req.body;
-
-        const { isValid, errors } = validateFields(req.body, {
-            slot_id: ["required"]
-        });
-
+        const { isValid, errors } = validateFields(req.body, {slot_id: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
+        let slot_date = moment().format("YYYY-MM-DD");
         const [slotDetails] = await db.execute(`
             SELECT 
-                id, slot_id,  start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
+                id, slot_id,  start_time, end_time, booking_limit, status, 
+                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date='${slot_date}' AND status NOT IN ("PU", "C")) AS slot_booking_count,
+                ${formatDateInQuery(['slot_date'])}
             FROM 
                 portable_charger_slot 
             WHERE 
