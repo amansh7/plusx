@@ -7,6 +7,7 @@ import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbU
 import emailQueue from '../../emailQueue.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
+import emailQueue from '../../emailQueue.js';
 dotenv.config();
 
 export const bookingList = async (req, resp) => {
@@ -474,7 +475,7 @@ export const adminCancelCSBooking = asyncHandler(async (req, resp) => {
     const checkOrder = await queryDB(`
         SELECT 
             name, rsa_id, slot_date_time,
-            (select cancel_reason from charging_service_history as csh where csh.service_id = charging_service.request_id ) as cancel_reason, 
+            (select MAX(cancel_reason) from charging_service_history as csh where csh.service_id = charging_service.request_id ) as cancel_reason, 
             concat( country_code, "-", contact_no) as contact_no, 
             (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = charging_service.rider_id) AS rider_email,
             (SELECT fcm_token FROM riders WHERE rider_id = charging_service.rider_id) AS fcm_token,

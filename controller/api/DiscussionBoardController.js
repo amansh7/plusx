@@ -507,7 +507,7 @@ export const boardShare = asyncHandler(async (req, resp) => {
             const href = 'disscussion_board/' + board_id;
             const heading = 'Board shared by rider';
             const desc = `Your board shared by rider : ${board.rider_name}`;
-            // pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
+            pushNotification(board.fcm_token, heading, desc, 'RDRFCM', href);
         }
     } catch (err) {
         console.error('Error sharing board:', err);

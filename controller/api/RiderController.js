@@ -125,10 +125,10 @@ export const register = asyncHandler(async (req, resp) => {
     if (vehicle_type && vehicle_type != "None") { 
         const vehicle = await insertRecord('riders_vehicles', [
             'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 
-            'vehicle_specification', 'regional_specification' 
+            'vehicle_specification', 'regional_specification', 'emirates'
         ],[
             vehicleId, riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, 
-            vehicle_specification, regional_specification
+            vehicle_specification, regional_specification, emirates
         ]); 
         if(vehicle.affectedRows == 0) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
     }
@@ -383,7 +383,7 @@ export const getRiderData = asyncHandler(async(req, resp) => {
         code: 200, 
         message: ['Rider Data fetch successfully!'], 
         data: rider, 
-        roadside_assitance_price: 15, 
+        roadside_assistance_price: 15, 
         portable_price: 90, 
         pick_drop_price: 49
     });
