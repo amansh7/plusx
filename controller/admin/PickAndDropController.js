@@ -7,7 +7,6 @@ import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbU
 import emailQueue from '../../emailQueue.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
-import emailQueue from '../../emailQueue.js';
 dotenv.config();
 
 export const bookingList = async (req, resp) => {
