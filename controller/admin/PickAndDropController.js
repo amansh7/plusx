@@ -300,7 +300,7 @@ export const pdSlotDetails = async (req, resp) => {
 
         const [slotDetails] = await db.execute(`
             SELECT 
-                slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
+                id, slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}
             FROM 
                 pick_drop_slot 
             WHERE 
