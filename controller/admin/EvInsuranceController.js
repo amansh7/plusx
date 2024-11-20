@@ -1,6 +1,6 @@
 import db from "../../config/db.js";
 import generateUniqueId from 'generate-unique-id';
-import { getPaginatedData, queryDB, updateRecord } from '../../dbUtils.js';
+import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import { asyncHandler, convertTo24HourFormat, formatDateInQuery, formatDateTimeInQuery } from '../../utils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
@@ -216,7 +216,7 @@ export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
         return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
     }
 
-    let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult;
+    let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult, insertResult, errMsg = [];
     for (let i = 0; i < start_time.length; i++) {
         const updates = {
             slot_date: fSlotDate,
@@ -225,15 +225,19 @@ export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
             booking_limit: booking_limit[i],
             status: status[i]
         };
+        
+        if(id[i]){
+            updateResult = await updateRecord("ev_pre_sale_testing_slot", updates, ["id"], [id[i]]);
+            if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_id ${slot_id}.`);
+        }else{
+            insertResult = await insertRecord("ev_pre_sale_testing_slot", ["slot_id", "slot_date", "start_time", "end_time", "booking_limit", "status"],[
+                slot_id, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
+            ]);
+            if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_id ${slot_id}.`);
+        }
 
-        updateResult = await updateRecord("ev_pre_sale_testing_slot", updates, ["id"], [id[i]]);
-
-        if (updateResult.affectedRows === 0) {
-            return resp.json({
-                status: 0,
-                code: 404,
-                message: `Slot with start_time ${start_time[i]} not found for slot_id ${slot_id}.`
-            });
+        if (errMsg.length > 0) {
+            return resp.json({ status: 0, code: 400, message: errMsg.join(" | ") });
         }
     }
         
