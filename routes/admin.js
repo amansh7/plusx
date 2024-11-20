@@ -4,10 +4,13 @@ import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
 import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, assignBooking, chargerDetails, 
-    invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail
+    invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail, adminCancelPCBooking
 } from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
-import { bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, PodAssignBooking as pdAssignBooking, pdSlotDetails } from "../controller/admin/PickAndDropController.js";
+import { 
+    bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, PodAssignBooking as pdAssignBooking, pdSlotDetails, 
+    adminCancelCSBooking 
+} from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList, deletePublicCharger, deletePublicChargerGallery, stationData } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { 
@@ -75,7 +78,7 @@ const adminRoutes = [
     { method: 'post',   path: '/pick-and-drop-slot-details',     handler: pdSlotDetails },
     { method: 'post',   path: '/pick-and-drop-add-slot',         handler: pdAddSlot },
     { method: 'post',   path: '/pick-and-drop-edit-slot',        handler: pdEditSlot },
-    { method: 'post', path: '/pick-and-drop-delete-slot',      handler: pdDeleteSlot },
+    { method: 'post',   path: '/pick-and-drop-delete-slot',      handler: pdDeleteSlot },
 
     /* Public Charger */
     { method: 'post',   path: '/public-charger-station-list',    handler: stationList },
@@ -96,7 +99,7 @@ const adminRoutes = [
     { method: 'post',   path: '/shop-add',            handler: storeAdd },
     { method: 'post',   path: '/shop-view',           handler: storeView },
     { method: 'post',   path: '/shop-update',         handler: storeUpdate },
-    { method: 'post', path: '/shop-delete',         handler: storeDelete },
+    { method: 'post',   path: '/shop-delete',         handler: storeDelete },
     { method: 'post',   path: '/shop-service-list',   handler: serviceList },
     { method: 'post',   path: '/shop-service-create', handler: serviceCreate },
     { method: 'post',   path: '/shop-service-update', handler: serviceUpdate },
@@ -119,7 +122,7 @@ const adminRoutes = [
     { method: 'post',   path: '/club-data',       handler: clubData },
     { method: 'post',   path: '/add-club',        handler: clubCreate },
     { method: 'post',   path: '/edit-club',       handler: clubUpdate },
-    { method: 'post', path: '/club-delete',     handler: clubDelete },
+    { method: 'post',   path: '/club-delete',     handler: clubDelete },
     { method: 'delete', path: '/club-delete-img', handler: clubDeleteImg },
 
     /* Electric Cars Leasing */
@@ -127,7 +130,7 @@ const adminRoutes = [
     { method: 'post',    path: '/electric-car-detail',    handler: carDetail },
     { method: 'post',    path: '/electric-car-add',       handler: carAdd },
     { method: 'post',    path: '/electric-car-edit',      handler: carEdit },
-    { method: 'post',  path: '/electric-car-delete',    handler: carDelete },
+    { method: 'post',    path: '/electric-car-delete',    handler: carDelete },
     { method: 'delete',  path: '/electric-car-gallery-d', handler: carGalleryDelete },
 
     /* Electric Bikes Leasing */
@@ -135,7 +138,7 @@ const adminRoutes = [
     { method: 'post',    path: '/electric-bike-detail',    handler: bikeDetail },
     { method: 'post',    path: '/electric-bike-add',       handler: bikeAdd },
     { method: 'post',    path: '/electric-bike-edit',      handler: bikeEdit },
-    { method: 'post',  path: '/electric-bike-delete',    handler: bikeDelete },
+    { method: 'post',    path: '/electric-bike-delete',    handler: bikeDelete },
     { method: 'delete',  path: '/electric-bike-gallery-d', handler: bikeGalleryDelete },
 
     /* EV Road Assistance */
@@ -155,14 +158,14 @@ const adminRoutes = [
     { method: 'post',   path: '/coupon-data',     handler: couponDetail },
     { method: 'post',   path: '/add-coupan',      handler: couponAdd },
     { method: 'post',   path: '/edit-coupan',     handler: couponEdit },
-    { method: 'post', path: '/delete-coupan',   handler: couponDelete },
+    { method: 'post',   path: '/delete-coupan',   handler: couponDelete },
 
     /* Offer */
     { method: 'post',   path: '/offer-list',   handler: offerList },
     { method: 'post',   path: '/offer-detail', handler: offerDetail },
     { method: 'post',   path: '/add-offer',    handler: offerAdd },
     { method: 'post',   path: '/edit-offer',   handler: offerEdit },
-    { method: 'post', path: '/delete-offer', handler: offerDelete },
+    { method: 'post',   path: '/delete-offer', handler: offerDelete },
 
     /* Subscription */
     { method: 'post',  path: '/subscription-list',    handler: subscriptionList },
@@ -197,6 +200,10 @@ const adminRoutes = [
     { method: 'post',  path: '/ev-pre-sale-time-slot-details',     handler: evPreSaleTimeSlotDetails },
     { method: 'post',  path: '/ev-pre-sale-edit-time-slot-list',   handler: evPreSaleTimeSlotEdit },
     { method: 'post',  path: '/ev-pre-sale-delete-time-slot-list', handler: evPreSaleTimeSlotDelete },
+
+    /* Admin Booking Cancel */
+    { method: 'get', path: '/portable-charger-cancel',  handler: adminCancelPCBooking },
+    { method: 'get', path: '/charging-service-cancel',  handler: adminCancelCSBooking },
 ]; 
 
 adminRoutes.forEach(({ method, path, handler }) => {

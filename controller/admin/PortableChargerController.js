@@ -895,6 +895,86 @@ export const subscriptionDetail = asyncHandler(async (req, resp) => {
 });
 
 
+/* Admin Cancel Booking */
+export const adminCancelPCBooking = asyncHandler(async (req, resp) => {
+    const { rider_id, booking_id, reason } = req.body;
+    const { isValid, errors } = validateFields(req.body, {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const checkOrder = await queryDB(`
+        SELECT 
+            rsa_id, address, slot_date, slot_time, user_name, 
+            concat( country_code, "-", contact_no) as contact_no, 
+            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = portable_charger_booking.rider_id) AS rider_email,
+            (select fcm_token from riders as r where r.rider_id = portable_charger_booking.rider_id ) as fcm_token, 
+            (select fcm_token from rsa where rsa.rsa_id = portable_charger_booking.rsa_id ) as rsa_fcm_token
+        FROM 
+            portable_charger_booking
+        WHERE 
+            booking_id = ? AND rider_id = ? AND status IN ('CNF','A','ER') 
+        LIMIT 1
+    `,[booking_id, rider_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+    const insert = await db.execute(
+        'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, cancel_by, cancel_reason) VALUES (?, ?, "C", ?, "Admin", ?)',
+        [booking_id, rider_id, checkOrder.rsa_id, reason]
+    );
+    if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+    await updateRecord('portable_charger_booking', {status : 'C'}, ['booking_id'], [booking_id]);
+    const href    = `portable_charger_booking/${booking_id}`;
+    const title   = 'Portable Charger Cancel!';
+    const message = `We regret to inform you that your portable charging booking (ID: ${booking_id}) has been cancelled by the admin.`;
+    await createNotification(title, message, 'Portable Charging', 'Rider', 'Rider',  rider_id, rider_id, href);
+    await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+    if(checkOrder.rsa_id) {
+        await db.execute(`DELETE FROM portable_charger_booking_assign WHERE order_id=? AND rider_id=?`, [booking_id, rider_id]);
+        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
+
+        const message1 = `A Booking of the portable charging booking has been cancelled by admin with booking id : ${booking_id}`;
+        await createNotification(title, message1, 'Portable Charging', 'RSA', 'Rider', rider_id, checkOrder.rsa_id,  href);
+        await pushNotification(checkOrder.rsa_fcm_token, title, message1, 'RSAFCM', href);
+    } 
+
+    const html = `<html>
+        <body>
+            <h4>Dear ${checkOrder.user_name},</h4>
+            <p>We would like to inform you that your recent booking for the Portable EV Charger Service with PlusX Electric has been cancelled.</p><br />
+            <p>Booking Details:</p><br />
+            <p>Booking ID    : ${booking_id}</p>
+            <p>Date and Time : ${checkOrder.slot_date} - ${checkOrder.slot_time}</p>
+            <p>Location      : ${checkOrder.address}</p> <br />
+            <p>If you have any questions or wish to reschedule your booking, please don't hesitate to reach out to us through the PlusX Electric app or by contacting our support team.</p>
+            <p>Thank you for choosing PlusX Electric. We look forward to serving you again in the future.</p><br />
+            <p>Best regards,<br/> The PlusX Electric Team </p>
+        </body>
+    </html>`;
+    emailQueue.addEmail(checkOrder.rider_email, `Booking Cancellation Confirmation - PlusX Electric Portable Charger Service (Booking ID : ${booking_id} )`, html);
+
+    const adminHtml = `<html>
+        <body>
+            <h4>Dear Admin,</h4>
+            <p>This is to inform you that admin has cancelled a booking for the Portable EV Charging Service. Please see the details below for record-keeping and any necessary follow-up.</p> <br />
+            <p>Booking Details:</p><br />
+            <p>User Name    : ${checkOrder.user_name}</p>
+            <p>User Contact    : ${checkOrder.contact_no}</p>
+            <p>Booking ID    : ${booking_id}</p>
+            <p>Scheduled Date and Time : ${checkOrder.slot_date} - ${checkOrder.slot_time}</p> 
+            <p>Location      : ${checkOrder.address}</p> <br />
+            <p>Thank you for your attention to this update.</p><br />
+            <p>Best regards,<br/> The PlusX Electric Team </p>
+        </body>
+    </html>`;
+    emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
+
+    return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
+});
+
+
 
 
 

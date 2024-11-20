@@ -464,3 +464,83 @@ export const PodAssignBooking = async (req, resp) => {
     }
 };
 
+/* Admin Cancel Booking */
+export const adminCancelCSBooking = asyncHandler(async (req, resp) => {
+    const { rider_id, booking_id, reason } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    
+    const checkOrder = await queryDB(`
+        SELECT 
+            name, rsa_id, slot_date_time,
+            (select cancel_reason from charging_service_history as csh where csh.service_id = charging_service.request_id ) as cancel_reason, 
+            concat( country_code, "-", contact_no) as contact_no, 
+            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = charging_service.rider_id) AS rider_email,
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service.rider_id) AS fcm_token,
+            (select fcm_token from rsa where rsa.rsa_id = charging_service.rsa_id ) as rsa_fcm_token
+        FROM 
+            charging_service
+        WHERE 
+            request_id = ? AND rider_id = ? AND order_status IN ('CNF','A','ER') 
+        LIMIT 1
+    `,[booking_id, rider_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+
+    const insert = await db.execute(
+        'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, cancel_by, cancel_reason) VALUES (?, ?, "C", ?, "Admin", ?)',
+        [booking_id, rider_id, checkOrder.rsa_id, reason]
+    );
+    if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+    await updateRecord('charging_service', {order_status: 'C'}, ['request_id'], [booking_id]);
+    const href    = `charging_service/${booking_id}`;
+    const title   = 'Valet Service Cancel!';
+    const message = `We regret to inform you that your Valet Service booking booking (ID: ${booking_id}) has been cancelled by the admin.`;
+    await createNotification(title, message, 'Charging Service', 'Rider', 'Rider', rider_id, rider_id, href);
+    await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+    if( checkOrder.rsa_id) {
+        await db.execute(`DELETE FROM charging_service_assign WHERE rider_id=? AND order_id = ?`, [rider_id, booking_id]);
+        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
+
+        const message1 = `A Booking of the Valet Service booking has been cancelled by admin with booking id : ${booking_id}`;
+        await createNotification(title, message1, 'Charging Service', 'RSA', 'Rider', rider_id, checkOrder.rsa_id,  href);
+        await pushNotification(checkOrder.rsa_fcm_token, title, message1, 'RSAFCM', href);
+    }
+    const slot_date_time = moment(checkOrder.slot_date_time).format('YYYY-MM-DD');
+    
+    const html = `<html>
+        <body>
+            <h4>Dear ${checkOrder.user_name},</h4>
+            <p>We've received your cancellation request for the PlusX Electric Pickup and Drop-Off EV Charging Service. Your booking has been successfully canceled. If you need assistance with rescheduling or have any questions, please feel free to reach out to us.</p> <br />
+            <p>We would like to inform you that your recent booking for the Pickup and Drop-Off EV Charging Service with PlusX Electric has been cancelled.</p><br />
+            <p>Booking Details:</p><br />
+            <p>Booking ID    : ${booking_id}</p>
+            <p>Booking Date : ${slot_date_time}</p>
+            <p>Thank you for choosing PlusX Electric, and we hope to serve you in the future!</p><br />
+            <p>Warm regards,<br/> The PlusX Electric Team </p>
+        </body>
+    </html>`;
+    emailQueue.addEmail(checkOrder.rider_email, `Booking Cancellation Confirmation - PlusX Electric Pickup & Drop-Off Charging Service`, html);
+
+    const adminHtml = `<html>
+        <body>
+            <h4>Dear Admin,</h4>
+            <p>This is to notify you that admin has canceled their PlusX Electric Pickup and Drop-Off EV Charging Service booking. Please find the details below:</p> <br />
+            <p>Booking Details:</p><br />
+            <p>Name         : ${checkOrder.name}</p>
+            <p>Contact      : ${checkOrder.contact_no}</p>
+            <p>Booking ID   : ${booking_id}</p>
+            <p>Booking Date : ${checkOrder.slot_date_time}</p> 
+            <p>Reason       : ${checkOrder.cancel_reason}</p> <br />
+            <p>Thank you,<br/> The PlusX Electric Team </p>
+        </body>
+    </html>`;
+    emailQueue.addEmail('valetbookings@plusxelectric.com', `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
+
+    return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
+});
+
