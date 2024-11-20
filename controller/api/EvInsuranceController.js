@@ -11,9 +11,11 @@ export const addInsurance = asyncHandler(async (req, resp) => {
         const fileFields = ['vehicle_registration_img', 'driving_licence', 'car_images', 'car_type_image', 'scretch_image', 'emirates_id'];
         let tempFileNames = {};
         const uploadedFiles = req.files;
-        fileFields.forEach(field => {
-            tempFileNames[field] = uploadedFiles[field]?.map(file => file.filename).join('*') || '';
-        });
+        if(req.files && Object.keys(req.files).length > 0){
+            fileFields.forEach(field => {
+                tempFileNames[field] = uploadedFiles[field]?.map(file => file.filename).join('*') || '';
+            });
+        }
         
         const { rider_id, owner_name, date_of_birth, country, country_code, mobile_no, email, vehicle, registration_place, car_brand, insurance_expired, bank_loan,
             insurance_expiry, type_of_insurance, bank_name
@@ -44,7 +46,8 @@ export const addInsurance = asyncHandler(async (req, resp) => {
             Object.keys(tempFileNames).forEach(key => {
                 fileNames[key] = tempFileNames[key];
             });
-        }else{
+        }
+        if(req.files && Object.keys(req.files).length > 0){
             fileFields.forEach(field => {
                 uploadedFiles[field]?.forEach(file => {
                     deleteFile('insurance-images', file.filename);
