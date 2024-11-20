@@ -515,7 +515,6 @@ export const adminCancelCSBooking = asyncHandler(async (req, resp) => {
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
-            <p>We've received your cancellation request for the PlusX Electric Pickup and Drop-Off EV Charging Service. Your booking has been successfully canceled. If you need assistance with rescheduling or have any questions, please feel free to reach out to us.</p> <br />
             <p>We would like to inform you that your recent booking for the Pickup and Drop-Off EV Charging Service with PlusX Electric has been cancelled.</p><br />
             <p>Booking Details:</p><br />
             <p>Booking ID    : ${booking_id}</p>
