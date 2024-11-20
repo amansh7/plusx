@@ -6,6 +6,7 @@ import { mergeParam, asyncHandler, getOpenAndCloseTimings, convertTo24HourFormat
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
+import emailQueue from '../../emailQueue.js';
 dotenv.config();
 
 

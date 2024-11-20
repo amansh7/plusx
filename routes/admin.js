@@ -202,8 +202,8 @@ const adminRoutes = [
     { method: 'post',  path: '/ev-pre-sale-delete-time-slot-list', handler: evPreSaleTimeSlotDelete },
 
     /* Admin Booking Cancel */
-    { method: 'get', path: '/portable-charger-cancel',  handler: adminCancelPCBooking },
-    { method: 'get', path: '/charging-service-cancel',  handler: adminCancelCSBooking },
+    { method: 'post', path: '/portable-charger-cancel',  handler: adminCancelPCBooking },
+    { method: 'post', path: '/charging-service-cancel',  handler: adminCancelCSBooking },
 ]; 
 
 adminRoutes.forEach(({ method, path, handler }) => {

@@ -4,6 +4,7 @@ import moment from 'moment';
 import crypto from 'crypto';
 import { mergeParam, asyncHandler, getOpenAndCloseTimings, convertTo24HourFormat, formatDateTimeInQuery, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
+import emailQueue from '../../emailQueue.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
 dotenv.config();
