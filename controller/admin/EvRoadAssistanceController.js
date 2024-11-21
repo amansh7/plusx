@@ -114,8 +114,8 @@ export const evRoadAssistanceConfirmBooking = asyncHandler(async (req, resp) => 
 });
 
 export const evRoadAssistanceCancelBooking = asyncHandler(async (req, resp) => {
-    const { order_id, reason } = req.body;
-    const { isValid, errors } = validateFields(req.body, { order_id : ["required"], reason : ["required"] });
+    const { request_id, reason } = req.body;
+    const { isValid, errors } = validateFields(req.body, { request_id : ["required"], reason : ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const order = await queryDB(`
@@ -124,20 +124,20 @@ export const evRoadAssistanceCancelBooking = asyncHandler(async (req, resp) => {
         FROM road_assistance
         WHERE request_id = ? AND order_status = ?
         LIMIT 1  
-    `, [order_id, 'BD']);
+    `, [request_id, 'BD']);
 
     if(!order) return resp.json({status:0, message: "No booking found on this booking id."});
 
-    await db.execute(`UPDATE road_assistance SET order_status = 'C' WHERE request_id = ?`, [order_id]);
-    await insertRecord('order_history', ['order_id', 'rider_id', 'cancel_by', 'order_status', 'cancel_reason'], [order_id, order.rider_id, 'Admin', 'CNF', 'reason']);
+    await db.execute(`UPDATE road_assistance SET order_status = 'C' WHERE request_id = ?`, [request_id]);
+    await insertRecord('order_history', ['order_id', 'rider_id', 'cancel_by', 'order_status', 'cancel_reason'], [request_id, order.rider_id, 'Admin', 'CNF', reason]);
 
     const title = 'Order Cancelled!';
-    const message = `We regret to inform you that your roadside assistance order no : ${order_id} has been cancelled.`;
-    const href = `road_assistance/${order_id}`;
-    createNotification(title, message, 'Roadside Assistance', 'Rider', 'Admin', '', rsa.rsa_id, href);
-    pushNotification(rsa.fcm_token, title, message, 'RDRFCM', href);
+    const message = `We regret to inform you that your roadside assistance order no : ${request_id} has been cancelled.`;
+    const href = `road_assistance/${request_id}`;
+    createNotification(title, message, 'Roadside Assistance', 'Rider', 'Admin', '', order.rider_id, href);
+    pushNotification(order.fcm_token, title, message, 'RDRFCM', href);
 
-    return resp.json({status: 1, message: "Booking has been cancelled successfully!."});
+    return resp.json({status: 1, code:200, message: "Booking has been cancelled successfully!."});
 });
 
 
