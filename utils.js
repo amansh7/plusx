@@ -1,17 +1,15 @@
 import NodeCache from "node-cache";
 import axios from "axios";
-import multer from 'multer';
 import path from 'path';
 import puppeteer from 'puppeteer';
-// import puppeteer from 'puppeteer-core';
-import PDFKit from 'pdfkit';
 import htmlPdf from 'html-pdf-node';
 import ejs from 'ejs';
 import { insertRecord } from "./dbUtils.js";
 import { GoogleAuth } from "google-auth-library";
 import { fileURLToPath } from 'url';
-import moment from "moment";
 import fs from 'fs';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,8 +81,8 @@ export const getOTP = (key) => {
 
 /* API Call to Send OTP */
 export const sendOtp = async (mobile, otpMsg) => {
-  const username = "2btgve6f";
-  const password = "aLXHNiHw";
+  const username = process.env.SMS_USERNAME;
+  const password = process.env.SMS_PASSWORD;
   const from = "PlusX";
 
   const baseUrl = `https://api.smsglobal.com/http-api.php?action=sendsms&user=${username}&password=${password}&from=${encodeURIComponent(
