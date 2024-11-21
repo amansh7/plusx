@@ -260,7 +260,7 @@ export const serviceCreate = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     if(service_name.length > 250) return resp.json({ status: 0, code: 422, message: "Max 250 character allowed." });
 
-    const insert = await insertRecord('store_services', ['service_id', 'service_name'], [`STRC${generateUniqueId({length:12})}`, service_name]);
+    const insert = await insertRecord('store_services', ['service_id', 'service_name'], [`STRC${generateUniqueId({length:6})}`, service_name]);
 
     return resp.json({
         status: insert.affectedRows > 0 ? 1 : 0 ,
@@ -326,7 +326,7 @@ export const brandCreate = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     if(brand_name.length > 250) return resp.json({ status: 0, code: 422, message: "Max 250 character allowed." });
 
-    const insert = await insertRecord('store_brands', ['brand_id', 'brand_name'], [`STB${generateUniqueId({length:12})}`, brand_name]);
+    const insert = await insertRecord('store_brands', ['brand_id', 'brand_name'], [`STB${generateUniqueId({length:6})}`, brand_name]);
 
     return resp.json({
         status: insert.affectedRows > 0 ? 1 : 0 ,
@@ -335,6 +335,7 @@ export const brandCreate = asyncHandler(async (req, resp) => {
     });
 
 });
+
 export const brandUpdate = asyncHandler(async (req, resp) => {
     const { brand_name, brand_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { brand_name: ["required"], brand_id: ["required"] });
