@@ -214,6 +214,7 @@ export const rsaDelete = asyncHandler(async (req, resp) => {
         }
 
         await commitTransaction(conn);
+        return resp.json({ status: 1, code: 200, error: false, message: ['Driver account deleted successfully!'] });
     } catch(err){
         await rollbackTransaction(conn);
         console.error("Transaction failed:", err);
