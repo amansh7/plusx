@@ -194,6 +194,28 @@ export const convertTo24HourFormat = (timeStr) => {
   return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`; 
 };
 
+/* Generates a PDF from an EJS template. */
+export const generatePDFOld = async (pdfTemplateContext, templatePath, pdfPath, req) => {
+  const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
+  let success = false; 
+  try{
+    const html = await ejs.renderFile(templatePath, { ...pdfTemplateContext, imgUrl });
+  
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+  
+    page.setViewport({ width: 1280, height: 1050 });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+    console.log('pdf generated: ', pdfPath);
+    await browser.close();
+    return { success: true, pdfPath }; 
+  }catch(error){
+    console.error('Error generating PDF:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 /* Amount Number To Word Converter */
 export function numberToWords(num) {
   const ones = [
