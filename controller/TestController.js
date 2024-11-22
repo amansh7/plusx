@@ -6,27 +6,6 @@ import transporter from '../mailer.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const g1test1 = async (req, resp) => {
-    return resp.json({msg: "This is test 1 under route group 1"});
-}
-export const g1test2 = async (req, resp) => {
-    return resp.json({msg: "This is test 2 under route group 1"});
-}
-
-export const g2test1 = async (req, resp) => {
-    return resp.json({msg: "This is test 1 under route group 2"});
-}
-export const g2test2 = async (req, resp) => {
-    return resp.json({msg: "This is test 2 under route group 2"});
-}
-
-export const g3test1 = async (req, resp) => {
-    return resp.json({msg: "This is test 1 under route group 3"});
-}
-export const g3test2 = async (req, resp) => {
-    return resp.json({msg: "This is test 2 under route group 3"});
-}
-
 export const generateTemplate = async (req, resp) => {
     const result = {booking_id: 'BK-2024-01',user_name: 'John Doe',invoice_id: 'INV-2024-10-18',amount: 200.5,currency: 'USD',invoice_date: new Date(),};
     const invoiceDate = new Date(result.invoice_date).toLocaleDateString('en-US', {day: '2-digit',month: 'short',year: 'numeric',});
@@ -208,3 +187,14 @@ export const pickAndDropInvoicePdf = async (req, resp) => {
         console.log('Error in generating PDF', err);
     }
 };
+
+/*
+    -> Delete Gallery Img...
+    const [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+    const galleryData = gallery.map(img => img.image_name);
+
+    if (req.files['shop_gallery'] && galleryData.length > 0) {
+        galleryData.forEach(img => img && deleteFile('charging-station-images', img));
+        await db.execute(`DELETE FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+    }
+*/

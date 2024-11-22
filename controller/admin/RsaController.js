@@ -2,7 +2,7 @@ import generateUniqueId from 'generate-unique-id';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord, } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { asyncHandler } from '../../utils.js';
+import { asyncHandler, deleteFile } from '../../utils.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -129,16 +129,14 @@ export const rsaAdd = asyncHandler(async (req, resp) => {
     if(password.length <= 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
     if(password != confirm_password) return resp.json({ status: 0, code: 422, message: ['Password and confirm password not matched!'] });
 
-    let profile_image = '';
-    if(req.files && req.files['profile_image']){
-        const files = req.files;
-        profile_image = files ? files['profile_image'][0].filename : '';
-    }
+    let profile_image = req.files['profile_image'] ? files['profile_image'][0].filename  : '';
+
     const insert = await insertRecord('rsa', [
         'rsa_id', 'rsa_name', 'email', 'country_code', 'mobile', 'booking_type', 'password', 'status', 'running_order', 'profile_img'
     ], [
         `RSA-${generateUniqueId({length:8})}`, rsa_name, rsa_email, '+971', mobile, service_type, password, 0, 0, profile_image
     ]);
+    
     return resp.json({
         status: insert.affectedRows > 0 ? 1 : 0, 
         code: 200, 
@@ -164,27 +162,15 @@ export const rsaUpdate = asyncHandler(async (req, resp) => {
     if (mobileCheck?.length > 0) return resp.json({status:1, code: 200, message:["Mobile number already exists"]});
     
     const rsaData = await queryDB(`SELECT profile_img FROM rsa WHERE rsa_id = ?`, [rsa_id]);
-
-    let profile_image = rsaData.profile_img;
-    if(req.files && req.files['profile_image']){
-        const files = req.files;
-        profile_image = files ? files['profile_image'][0].filename : '';
-    }
-
+    const profile_image = req.files['profile_image'] ? files['profile_image'][0].filename : rsaData.profile_img;
     const updates = {rsa_name, email: rsa_email, mobile, booking_type: service_type, profile_img: profile_image};
-    if(password){
-        const hashedPswd = await bcrypt.hash(password, 10);
-        updates.password = hashedPswd;
-    } 
+
+    if(password) updates.password = await bcrypt.hash(password, 10);
+
     const update = await updateRecord('rsa', updates, ['rsa_id'], [rsa_id]);
-    const profileImgPath = path.join(__dirname, `public/uploads/rsa_images/${rsaData.profile_img}`, rsaData.profile_img);
-    if (req.file) {
-        fs.unlink(profileImgPath, (err) => {
-            if (err) {
-                console.error(`Failed to delete rider old image: ${profileImgPath}`, err);
-            }
-        });
-    }
+
+    if(rsaData.profile_img) deleteFile('rsa_images', rsaData.profile_img);
+
     return resp.json({
         status: update.affectedRows > 0 ? 1 : 0, 
         code: 200, 
@@ -205,13 +191,7 @@ export const rsaDelete = asyncHandler(async (req, resp) => {
         await conn.execute(`DELETE FROM order_assign WHERE rsa_id = ?`, [rsa_id]);
 
         const profileImgPath = path.join(__dirname, 'public/uploads/rsa_images', rsaData.profile_img);
-        if (rsaData.profile_img) {
-            fs.unlink(profileImgPath, (err) => {
-                if (err) {
-                    console.error(`Failed to delete rider old image: ${profileImgPath}`, err);
-                }
-            });
-        }
+        if (rsaData.profile_img) deleteFile('rsa_images', rsaData.profile_img);
 
         await commitTransaction(conn);
         return resp.json({ status: 1, code: 200, error: false, message: ['Driver account deleted successfully!'] });

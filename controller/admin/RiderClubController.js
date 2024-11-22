@@ -2,7 +2,7 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { asyncHandler } from '../../utils.js';
+import { asyncHandler, deleteFile } from '../../utils.js';
 
 export const clubList = asyncHandler(async (req, resp) => {
     const { search, page_no } = req.body;
@@ -54,13 +54,6 @@ export const clubData = asyncHandler(async (req, resp) => {
 
 export const clubCreate = asyncHandler(async (req, resp) => {
     try{
-        const uploadedFiles = req.files;
-        let cover_image = '';
-        if(req.files && req.files['cover_image']){
-            cover_image = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
-        }
-        const club_gallery = uploadedFiles['club_gallery']?.map(file => file.filename) || [];
-
         const { club_name, location, description, club_url, category, age_group, no_of_members='', url_link='', preference='' } = req.body;
         const { isValid, errors } = validateFields(req.body, {
             club_name: ["required"],
@@ -75,16 +68,19 @@ export const clubCreate = asyncHandler(async (req, resp) => {
 
         const clubId = `CLB${generateUniqueId({length:6})}`;
 
+        const cover_img = req.files['cover_image'] ? req.files['cover_image'][0].filename : '' ;
+        const clubGallery = uploadedFiles['club_gallery']?.map(file => file.filename) || [];
+
         const insert = await insertRecord('clubs', [
             'club_id', 'club_name', 'location', 'no_of_members', 'description', 'url_link', 'cover_img', 'category', 'age_group', 'preference', 'status'
         ], [
-            clubId, club_name, location, no_of_members, description, url_link, cover_image, category, age_group, preference, 1
+            clubId, club_name, location, no_of_members, description, url_link, cover_img, category, age_group, preference, 1
         ]);
 
         if(insert.affectedRows == 0) return resp.json({status:0, message: "Something went wrong! Please try again after some time."});
 
-        if(club_gallery.length > 0){
-            const values = club_gallery.map(filename => [clubId, filename]);
+        if(clubGallery.length > 0){
+            const values = clubGallery.map(filename => [clubId, filename]);
             const placeholders = values.map(() => '(?, ?)').join(', ');
             await db.execute(`INSERT INTO club_gallery (club_id, image_name) VALUES ${placeholders}`, values.flat());
         }
@@ -92,19 +88,11 @@ export const clubCreate = asyncHandler(async (req, resp) => {
         return resp.json({status: 1, message: "Club added successfully."});
 
     }catch(err){
-        // console.log(err);
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 });
 
-export const clubUpdate = asyncHandler(async (req, resp) => {
-    const uploadedFiles = req.files;
-    let cover_image = '';
-    if(req.files && req.files['cover_image']){
-        cover_image = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
-    }
-    const club_gallery = uploadedFiles['club_gallery']?.map(file => file.filename) || [];
-        
+export const clubUpdate = asyncHandler(async (req, resp) => {        
     const { club_id, club_name, location, description, club_url, category, age_group, no_of_members='', url_link='', preference='', status=1 } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         club_name: ["required"],
@@ -115,88 +103,36 @@ export const clubUpdate = asyncHandler(async (req, resp) => {
         age_group: ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
+    
     const club = await queryDB(`SELECT cover_img FROM clubs WHERE club_id = ?`, [club_id]);
     if(!club) return resp.json({status:0, message: "Club Data can not edit, or invalid club Id"});
-    const [gallery] = await db.execute(`SELECT image_name FROM club_gallery WHERE club_id = ?`, [club_id]);
-    const galleryData = gallery.map(img => img.image_name);
-
-    const updates = {
-        club_name, 
-        location, 
-        no_of_members,
-        description, 
-        url_link, 
-        category, 
-        age_group, 
-        preference,
-        status
-    };
-    const update = await updateRecord('clubs', updates, ['club_id'], [club_id]);
     
+    const cover_img = req.files['cover_image'] ? req.files['cover_image'][0].filename : club.cover_img ;
+    const clubGallery = uploadedFiles['club_gallery']?.map(file => file.filename) || [];
+
+    const updates = { club_name, location, no_of_members, description, url_link, category, age_group, preference, status, cover_img };
+    const update = await updateRecord('clubs', updates, ['club_id'], [club_id]);
     if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
 
-    if(club_gallery.length > 0){
-        const values = club_gallery.map(filename => [club_id, filename]);
+    if(clubGallery.length > 0){
+        const values = clubGallery.map(filename => [club_id, filename]);
         const placeholders = values.map(() => '(?, ?)').join(', ');
         await db.execute(`INSERT INTO club_gallery (club_id, image_name) VALUES ${placeholders}`, values.flat());
     }
-    console.log(galleryData);
-    
-    if (galleryData) {
-        for (const img of galleryData) {
-            if (img.image_name) {
-                const file_path = path.join(__dirname, '../uploads/club-images', img.image_name);
-                fs.unlink(file_path, (err) => {
-                    if (err) {
-                        console.error(`Failed to delete image ${img.image_name}:`, err);
-                    }
-                });
-            }
-        }
-    }
-    if (club.cover_image) {
-        const cover_file_path = path.join(__dirname, '../uploads/club-images', club.cover_image);
-        fs.unlink(cover_file_path, (err) => {
-            if (err) {
-                console.error(`Failed to delete cover image ${club.cover_image}:`, err);
-            }
-        });
-    }
+
+    if (club.cover_img) deleteFile('club-images', club.cover_img);
 
     return resp.json({status:1, code: 200, message: "Club updated successfully"});
 });
 
 export const clubDelete = asyncHandler(async (req, resp) => {
     const {club_id} = req.body;
+    if(!club_id) return resp.json({status:0, code:422, message:"Club Id is required"});
 
     const club = await queryDB(`SELECT cover_img FROM clubs WHERE club_id = ?`, [club_id]);
     if (!club) return resp.json({ status: 0, msg: "Club Data cannot be deleted, or invalid" });
 
-    const galleryData = await queryDB(`SELECT image_name FROM club_gallery WHERE club_id = ?`, [club_id]);
-
-    if (galleryData) {
-        for (const img of galleryData) {
-            if (img.image_name) {
-                const file_path = path.join(__dirname, '../uploads/club-images', img.image_name);
-                fs.unlink(file_path, (err) => {
-                    if (err) {
-                        console.error(`Failed to delete image ${img.image_name}:`, err);
-                    }
-                });
-            }
-        }
-        await queryDB(`DELETE FROM club_gallery WHERE club_id = ?`, [club_id]);
-    }
-    if (club.cover_image) {
-        const cover_file_path = path.join(__dirname, '../uploads/club-images', club.cover_image);
-        fs.unlink(cover_file_path, (err) => {
-            if (err) {
-                console.error(`Failed to delete cover image ${club.cover_image}:`, err);
-            }
-        });
-    }
-
+    if (club.cover_image) deleteFile('club-images', club.cover_image);
     await queryDB(`DELETE FROM clubs WHERE club_id = ?`, [club_id]);
 
     return resp.json({ status: 1, msg: "Club deleted successfully!" });
@@ -204,23 +140,12 @@ export const clubDelete = asyncHandler(async (req, resp) => {
 
 export const clubDeleteImg = asyncHandler(async (req, resp) => {
     const { gallery_id } = req.body;
+    if(!gallery_id) return resp.json({status:0, code:422, message:"Gallery Id is required"});
 
-    const galleryData = await queryDB(`SELECT image_name FROM club_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
-    if (!galleryData) return resp.json({ status: 0, msg: "Gallery id not valid!" });
-
-    if (galleryData) {
-        for (const img of galleryData) {
-            if (img.image_name) {
-                const file_path = path.join(__dirname, '../uploads/club-images', img.image_name);
-                fs.unlink(file_path, (err) => {
-                    if (err) {
-                        console.error(`Failed to delete image ${img.image_name}:`, err);
-                    }
-                });
-            }
-        }
-        await queryDB(`DELETE FROM club_gallery WHERE club_id = ?`, [club_id]);
-    }
+    const gallery = await queryDB(`SELECT image_name FROM club_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
+    
+    deleteFile('club-images', gallery.image_name);
+    await queryDB(`DELETE FROM club_gallery WHERE id = ?`, [gallery_id]);
 
     return resp.json({ status: 1, msg: "Club Image deleted successfully!" });
 });

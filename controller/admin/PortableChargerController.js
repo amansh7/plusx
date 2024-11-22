@@ -1,8 +1,7 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import dotenv from 'dotenv';
 import moment from 'moment';
-import crypto from 'crypto';
-import { mergeParam, asyncHandler, getOpenAndCloseTimings, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification} from '../../utils.js';
+import { mergeParam, asyncHandler, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification, deleteFile} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
@@ -124,21 +123,7 @@ export const addCharger = async (req, resp) => {
 export const editCharger = async (req, resp) => {
     try {
         const { charger_id, charger_name, charger_price, charger_feature, charger_type, status } = req.body;
-        const charger_image = req.files && req.files['charger_image'] ? req.files['charger_image'][0].filename : null;
-
-        const [currentCharger] = await db.execute(`
-            SELECT 
-                charger_id, charger_name, charger_price, charger_feature, image, charger_type, status
-            FROM 
-                portable_charger 
-            WHERE 
-                charger_id = ?`, 
-            [charger_id]
-        );
-
-        const { isValid, errors } = validateFields({ 
-            charger_id, charger_name, charger_price, charger_feature, charger_type, status
-        }, {
+        const { isValid, errors } = validateFields(req.body, {
             charger_id: ["required"],
             charger_name: ["required"],
             charger_price: ["required"],
@@ -146,51 +131,42 @@ export const editCharger = async (req, resp) => {
             charger_type: ["required"],
             status: ["required"]
         });
-
-        if (!charger_image && !currentCharger[0].image) {
-            errors.charger_image = "Image is required.";
-            isValid = false;
-        }
-
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+        if (!charger_image) return resp.json({ status:0, code: 422, message: 'charger_image is required' });
+        
+        const charger = await queryDB(`SELECT image FROM portable_charger WHERE charger_id = ?`, [charger_id]);
+        if(!charger) return resp.json({status:0, message: "Charger Data can not edit, or invalid charger Id"});
+        
+        const charger_image = req.files['charger_image'] ? req.files['charger_image'][0].filename : charger.image;
 
-        const updates = {
-            charger_name,
-            charger_price,
-            charger_feature,
-            charger_type,
-            status
-        };
-
-        if (charger_image) {
-            updates.image = charger_image;
-        }
-
+        const updates = { charger_name, charger_price, charger_feature, charger_type, status, image : charger_image };
         const update = await updateRecord('portable_charger', updates, ['charger_id'], [charger_id]);
+
+        deleteFile('charger-images', charger.image);
 
         return resp.json({
             status: update.affectedRows > 0 ? 1 : 0,
             code: 200,
-            message: update.affectedRows > 0 ? ['Charger updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
+            message: update.affectedRows > 0 ? ['Charger updated successfully!'] : ['Failed to update. Please try again.'],
         });
 
     } catch (error) {
-        console.error('Something went wrong:', error);
-        resp.status(500).json({ message: 'Something went wrong' });
+        console.log('Something went wrong:', error);
+        return resp.status(500).json({ message: 'Something went wrong' });
     }
 };
 
 export const deleteCharger = async (req, resp) => {
     try {
         const { charger_id } = req.body; 
-
-        const { isValid, errors } = validateFields(req.body, {
-            charger_id: ["required"]
-        });
-
+        const { isValid, errors } = validateFields(req.body, { charger_id: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
+        const charger = await queryDB(`SELECT image FROM portable_charger WHERE charger_id = ?`, [charger_id]);
+        if(!charger) return resp.json({status:0, message: "Charger Data can not be deleted, or invalid"});
+        
         const [del] = await db.execute(`DELETE FROM portable_charger WHERE charger_id = ?`, [charger_id]);
+        deleteFile('charger-images', charger.image);
 
         return resp.json({
             code:200,

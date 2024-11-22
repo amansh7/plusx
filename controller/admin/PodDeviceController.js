@@ -118,10 +118,7 @@ export const addPodDevice = async (req, resp) => {
 export const editPodDevice = async (req, resp) => {
     try {
         const { deviceId, device_model, capacity, charger, inverter, date_of_manufacturing } = req.body;
-       
-        const { isValid, errors } = validateFields({ 
-            deviceId, device_model, capacity, charger, inverter, date_of_manufacturing
-        }, {
+        const { isValid, errors } = validateFields(req.body, {
             deviceId              : ["required"],
             device_model          : ["required"],
             capacity              : ["required"],
@@ -131,13 +128,6 @@ export const editPodDevice = async (req, resp) => {
         });
         if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
 
-        // const [[isExist]] = await db.execute(`
-        //     SELECT COUNT(id) as check_device FROM pod_devices where device_id != ? `, [deviceId]);
-        // const err = [];
-        // if( isExist.check_device ) err.push('Device Id is already registered.');
-        // if(err.length > 0) return resp.json({ status : 0, code : 422, message : err });
-
-        // const dateOfManufacturing = moment(date_of_manufacturing ).format("YYYY-MM-DD");
         let date_manufacturing = date_of_manufacturing.split("-");
         const dateOfManufacturing = date_manufacturing[2] +'-'+ date_manufacturing[1] +'-'+date_manufacturing[0];
         const updates = {
@@ -146,9 +136,8 @@ export const editPodDevice = async (req, resp) => {
             charger,
             inverter,
             date_of_manufacturing : dateOfManufacturing,
-            
         };
-        console.log(updates)
+        
         const update = await updateRecord('pod_devices', updates, ['device_id'], [deviceId]);
 
         return resp.json({
