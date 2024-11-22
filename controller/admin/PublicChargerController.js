@@ -190,12 +190,6 @@ export const addPublicCharger = asyncHandler(async (req, resp) => {
 
 export const editPublicCharger = asyncHandler(async (req, resp) => {
     try {
-        console.log(req.body);
-        const uploadedFiles = req.files;
-        
-        const data = req.body;
-        
-        const shop_gallery = uploadedFiles['shop_gallery']?.map(file => file.filename) || [];
         const { station_id, station_name, charging_for, charger_type, charging_point, description, address, latitude, longitude, always_open=0, days='', price='', status } = req.body;
         const { isValid, errors } = validateFields(req.body, { 
             station_id: ["required"], 
@@ -214,16 +208,14 @@ export const editPublicCharger = asyncHandler(async (req, resp) => {
         if(!charger) return resp.json({status:0, message: "Public Charger Data can not edit, or invalid station Id"});
         const [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
         const galleryData = gallery.map(img => img.image_name);
-
+        
+        const uploadedFiles = req.files;        
+        const data = req.body;
         const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
         
-        // let stationImg = req.files?.['cover_image']?.[0]?.filename || '';
-        // let shop_gallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
-
-        let stationImg = charger.station_image;
-        if(req.files && req.files['cover_image']){
-            stationImg = uploadedFiles ? uploadedFiles['cover_image'][0].filename : stationImg;
-        }
+        const stationImg = uploadedFiles['cover_image'] ? uploadedFiles['cover_image'][0].filename : charger.station_image;
+        const shopGallery = uploadedFiles['shop_gallery']?.map(file => file.filename) || [];
+        
         const updates = {
             station_name,
             price,
@@ -242,12 +234,13 @@ export const editPublicCharger = asyncHandler(async (req, resp) => {
         };
         
         if (req.files['cover_image']) deleteFile('charging-station-images', charger.station_image);
-        if (req.files['shop_gallery'] && galleryData.length > 0) {
-            galleryData.forEach(img => img && deleteFile('charging-station-images', img));
-        }
+        // if (req.files['shop_gallery'] && galleryData.length > 0) {
+        //     galleryData.forEach(img => img && deleteFile('charging-station-images', img));
+        //     await db.execute(`DELETE FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+        // }
 
-        if(shop_gallery.length > 0){
-            const values = shop_gallery.map(filename => [station_id, filename]);
+        if(shopGallery.length > 0){
+            const values = shopGallery.map(filename => [station_id, filename]);
             const placeholders = values.map(() => '(?, ?)').join(', ');
             await db.execute(`INSERT INTO public_charging_station_gallery (station_id, image_name) VALUES ${placeholders}`, values.flat());
         }
@@ -268,28 +261,12 @@ export const deletePublicCharger = asyncHandler(async (req, resp) => {
 
     const charger = await queryDB(`SELECT station_image FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
     if(!charger) return resp.json({status:0, message: "Public Charger Data can not edit, or invalid station Id"});
-    const galleryData = await queryDB(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+    const [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+    const galleryData = gallery.map(img => img.image_name);
 
-    if (galleryData.length) {
-        for (const img of galleryData) {
-            if (img.image_name) {
-                const file_path = path.join(__dirname, '../uploads/charging-station-images', img.image_name);
-                fs.unlink(file_path, (err) => {
-                    if (err) {
-                        console.error(`Failed to delete image ${img.image_name}:`, err);
-                    }
-                });
-            }
-        }
-    }
-    if (charger.station_image) {
-        const cover_file_path = path.join(__dirname, '../uploads/charging-station-images', charger.station_image);
-        fs.unlink(cover_file_path, (err) => {
-            if (err) {
-                console.error(`Failed to delete cover image ${charger.station_image}:`, err);
-            }
-        });
-    }
+    if (galleryData.length > 0) galleryData.forEach(img => img && deleteFile('charging-station-images', img));
+    
+    if (charger.station_image) deleteFile('charging-station-images', charger.station_image);
 
     await queryDB(`DELETE FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
     await queryDB(`DELETE FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
@@ -304,7 +281,7 @@ export const deletePublicChargerGallery = asyncHandler(async (req, resp) => {
     const galleryData = await queryDB(`SELECT image_name FROM public_charging_station_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
     
     if(galleryData){
-        deleteFile('bike-rental-images', galleryData.image_name);
+        deleteFile('charging-station-images', galleryData.image_name);
         await db.execute('DELETE FROM public_charging_station_gallery WHERE id = ?', [gallery_id]);
     }
 
