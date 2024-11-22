@@ -27,7 +27,8 @@ import {
     boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
 } from '../controller/api/DiscussionBoardController.js';
 import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList, sellVehicleDetail, updateSellVehicle, 
-    deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList
+    deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList,
+    updateSellVehicleImg
 } from '../controller/api/VehicleController.js';
 import { 
     chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking
@@ -128,6 +129,7 @@ const authzAndAuthRoutes = [
     { method: 'get',  path: '/sell-vehicle-list',     handler: sellVehicleList },
     { method: 'get',  path: '/sell-vehicle-details',  handler: sellVehicleDetail },
     { method: 'post', path: '/edit-sell-vehicle',     handler: updateSellVehicle },
+    { method: 'post', path: '/edit-sell-vehicle-img', handler: updateSellVehicleImg },
     { method: 'get',  path: '/delete-sell-vehicle',   handler: deleteSellVehicle },
     { method: 'get',  path: '/sold-sell-vehicle',     handler: soldSellVehicle },
 
@@ -203,8 +205,8 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
     if(path === '/rider-profile-change'){
         middlewares.push(handleFileUpload('rider_profile', ['profile_image'], 1));
     }
-    if(path === '/sell-vehicle' || path === '/edit-sell-vehicle'){
-        middlewares.push(handleFileUpload('vehicle-image', ['car_images', 'car_tyre_image', 'other_images'], 5));
+    if(path === '/sell-vehicle' || path === '/edit-sell-vehicle' || path === '/edit-sell-vehicle-img'){
+        middlewares.push(handleFileUpload('vehicle-image', ['car_images', 'car_tyre_image', 'other_images', 'image'], 5));
     }
     if(path === '/add-discussion-board' || path === '/discussion-board-edit'){
         middlewares.push(handleFileUpload('discussion-board-images', ['image'], 5));
