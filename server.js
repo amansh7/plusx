@@ -17,19 +17,24 @@ const PORT = process.env.PORT || 3333;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('/*', function (req, res) {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
 const corsOptions = {
-    origin: [
+    origin : [
         'http://192.168.1.87:3000',
         'http://192.168.1.25:3000',
         'http://192.168.1.7:3333',
         'http://localhost:3000',
         'http://localhost:3001',
-        // 'http://192.168.1.21:3434/admin/driver-list'
         'http://192.168.1.21:1112',
         'http://192.168.1.87:3434',
         'http://192.168.1.19:3000',
+        'http://192.168.1.38:3434/',
         'http://localhost:1112',
-        'https://plusx.shunyaekai.com',
+        'https://plusx.shunyaekai.com/'
     ],
     // origin : "*",
     methods: 'GET, POST, PUT, DELETE',
@@ -54,10 +59,10 @@ app.use('/api', apiRoutes);
 app.use('/web', mainRoutes);
 
 // React build
-app.use(express.static(path.join(__dirname, 'build')));
-app.get('/*', function (req, res) {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
+// app.use(express.static(path.join(__dirname, 'build')));
+// app.get('/*', function (req, res) {
+//     res.sendFile(path.join(__dirname, 'build', 'index.html'));
+// });
 
 app.use(errorHandler);
 

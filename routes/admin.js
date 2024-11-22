@@ -34,6 +34,9 @@ import {
 import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleController.js";
 import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
 
+
+import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea } from "../controller/admin/PodDeviceController.js";
+
 const router = Router();
 const adminAuthRoutes = [
     { method: 'post', path: '/login', handler: login },
@@ -204,7 +207,31 @@ const adminRoutes = [
     /* Admin Booking Cancel */
     { method: 'post', path: '/portable-charger-cancel',  handler: adminCancelPCBooking },
     { method: 'post', path: '/charging-service-cancel',  handler: adminCancelCSBooking },
-]; 
+    
+    /* POD Device Routes */
+    { method: 'post',  path: '/pod-device-list',            handler: podDeviceList },
+    { method: 'post',  path: '/pod-device-add',             handler: addPodDevice },
+    { method: 'post',  path: '/pod-device-details',         handler: podDeviceDetails },
+    { method: 'post',  path: '/pod-device-update',          handler: editPodDevice },
+    { method: 'post',  path: '/pod-device-delete',          handler: deletePodDevice },
+
+    /* POD Device Brand Routes */
+    { method: 'post',  path: '/all-pod-device',            handler: AllpodDevice},
+    { method: 'post',  path: '/pod-brand-list',             handler: podBrandList },
+    { method: 'post',  path: '/add-pod-brand',            handler: addPodBrand },
+    { method: 'post',  path: '/pod-brand-details',         handler: podDeviceDetails },
+    { method: 'post',  path: '/edit-pod-brand',          handler: editPodDevice },
+    { method: 'post',  path: '/pod-brand-delete',          handler: deletePodDevice },
+    { method: 'post',  path: '/device-brand-list',             handler: deviceBrandList },
+
+    /* POD Area Routes */
+    { method: 'post',  path: '/pod-area-list',            handler: podAreaList },
+    { method: 'post',  path: '/pod-area-add',             handler: addPodArea },
+    // { method: 'post',  path: '/pod-device-details',         handler: podDeviceDetails },
+    // { method: 'post',  path: '/pod-device-update',          handler: editPodDevice },
+    // { method: 'post',  path: '/pod-device-delete',          handler: deletePodDevice },
+    
+];  //
 
 adminRoutes.forEach(({ method, path, handler }) => {
     const middlewares = [adminAuthorization];
@@ -236,7 +263,9 @@ adminRoutes.forEach(({ method, path, handler }) => {
     if (path === '/electric-car-add' || path === '/electric-car-edit') {
         middlewares.push(handleFileUpload('car-rental-images', ['cover_image', 'rental_gallery'], 5));
     }
-
+    if (path === '/add-pod-brand' || path === '/edit-pod-brand') {
+        middlewares.push(handleFileUpload('pod-brand-images', ['brand_image'], 1));
+    }
     middlewares.push(authenticateAdmin);
     // middlewares.push(authenticate);
 
