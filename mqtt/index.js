@@ -17,10 +17,10 @@ let options = {
 
 let client = mqtt.connect('mqtt://supro.shunyaekai.tech:1883', options);
 
-client.on('connect', function () {
-    // console.log('connected');
-    client.subscribe('/supro/CYCLE/#', function () {
-        client.on('message', function (topic, message, packet) {
+client.on('connect', () => {
+    console.log('connected');
+    client.subscribe('/supro/CYCLE/#', () => {
+        client.on('message', (topic, message, packet) => {
             //  console.log('received', message);
 
             const str = message.toString();
@@ -58,7 +58,7 @@ client.on('connect', function () {
             }
         });
         // publish a message to a topic 
-        // client.publish('get/ravv', 'Msg by ravv', function() {
+        // client.publish('get/ravv', 'Msg by ravv', () => {
         //     console.log("Message is published"); 
         //     client.end(); 
         // });
