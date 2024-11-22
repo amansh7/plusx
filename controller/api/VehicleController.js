@@ -300,6 +300,34 @@ export const updateSellVehicle = asyncHandler(async (req, resp) => {
     }
 });
 
+export const updateSellVehicleImg = asyncHandler(async (req, resp) => {
+    const { sell_id, rider_id, image_name, image_type, image } = req.body; 
+    const { isValid, errors } = validateFields(req.body, {sell_id: ["required"], rider_id: ["required"], image_name: ["required"], image_type: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const vehicle = await queryDB(`SELECT car_images, car_tyre_image, other_images FROM vehicle_sell WHERE sell_id = ? AND rider_id = ?`, [sell_id, rider_id]);
+    if(!vehicle) return resp.json({status: 0, code:422, message: "Invalid sell id"});
+    let imgArr = vehicle.car_images ? vehicle.car_images.split('*').filter(Boolean) : [];
+    
+    const imgIndex = imgArr.indexOf(image_name);
+    const newImg = req.files['image'][0].filename;
+    imgArr[imgIndex] = newImg;
+    deleteFile('vehicle-image', image_name);
+    
+    const updates = {};
+    if(image_type === 'car_images') updates.car_images = imgArr.filter(Boolean).join('*');
+    
+    const update = await updateRecord('vehicle_sell', updates, ['sell_id', 'rider_id'], [sell_id, rider_id]);
+
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0,
+        code: 200,
+        error: update.affectedRows > 0 ? false : true,
+        message: update.affectedRows > 0 ? ["Image updated successfully"] : ["Failed to update. Please try again."]
+    });
+
+});
+
 export const deleteSellVehicle = asyncHandler(async (req, resp) => {
     const {rider_id, sell_id} = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], sell_id: ["required"]});
