@@ -49,7 +49,7 @@ const adminRoutes = [
     { method: 'put',  path: '/logout',          handler: logout },
     { method: 'post', path: '/forgot-password', handler: forgotPassword },
     { method: 'put',  path: '/change-password', handler: updatePassword },
-    { method: 'post',  path: '/dashboard',       handler: getDashboardData },
+    { method: 'post', path: '/dashboard',       handler: getDashboardData },
     { method: 'post', path: '/rider-list',      handler: riderList },
     { method: 'post', path: '/rider-details',   handler: riderDetails },
     { method: 'post', path: '/delete-rider',    handler: deleteRider },
@@ -216,13 +216,13 @@ const adminRoutes = [
     { method: 'post',  path: '/pod-device-delete',          handler: deletePodDevice },
 
     /* POD Device Brand Routes */
-    { method: 'post',  path: '/all-pod-device',            handler: AllpodDevice},
+    { method: 'post',  path: '/all-pod-device',             handler: AllpodDevice},
     { method: 'post',  path: '/pod-brand-list',             handler: podBrandList },
-    { method: 'post',  path: '/add-pod-brand',            handler: addPodBrand },
-    { method: 'post',  path: '/pod-brand-details',         handler: podDeviceDetails },
-    { method: 'post',  path: '/edit-pod-brand',          handler: editPodDevice },
-    { method: 'post',  path: '/pod-brand-delete',          handler: deletePodDevice },
-    { method: 'post',  path: '/device-brand-list',             handler: deviceBrandList },
+    { method: 'post',  path: '/add-pod-brand',              handler: addPodBrand },
+    { method: 'post',  path: '/pod-brand-details',          handler: podDeviceDetails },
+    { method: 'post',  path: '/edit-pod-brand',             handler: editPodDevice },
+    { method: 'post',  path: '/pod-brand-delete',           handler: deletePodDevice },
+    { method: 'post',  path: '/device-brand-list',          handler: deviceBrandList },
 
     /* POD Area Routes */
     { method: 'post',  path: '/pod-area-list',            handler: podAreaList },

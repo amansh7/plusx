@@ -1,7 +1,7 @@
-import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
-import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
+import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import { formatOpenAndCloseTimings, asyncHandler, deleteFile, getOpenAndCloseTimings } from '../../utils.js';
 
 export const storeList = asyncHandler(async (req, resp) => {
@@ -59,18 +59,17 @@ export const storeData = asyncHandler(async (req, resp) => {
 });
 
 export const storeAdd = asyncHandler(async (req, resp) => {
-    const data    = req.body;
-    console.log("DATA",data);
-    // return false;
     const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
     const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
-    const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
-    const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
-    const storeId     = `STOR${generateUniqueId({length:6})}`;
-    const brandsArr   = (brands && brands.trim !== '') ? brands : '';
-    const servicesArr = (services && services.trim !== '') ? services : '';
+    
+    const data             = req.body;
+    const coverImg         = req.files?.['cover_image']?.[0]?.filename || '';
+    const shopGallery      = req.files?.['shop_gallery']?.map(file => file.filename) || [];
+    const {fDays, fTiming} = formatOpenAndCloseTimings(always_open, data);
+    const storeId          = `STOR${generateUniqueId({length:6})}`;
+    const brandsArr        = (brands && brands.trim !== '') ? brands : '';
+    const servicesArr      = (services && services.trim !== '') ? services : '';
 
     const insert = await insertRecord('service_shops', [
         'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
@@ -119,9 +118,6 @@ export const storeView = asyncHandler(async (req, resp) => {
     const [gallery] = await db.execute(`SELECT * FROM store_gallery WHERE store_id = ? ORDER BY id DESC`, [shop_id]);
     
     const galleryData = gallery.map(image => image.image_name);
-    // gallery.forEach(row => {
-    //     galleryData[row.id] = row.image_name;
-    // });
       
     return resp.json({
         status:1,
@@ -136,22 +132,22 @@ export const storeView = asyncHandler(async (req, resp) => {
 });
 
 export const storeUpdate = asyncHandler(async (req, resp) => {
-    const data = req.body;
-    console.log("data",data);
-    // return false
     const { shop_name, contact_no , address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    const shop = queryDB(`SELECT cover_image FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
+    
+    const data = req.body;
+    const shop = await queryDB(`SELECT cover_image FROM service_shops WHERE shop_id = ? LIMIT 1`, [shop_id]);
     if(!shop) return resp.json({status:0, message: "Shop Data can not edit, or invalid shop Id"});
-    const [gallery] = await db.execute(`SELECT image_name FROM store_gallery WHERE store_id = ?`, [shop_id]);
-    const galleryData = gallery.map(img => img.image_name);
     const brandsArr = (brands && brands.trim !== '') ? data.brands : '';
     const servicesArr = (services && services.trim !== '') ? data.services : '';
     const { fDays, fTiming } = formatOpenAndCloseTimings(always_open, data);
 
+    const coverImg = req.files['cover_image'] ? req.files['cover_image'][0].filename : shop.cover_image;
+    const shopGallery = req.files['shop_gallery']?.map(file => file.filename) || [];
+    
     const updates = {
         shop_name, 
         contact_no, 
@@ -164,15 +160,10 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
         open_timing: fTiming, 
         brands: brandsArr,
         services: servicesArr,
+        cover_image: coverImg
     };
 
-    const coverImg = req.files?.['cover_image']?.[0]?.filename || '';
-    const shopGallery = req.files?.['shop_gallery']?.map(file => file.filename) || [];
-
-    if (coverImg) updates.cover_image = coverImg;
-
     const update = await updateRecord('service_shops', updates, ['shop_id'], [shop_id]);
-    
     if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
 
     if(shopGallery.length > 0){
@@ -182,9 +173,6 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
     }
 
     if (shop.cover_image) deleteFile('shop-images', shop.cover_image);
-    if (req.files['shop_gallery'] && galleryData.length > 0) {
-        galleryData.forEach(img => img && deleteFile('shop-images', img));
-    }
 
     const allAddress = data.address ? data.address.filter(Boolean) : [];
     if (allAddress.length > 0) {
@@ -335,7 +323,6 @@ export const brandCreate = asyncHandler(async (req, resp) => {
     });
 
 });
-
 export const brandUpdate = asyncHandler(async (req, resp) => {
     const { brand_name, brand_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { brand_name: ["required"], brand_id: ["required"] });

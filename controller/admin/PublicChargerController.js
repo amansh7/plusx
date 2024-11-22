@@ -206,8 +206,6 @@ export const editPublicCharger = asyncHandler(async (req, resp) => {
 
         const charger = await queryDB(`SELECT station_image FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
         if(!charger) return resp.json({status:0, message: "Public Charger Data can not edit, or invalid station Id"});
-        const [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
-        const galleryData = gallery.map(img => img.image_name);
         
         const uploadedFiles = req.files;        
         const data = req.body;
@@ -232,21 +230,17 @@ export const editPublicCharger = asyncHandler(async (req, resp) => {
             open_timing: fTiming, 
             station_image: stationImg
         };
-        
-        if (req.files['cover_image']) deleteFile('charging-station-images', charger.station_image);
-        // if (req.files['shop_gallery'] && galleryData.length > 0) {
-        //     galleryData.forEach(img => img && deleteFile('charging-station-images', img));
-        //     await db.execute(`DELETE FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
-        // }
 
+        const update = await updateRecord('public_charging_station_list', updates, ['station_id'], [station_id]);
+        if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
+        
         if(shopGallery.length > 0){
             const values = shopGallery.map(filename => [station_id, filename]);
             const placeholders = values.map(() => '(?, ?)').join(', ');
             await db.execute(`INSERT INTO public_charging_station_gallery (station_id, image_name) VALUES ${placeholders}`, values.flat());
         }
 
-        const update = await updateRecord('public_charging_station_list', updates, ['station_id'], [station_id]);
-        if(update.affectedRows == 0) return resp.json({status:0, message: "Failed to update! Please try again after some time."});
+        if (req.files['cover_image']) deleteFile('charging-station-images', charger.station_image);
 
         return resp.json({ status  : 1, message : "Public Charger updated successfully." });
 

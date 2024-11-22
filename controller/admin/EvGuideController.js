@@ -1,10 +1,8 @@
-import db from '../../config/db.js';
-import dotenv from 'dotenv';
-import { asyncHandler, deleteFile} from '../../utils.js';
-import validateFields from "../../validation.js";
-dotenv.config();
-import generateUniqueId from 'generate-unique-id';
 import moment from 'moment';
+import db from '../../config/db.js';
+import validateFields from "../../validation.js";
+import generateUniqueId from 'generate-unique-id';
+import { asyncHandler, deleteFile} from '../../utils.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 
 export const guideList = asyncHandler(async (req, resp) => {
@@ -28,12 +26,6 @@ export const guideList = asyncHandler(async (req, resp) => {
             whereOperators.push('>=', '<=');
         }
 
-        // let whereClause = '';
-        // let whereParams = [];
-        // if (search_text.trim() !== '') {
-        //     whereClause = 'station_name LIKE ?';
-        //     whereParams.push(`%${station_name}%`);
-        // }
         const result = await getPaginatedData({
             tableName: 'vehicle',
             columns: `vehicle_id, vehicle_type, vehicle_name, vehicle_model, horse_power, price, image`,
@@ -69,38 +61,37 @@ export const guideList = asyncHandler(async (req, resp) => {
 });
 
 export const addGuide = asyncHandler(async (req, resp) => {
-    const{ vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature } = req.body;
-    const { isValid, errors } = validateFields(req.body, { 
-        vehicle_type : ["required"],
-        vehicle_name : ["required"],
-        vehicle_model   : ["required"],
-        description  : ["required"],
-        engine       : ["required"],
-        horse_power  : ["required"],
-        max_speed   : ["required"],
-        price        : ["required"],
-        best_feature : ["required"],
-    });
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
     try {
-        const uploadedFiles = req.files;
-        let cover_image     = '';
-        if(req.files && req.files['cover_image']){
-            cover_image = uploadedFiles ? uploadedFiles['cover_image'][0].filename : '';
-        }
-        const gallery_img = uploadedFiles['vehicle_gallery']?.map(file => file.filename) || [];
-        const vehicle_id = `VH-${generateUniqueId({length:6})}`;
+        const{ vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature } = req.body;
+        const { isValid, errors } = validateFields(req.body, { 
+            vehicle_type : ["required"],
+            vehicle_name : ["required"],
+            vehicle_model   : ["required"],
+            description  : ["required"],
+            engine       : ["required"],
+            horse_power  : ["required"],
+            max_speed   : ["required"],
+            price        : ["required"],
+            best_feature : ["required"],
+        });
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const cover_image = req.files['cover_image'] ? req.files['cover_image'][0].filename : '';
+        const galleryImg = uploadedFiles['vehicle_gallery']?.map(file => file.filename) || [];
+        const vehicleId = `VH-${generateUniqueId({length:6})}`;
+        
         const insert = await insertRecord('vehicle', [
             'vehicle_id', 'vehicle_type', 'vehicle_name', 'vehicle_model', 'description', 'engine', 'horse_power', 'max_speed', 'price', 'best_feature', 'status', 'image'
         ], [
-            vehicle_id, vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature, 1, cover_image
+            vehicleId, vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature, 1, cover_image
         ]);
-        if(gallery_img.length > 0){
-            const values = gallery_img.map(filename => [vehicle_id, filename]);
+
+        if(galleryImg.length > 0){
+            const values = galleryImg.map(filename => [vehicleId, filename]);
             const placeholders = values.map(() => '(?, ?)').join(', ');
             await db.execute(`INSERT INTO vehicle_gallery (vehicle_id, image_name) VALUES ${placeholders}`, values.flat());
         }
+        
         return resp.json({
             status  : insert.affectedRows > 0 ? 1 : 0, 
             code    : 200, 
@@ -170,14 +161,12 @@ export const editGuide = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const vehicle = await queryDB(`SELECT image FROM vehicle WHERE vehicle_id = ?`, [vehicle_id]);
-    let cover_image = vehicle.image;
-    if(req.files && req.files['cover_image']){
-        cover_image = req.files ? req.files['cover_image'][0].filename : '';
-        deleteFile('vehicle-image', vehicle.image);
-    }
+    const cover_image = req.files['cover_image'] ? req.files['cover_image'][0].filename : vehicle.image;
     
     const updates = {vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, status, best_feature, image : cover_image};
     const update = await updateRecord('vehicle', updates, ['vehicle_id'], [vehicle_id]);
+
+    deleteFile('vehicle-image', vehicle.image);
     
     return resp.json({
         status  : update.affectedRows > 0 ? 1 : 0, 
