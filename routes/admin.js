@@ -103,11 +103,11 @@ const adminRoutes = [
     { method: 'post',   path: '/shop-service-list',   handler: serviceList },
     { method: 'post',   path: '/shop-service-create', handler: serviceCreate },
     { method: 'post',   path: '/shop-service-update', handler: serviceUpdate },
-    { method: 'delete', path: '/shop-service-delete', handler: serviceDelete },
+    { method: 'post',   path: '/shop-service-delete', handler: serviceDelete },
     { method: 'post',   path: '/shop-brand-list',     handler: brandList },
     { method: 'post',   path: '/shop-brand-create',   handler: brandCreate },
     { method: 'post',   path: '/shop-brand-update',   handler: brandUpdate },
-    { method: 'delete', path: '/shop-brand-delete',   handler: brandDelete },
+    { method: 'post',   path: '/shop-brand-delete',   handler: brandDelete },
 
     /* RSA Routes */
     { method: 'post',  path: '/rsa-list',          handler: rsaList },
