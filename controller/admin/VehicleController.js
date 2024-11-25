@@ -35,7 +35,7 @@ import { asyncHandler } from '../../utils.js';
 
 
 export const sellVehicleList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
 
     const result = await getPaginatedData({
         tableName: 'vehicle_sell',
@@ -55,8 +55,8 @@ export const sellVehicleList = asyncHandler(async (req, resp) => {
              from riders as r 
              where r.rider_id = vehicle_sell.rider_id) as rider_data
         `,
-        searchFields: ['vehicle_id'],
-        searchTexts: [search],
+        liveSearchFields: ['body_type', ],
+        liveSearchTexts: [search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,

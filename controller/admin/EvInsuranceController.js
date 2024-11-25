@@ -7,12 +7,12 @@ import moment from 'moment';
 
 // EV Insurance
 export const evInsuranceList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'ev_insurance',
         columns: `insurance_id, owner_name, country, country_code, mobile_no, car_brand, car_images, registration_place, vehicle`,
-        searchFields: ['mobile_no', 'vehicle'],
-        searchTexts: [search],
+        liveSearchFields: ['insurance_id', 'owner_name'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
@@ -47,19 +47,35 @@ export const evInsuranceDetail = asyncHandler(async (req, resp) => {
 
 // EV Pre-Sale Testing Booking
 export const evPreSaleList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no, start_date, end_date, } = req.body;
+    const whereFields = []
+    const whereValues = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
 
     const result = await getPaginatedData({
         tableName: 'ev_pre_sale_testing',
         columns: `booking_id, owner_name, country_code, mobile_no, ${formatDateTimeInQuery(['created_at'])},
             (SELECT CONCAT(vehicle_model, "-", vehicle_make) FROM riders_vehicles AS rv WHERE rv.vehicle_id = ev_pre_sale_testing.vehicle) AS vehicle_data
         `,
-        searchFields: ['mobile_no', 'vehicle'],
-        searchTexts: [search],
+        liveSearchFields: ['booking_id'],
+        liveSearchTexts: [search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({

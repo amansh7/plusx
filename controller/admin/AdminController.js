@@ -22,6 +22,24 @@ export const getDashboardData = async (req, resp) => {
                 (SELECT COUNT(*) FROM public_charging_station_list) AS total_station
         `);
 
+        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, latitude AS lat, longitude AS lng FROM rsa`);
+        const [podRecords] = await db.execute(`SELECT id, device_id, pod_id, pod_name, status, latitude AS lat, longitude AS lng FROM pod_devices`);
+
+        const location = rsaRecords.map((rsa, i) => ({
+            key: rsa.rsa_id,
+            location: { lat: parseFloat(rsa.lat), lng: parseFloat(rsa.lng) },
+        }));
+
+        const podLocation = podRecords.map((pod, i) => ({
+            podId: pod.pod_id,
+            deviceId: pod.device_id,
+            podName: pod.pod_name,
+            status : pod.status,
+            location: { lat: parseFloat(pod.lat), lng: parseFloat(pod.lng) },
+        }));
+
+
+        
         const count_arr = [ 
             { module: 'App Sign Up', count: counts[0].total_rider },
             { module: 'POD Bookings', count: counts[0].total_charger_booking },
@@ -29,9 +47,10 @@ export const getDashboardData = async (req, resp) => {
             { module: 'Charger Installation Bookings', count: counts[0].total_installation },
             { module: 'EV Road Assistance', count: counts[0].total_road_assistance },
             { module: 'Pre-Sale Testing Bookings', count: counts[0].total_pre_sale_testing },
-            // { module: 'EV Buy & Sell', count: counts[0].total_vehicle_sell },
             { module: 'No. of Regs. Drivers', count: counts[0].total_rsa },
             { module: 'Total Public Chargers', count: counts[0].total_station }, 
+
+             // { module: 'EV Buy & Sell', count: counts[0].total_vehicle_sell },
             // { module: 'Total Electric Bikes Leasing', count: counts[0].total_bike_rental }, 
             // { module: 'Total Electric Cars Leasing', count: counts[0].total_car_rental },
             // { module: 'Total EV Guide', count: counts[0].total_vehicle }, 
@@ -42,8 +61,8 @@ export const getDashboardData = async (req, resp) => {
             // { module: 'Total Active Offer', count: counts[0].total_offer },  
             // { module: 'Total Register your Interest', count: counts[0].total_pod }
         ];
-
-        return resp.json({code: 200, data:count_arr});
+        // return resp.json({code: 200, data:count_arr});
+        return resp.json({code: 200, data:{count_arr, location, podLocation}});
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
         resp.status(500).json({ message: 'Error fetching dashboard data' });

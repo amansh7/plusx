@@ -3,7 +3,7 @@ import { getPaginatedData, queryDB  } from '../../dbUtils.js';
 import { deleteFile,asyncHandler } from '../../utils.js';
 
 export const discussionBoardList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'discussion_board',
         columns: `board_id, blog_title, description, image, created_at,
@@ -15,8 +15,8 @@ export const discussionBoardList = asyncHandler(async (req, resp) => {
             (select count(id) from board_likes as bl where bl.board_id = discussion_board.board_id and status =1) as likes_count,
             (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count
         `,
-        searchFields: ['blog_title'],
-        searchTexts: [search],
+        liveSearchFields: ['blog_title', 'board_id'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,

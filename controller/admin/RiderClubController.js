@@ -5,12 +5,12 @@ import validateFields from "../../validation.js";
 import { asyncHandler, deleteFile } from '../../utils.js';
 
 export const clubList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'clubs',
         columns: `club_id, club_name, location, no_of_members, cover_img`,
-        searchFields: ['club_name'],
-        searchTexts: [search],
+        liveSearchFields: ['club_name', 'club_id'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,

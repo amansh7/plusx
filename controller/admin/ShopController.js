@@ -5,14 +5,14 @@ import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbU
 import { formatOpenAndCloseTimings, asyncHandler, deleteFile, getOpenAndCloseTimings } from '../../utils.js';
 
 export const storeList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'service_shops',
         columns: `shop_id, shop_name, contact_no, cover_image AS shop_image, store_website, 
             (SELECT GROUP_CONCAT(location) FROM store_address AS sa WHERE sa.store_id = service_shops.shop_id ) AS location
         `,
-        searchFields: ['shop_name'],
-        searchTexts: [search],
+        liveSearchFields: ['shop_id', 'shop_name'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
@@ -221,12 +221,12 @@ export const storeDelete = asyncHandler(async (req, resp) => {
 
 /* Shop Service */
 export const serviceList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'store_services',
         columns: `service_id, service_name, created_at`,
-        searchFields: ['service_name'],
-        searchTexts: [search],
+        liveSearchFields: ['service_name', 'service_id'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
@@ -287,12 +287,12 @@ export const serviceDelete = asyncHandler(async (req, resp) => {
 
 /* Shop Brand */
 export const brandList = asyncHandler(async (req, resp) => {
-    const { search, page_no } = req.body;
+    const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'store_brands',
         columns: `brand_id, brand_name`,
-        searchFields: ['brand_name'],
-        searchTexts: [search],
+        liveSearchFields: ['brand_name', 'brand_id'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
