@@ -41,17 +41,17 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
     if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
     
     const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
-    let query = `SELECT slot_id, slot_date, start_time, end_time, booking_limit`;
+    let query = `SELECT slot_id, ${formatDateInQuery([('slot_date')])}, start_time, end_time, booking_limit`;
     
     if(fSlotDate >=  moment().format('YYYY-MM-DD')){
         query += `,(SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date='${slot_date}' AND status NOT IN ("PU", "C")) AS slot_booking_count`;
     }
 
-    query += ` FROM portable_charger_slot WHERE status = ? ORDER BY id ASC`;
+    query += ` FROM portable_charger_slot WHERE status = ? AND slot_date = ? ORDER BY id ASC`;
 
-    const [slot] = await db.execute(query, [1]);
+    const [slot] = await db.execute(query, [1, fSlotDate]);
 
-    return resp.json({ message: [ "Slot List fetch successfully!" ],  data: slot, status: 1, code: 200 });
+    return resp.json({ message: "Slot List fetch successfully!",  data: slot, status: 1, code: 200 });
 });
 
 export const chargerBooking = asyncHandler(async (req, resp) => {
@@ -140,24 +140,25 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
         const htmlUser = `<html>
             <body>
-                <h4>Dear ${rider.rider_name},</h4>
-                <p>Thank you for using the PlusX Electric App for Portable Charger Booking. We have successfully received your booking request. Below are the details of your Portable Charger Booking:</p>
-                <p>Address: ${address}</p> 
-                <p>Scheduled Date & Time: ${slot_date} | ${moment(slot_time, 'HH:mm').format('h:mm A')}</p>
-                <p>Vehicle Details: ${vechile.vehicle_data}</p> <br/>   
-                <p>Regards,<br/> PlusX Electric App Team </p>
+                <h4>Dear Admin,</h4>
+                <p>Thank you for choosing our portable charger service for your EV. We are pleased to confirm that your booking has been successfully received.</p> 
+                <p>Booking Details:</p>
+                Booking ID: ${bookingId}<br>
+                Date and Time of Service: ${moment(slot_date).format('D MMM, YYYY')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>
+                <p>We look forward to serving you and providing a seamless EV charging experience.</p>                  
+                <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
-        emailQueue.addEmail(rider.rider_email, 'Your Portable Charger Confirmation - PlusX Electric App', htmlUser);
+        emailQueue.addEmail(rider.rider_email, 'PlusX Electric App: Booking Confirmation for Your Portable EV Charger', htmlUser);
         
         const htmlAdmin = `<html>
             <body>
                 <h4>Dear Admin,</h4>
                 <p>We have received a new booking for our Portable Charger service. Below are the details:</p> 
-                <p>Customer Name  : ${rider.rider_name}</p>
-                <p>Address : ${address}</p>
-                <p>Booking Time : ${formattedDateTime}</p>                    
-                <p>Vechile Details : ${vechile.vehicle_data}</p> <br/>                        
+                Customer Name  : ${rider.rider_name}<br>
+                Address : ${address}<br>
+                Booking Time : ${formattedDateTime}<br>                    
+                Vechile Details : ${vechile.vehicle_data}<br>                      
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;

@@ -4,24 +4,24 @@ import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler, formatDateInQuery } from "../../utils.js";
 
 export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const { slot_date } = mergeParam(req);
     if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
     
     const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
-    let query = `SELECT slot_id, slot_date, start_time, end_time, booking_limit`;
+    let query = `SELECT slot_id, ${formatDateInQuery([('slot_date')])}, start_time, end_time, booking_limit`;
     
     if(fSlotDate >=  moment().format('YYYY-MM-DD')){
         query += `,(SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count`;
     }
 
-    query += ` FROM pick_drop_slot WHERE status = ? ORDER BY id ASC`;
+    query += ` FROM pick_drop_slot WHERE status = ? AND slot_date = ? ORDER BY id ASC`;
 
-    const [slot] = await db.execute(query, [1]);
+    const [slot] = await db.execute(query, [1, fSlotDate]);
 
-    return resp.json({ message: [ "Slot List fetch successfully!" ],  data: slot, status: 1, code: 200 });
+    return resp.json({ message: "Slot List fetch successfully!",  data: slot, status: 1, code: 200 });
 });
 
 export const requestService = asyncHandler(async (req, resp) => {
@@ -43,7 +43,7 @@ export const requestService = asyncHandler(async (req, resp) => {
         slot_date_time   : ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
+    
     const conn = await startTransaction();
     try{
         const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email,
@@ -57,6 +57,8 @@ export const requestService = asyncHandler(async (req, resp) => {
         const nextId       = (!rider.last_index) ? 0 : rider.last_index + 1;
         const requestId    = 'CS' + String(nextId).padStart(4, '0');
         const slotDateTime = moment(slot_date_time).format('YYYY-MM-DD HH:mm:ss');
+        const fslotDateTime = moment(slot_date_time).format('D MMM, YYYY, h:mm A');
+
         const insert       = await insertRecord('charging_service', [
             'request_id', 'rider_id', 'name', 'country_code', 'contact_no', 'vehicle_id', 'slot', 'slot_date_time', 'pickup_address', 'parking_number', 'parking_floor', 
             'price', 'order_status', 'pickup_latitude', 'pickup_longitude', 
@@ -80,34 +82,31 @@ export const requestService = asyncHandler(async (req, resp) => {
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
-        
+
         const htmlUser = `<html>
             <body>
                 <h4>Dear ${name},</h4>
-                <p>Thank you for booking our Valet Charging Service for your EV. We have successfully received your booking request. Below are the details of your booking.</p>
-                <p>Booking ID: ${requestId}</p>
-                <p>Pickup & Drop Address : ${pickup_address}</p>
-                <p>Scheduled Service Time : ${slotDateTime}</p>
-                <p>What's Next:</p> <br />          
-                <p>Your valet driver will call or message you to confirm he is on the way.</p>
-                <p>Your valet driver will identify himself with our plus X Badge.</p> 
-                <p>Your valet driver will fill out a brief vehicle condition report and take pictures of your car for reference.</p> 
-                <p>Your valet driver will charge your car at the nearest available supercharging station.</p> 
-                <p>Your valet driver will return your car with a minimum 80% charge within 3 hours.</p> 
-                <p>Thank you once again for choosing PlusX for your EV car charging needs and if you have any questions please feel free to email us back on support@plusxelectric.com.</p>  
-                <br /> <br />     
+                <p>Thank you for booking our Valet Charging Service for your EV. We are pleased to confirm that your booking request has been successfully received.</p>
+                Booking Details:
+                <br>
+                <ul>
+                <li>Booking ID: ${requestId}</li>
+                <li>Date and Time of Service : ${fslotDateTime}</li>
+                <li>Location : ${pickup_address}</li>
+                </ul>
+                <p>We look forward to serving you and ensuring a seamless valet EV charging experience.</p>   
                 <p> Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
-        emailQueue.addEmail(rider.rider_email, 'Your Valet Charge Booking Confirmation', htmlUser);
+        emailQueue.addEmail(rider.rider_email, 'PlusX Electric App: Booking Confirmation for Your Valet EV Charging Service', htmlUser);
         
         const htmlAdmin = `<html>
             <body>
                 <h4>Dear Admin,</h4>
                 <p>We have received a new booking for our Valet Charging service via the PlusX app. Below are the details:</p> 
-                <p>Customer Name  : ${name}</p>
-                <p>Pickup & Drop Address : ${pickup_address}</p>
-                <p>Booking Date & Time : ${formattedDateTime}</p> <br/>                        
+                Customer Name  : ${name}<br>
+                Pickup & Drop Address : ${pickup_address}<br>
+                Booking Date & Time : ${formattedDateTime}<br>                
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
