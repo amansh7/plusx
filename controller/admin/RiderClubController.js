@@ -54,6 +54,7 @@ export const clubData = asyncHandler(async (req, resp) => {
 
 export const clubCreate = asyncHandler(async (req, resp) => {
     try{
+        const uploadedFiles = req.files;
         const { club_name, location, description, club_url, category, age_group, no_of_members='', url_link='', preference='' } = req.body;
         const { isValid, errors } = validateFields(req.body, {
             club_name: ["required"],
@@ -88,6 +89,8 @@ export const clubCreate = asyncHandler(async (req, resp) => {
         return resp.json({status: 1, message: "Club added successfully."});
 
     }catch(err){
+        console.log(err);
+        
         return resp.status(500).json({status: 0, code: 500, message: "Oops! There is something went wrong! Please Try Again" });
     }
 });
@@ -133,9 +136,9 @@ export const clubDelete = asyncHandler(async (req, resp) => {
     if (!club) return resp.json({ status: 0, msg: "Club Data cannot be deleted, or invalid" });
 
     if (club.cover_image) deleteFile('club-images', club.cover_image);
-    await queryDB(`DELETE FROM clubs WHERE club_id = ?`, [club_id]);
+    await db.execute(`DELETE FROM clubs WHERE club_id = ?`, [club_id]);
 
-    return resp.json({ status: 1, msg: "Club deleted successfully!" });
+    return resp.json({ status: 1, code:200, message: "Club deleted successfully!" });
 });
 
 export const clubDeleteImg = asyncHandler(async (req, resp) => {
@@ -147,5 +150,5 @@ export const clubDeleteImg = asyncHandler(async (req, resp) => {
     deleteFile('club-images', gallery.image_name);
     await queryDB(`DELETE FROM club_gallery WHERE id = ?`, [gallery_id]);
 
-    return resp.json({ status: 1, msg: "Club Image deleted successfully!" });
+    return resp.json({ status: 1, code: 200, message: "Club Image deleted successfully!" });
 });

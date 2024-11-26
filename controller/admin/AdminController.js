@@ -23,7 +23,7 @@ export const getDashboardData = async (req, resp) => {
         `);
 
         const [rsaRecords] = await db.execute(`SELECT id, rsa_id, latitude AS lat, longitude AS lng FROM rsa`);
-        const [podRecords] = await db.execute(`SELECT id, device_id, pod_id, pod_name, status, latitude AS lat, longitude AS lng FROM pod_devices`);
+        const [podRecords] = await db.execute(`SELECT id, device_id, pod_name, status, latitude AS lat, longitude AS lng FROM pod_devices`);
 
         const location = rsaRecords.map((rsa, i) => ({
             key: rsa.rsa_id,

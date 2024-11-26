@@ -132,7 +132,7 @@ export const editCharger = async (req, resp) => {
             status: ["required"]
         });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        if (!charger_image) return resp.json({ status:0, code: 422, message: 'charger_image is required' });
+        // if (!charger_image) return resp.json({ status:0, code: 422, message: 'charger_image is required' });
         
         const charger = await queryDB(`SELECT image FROM portable_charger WHERE charger_id = ?`, [charger_id]);
         if(!charger) return resp.json({status:0, message: "Charger Data can not edit, or invalid charger Id"});
@@ -655,8 +655,7 @@ export const addSlot = async (req, resp) => {
 
 export const editSlot = async (req, resp) => {
     try {        
-        console.log(req.body);
-        
+
         const { id, slot_id, slot_date, start_time, end_time, booking_limit, status = 1 } = req.body;
         const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });

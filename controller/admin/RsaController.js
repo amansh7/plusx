@@ -126,10 +126,10 @@ export const rsaAdd = asyncHandler(async (req, resp) => {
         confirm_password: ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    if(password.length <= 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
+    if(password.length < 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
     if(password != confirm_password) return resp.json({ status: 0, code: 422, message: ['Password and confirm password not matched!'] });
 
-    let profile_image = req.files['profile_image'] ? files['profile_image'][0].filename  : '';
+    let profile_image = req.files['profile_image'] ? req.files['profile_image'][0].filename  : '';
 
     const insert = await insertRecord('rsa', [
         'rsa_id', 'rsa_name', 'email', 'country_code', 'mobile', 'booking_type', 'password', 'status', 'running_order', 'profile_img'
