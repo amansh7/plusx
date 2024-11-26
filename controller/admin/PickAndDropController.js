@@ -317,9 +317,9 @@ export const pdAddSlot = async (req, resp) => {
         }
 
         const values = []; const placeholders = [];
-        const slotId = `PDS${generateUniqueId({ length:6 })}`;
         const fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD");
         for (let i = 0; i < start_time.length; i++) {            
+            const slotId = `PDS${generateUniqueId({ length:6 })}`;
             values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i]);
             placeholders.push('(?, ?, ?, ?, ?, ?)');
         }
@@ -341,10 +341,10 @@ export const pdAddSlot = async (req, resp) => {
 export const pdEditSlot = async (req, resp) => {
     try {
         const { id, slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
-        const { isValid, errors } = validateFields(req.body, { id: ["required"], slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
+        const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         
-        if ( !Array.isArray(id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
+        if ( !Array.isArray(slot_id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
             return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
         }
         if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
@@ -361,14 +361,15 @@ export const pdEditSlot = async (req, resp) => {
                 status: status[i]
             };
 
-            if(id[i]){
-                updateResult = await updateRecord("pick_drop_slot", updates, ["id"], [id[i]]);
-                if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_id ${slot_id}.`);
+            if(slot_id[i]){
+                updateResult = await updateRecord("pick_drop_slot", updates, ["slot_id"], [slot_id[i]]);
+                if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_date ${fSlotDate}.`);
             }else{
+                const slotId = `PDS${generateUniqueId({ length:6 })}`;
                 insertResult = await insertRecord("pick_drop_slot", ["slot_id", "slot_date", "start_time", "end_time", "booking_limit", "status"],[
-                    slot_id, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
+                    slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
                 ]);
-                if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_id ${slot_id}.`);
+                if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_date ${fSlotDate}.`);
             }
         }
 
