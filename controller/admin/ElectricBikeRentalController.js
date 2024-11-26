@@ -9,8 +9,10 @@ export const bikesList = asyncHandler(async (req, resp) => {
     const result = await getPaginatedData({
         tableName: 'electric_bike_rental',
         columns: `rental_id, bike_name, available_on, bike_type, price, contract`,
-        searchFields: ['bike_name'],
-        searchTexts: [search_text],
+        // searchFields: ['bike_name'],
+        // searchTexts: [search_text],
+        liveSearchFields : ['bike_name', 'rental_id'],
+        liveSearchTexts  : [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,

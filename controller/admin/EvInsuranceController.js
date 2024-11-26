@@ -67,8 +67,8 @@ export const evPreSaleList = asyncHandler(async (req, resp) => {
         columns: `booking_id, owner_name, country_code, mobile_no, ${formatDateTimeInQuery(['created_at'])},
             (SELECT CONCAT(vehicle_model, "-", vehicle_make) FROM riders_vehicles AS rv WHERE rv.vehicle_id = ev_pre_sale_testing.vehicle) AS vehicle_data
         `,
-        liveSearchFields: ['booking_id'],
-        liveSearchTexts: [search_text],
+        liveSearchFields: ['booking_id', 'owner_name'],
+        liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,

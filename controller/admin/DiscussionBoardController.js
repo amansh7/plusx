@@ -2,23 +2,56 @@ import db, { startTransaction, commitTransaction, rollbackTransaction } from "..
 import { getPaginatedData, queryDB  } from '../../dbUtils.js';
 import { deleteFile,asyncHandler } from '../../utils.js';
 
+// export const discussionBoardList = asyncHandler(async (req, resp) => {
+//     const { search_text, page_no } = req.body;
+//     const result = await getPaginatedData({
+//         tableName: 'discussion_board',
+//         columns: `board_id, blog_title, description, image, created_at,
+//             (select rider_name from riders as r where r.rider_id = discussion_board.rider_id) as rider_name,
+//             (select rider_mobile from riders as r where r.rider_id = discussion_board.rider_id) as rider_mobile,
+//             (select profile_img from riders as r where r.rider_id = discussion_board.rider_id) as profile_img,
+//             (select count(id) from board_comment as bc where bc.board_id = discussion_board.board_id) as comment_count,
+//             (select count(id) from board_views as bv where bv.board_id = discussion_board.board_id) as view_count,
+//             (select count(id) from board_likes as bl where bl.board_id = discussion_board.board_id and status =1) as likes_count,
+//             (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count
+//         `,
+//         liveSearchFields: ['blog_title', 'board_id'],
+//         liveSearchTexts: [search_text, search_text],
+//         sortColumn: 'id',
+//         sortOrder: 'DESC',
+//         page_no,
+//         limit: 10,
+//     });
+
+//     return resp.json({
+//         status: 1,
+//         code: 200,
+//         message: "Discussion Board List fetch successfully!",
+//         data: result.data,
+//         total_page: result.totalPage,
+//         total: result.total,
+//     });    
+// });
+
 export const discussionBoardList = asyncHandler(async (req, resp) => {
     const { search_text, page_no } = req.body;
+
     const result = await getPaginatedData({
         tableName: 'discussion_board',
-        columns: `board_id, blog_title, description, image, created_at,
-            (select rider_name from riders as r where r.rider_id = discussion_board.rider_id) as rider_name,
-            (select rider_mobile from riders as r where r.rider_id = discussion_board.rider_id) as rider_mobile,
-            (select profile_img from riders as r where r.rider_id = discussion_board.rider_id) as profile_img,
-            (select count(id) from board_comment as bc where bc.board_id = discussion_board.board_id) as comment_count,
-            (select count(id) from board_views as bv where bv.board_id = discussion_board.board_id) as view_count,
-            (select count(id) from board_likes as bl where bl.board_id = discussion_board.board_id and status =1) as likes_count,
-            (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count
-        `,
-        liveSearchFields: ['blog_title', 'board_id'],
-        liveSearchTexts: [search_text, search_text],
-        sortColumn: 'id',
-        sortOrder: 'DESC',
+        columns: `discussion_board.board_id, discussion_board.blog_title, discussion_board.description, discussion_board.image, discussion_board.created_at,
+                (select rider_name from riders as r where r.rider_id = discussion_board.rider_id) as rider_name,
+                (select rider_mobile from riders as r where r.rider_id = discussion_board.rider_id) as rider_mobile,
+                (select profile_img from riders as r where r.rider_id = discussion_board.rider_id) as profile_img,
+                (select count(id) from board_comment as bc where bc.board_id = discussion_board.board_id) as comment_count,
+                (select count(id) from board_views as bv where bv.board_id = discussion_board.board_id) as view_count,
+                (select count(id) from board_likes as bl where bl.board_id = discussion_board.board_id and status = 1) as likes_count,
+                (select count(id) from board_share as bs where bs.board_id = discussion_board.board_id) as share_count`,
+        joinTable        : 'riders',
+        joinCondition    : 'discussion_board.rider_id = riders.rider_id',
+        liveSearchFields : ['discussion_board.blog_title', 'discussion_board.board_id', 'riders.rider_name'],
+        liveSearchTexts  : [search_text, search_text, search_text],
+        sortColumn       : 'discussion_board.board_id',
+        sortOrder        : 'DESC',
         page_no,
         limit: 10,
     });
@@ -26,12 +59,14 @@ export const discussionBoardList = asyncHandler(async (req, resp) => {
     return resp.json({
         status: 1,
         code: 200,
-        message: "Discussion Board List fetch successfully!",
+        message: "Discussion Board List fetched successfully!",
         data: result.data,
         total_page: result.totalPage,
         total: result.total,
-    });    
+    });
 });
+
+
 
 export const discussionBoardDetail = asyncHandler(async (req, resp) => {
     const { board_id } = req.body;

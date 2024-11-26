@@ -1,24 +1,34 @@
 import { getPaginatedData, queryDB } from '../../dbUtils.js';
 import { asyncHandler } from '../../utils.js';
 
+
 // export const sellVehicleList = asyncHandler(async (req, resp) => {
-//     const { search, page_no } = req.body;
+//     const { search_text, page_no } = req.body;
 
 //     const result = await getPaginatedData({
 //         tableName: 'vehicle_sell',
-//         columns: `sell_id, region, milage, price, body_type, engine_capacity, car_images, vehicle_id
-//             (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = vehicle_sell.vehicle_id) as vehicle_data,
-//             (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = vehicle_sell.rider_id) as rider_data') 
+//         columns: `
+//             sell_id, 
+//             region, 
+//             milage, 
+//             price, 
+//             body_type, 
+//             engine_capacity, 
+//             car_images, 
+//             vehicle_id,
+//             (select concat(vehicle_model, "-", vehicle_make) 
+//              from riders_vehicles as rv 
+//              where rv.vehicle_id = vehicle_sell.vehicle_id) as vehicle_data,
+//             (select concat(rider_name, ",", country_code, "-", rider_mobile) 
+//              from riders as r 
+//              where r.rider_id = vehicle_sell.rider_id) as rider_data
 //         `,
-//         searchFields: ['vehicle_id'],
-//         searchTexts: [search],
+//         liveSearchFields: ['body_type','rider_name' ],
+//         liveSearchTexts: [search_text, search_text],
 //         sortColumn: 'id',
 //         sortOrder: 'DESC',
 //         page_no,
 //         limit: 10,
-//         // whereField: ['status', 'vs.rider_id'],
-//         // whereValue: [1, rider_id],
-//         // whereOperator: ['!=', '='],
 //     });
 
 //     return resp.json({
@@ -30,7 +40,6 @@ import { asyncHandler } from '../../utils.js';
 //         code: 200,
 //         image_path: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
 //     });
-
 // });
 
 
@@ -39,31 +48,19 @@ export const sellVehicleList = asyncHandler(async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'vehicle_sell',
-        columns: `
-            sell_id, 
-            region, 
-            milage, 
-            price, 
-            body_type, 
-            engine_capacity, 
-            car_images, 
-            vehicle_id,
-            (select concat(vehicle_model, "-", vehicle_make) 
-             from riders_vehicles as rv 
-             where rv.vehicle_id = vehicle_sell.vehicle_id) as vehicle_data,
-            (select concat(rider_name, ",", country_code, "-", rider_mobile) 
-             from riders as r 
-             where r.rider_id = vehicle_sell.rider_id) as rider_data
-        `,
-        liveSearchFields: ['body_type', ],
-        liveSearchTexts: [search_text],
-        sortColumn: 'id',
+        columns: `sell_id, region, milage, price, body_type, engine_capacity, car_images, vehicle_id,
+                  (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv 
+                  where rv.vehicle_id = vehicle_sell.vehicle_id) as vehicle_data,
+                  (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r 
+                where r.rider_id = vehicle_sell.rider_id) as rider_data`,
+        joinTable: 'riders',
+        joinCondition: 'vehicle_sell.rider_id = riders.rider_id',
+        liveSearchFields: ['riders.rider_name', 'vehicle_sell.body_type'],
+        liveSearchTexts: [search_text, search_text],
+        sortColumn: 'sell_id',
         sortOrder: 'DESC',
         page_no,
         limit: 10,
-        // whereField: ['status', 'vs.rider_id'],
-        // whereValue: [1, rider_id],
-        // whereOperator: ['!=', '='],
     });
 
     return resp.json({

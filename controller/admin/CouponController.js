@@ -89,7 +89,7 @@ export const couponData = asyncHandler(async (req, resp) => {
 export const couponAdd = asyncHandler(async (req, resp) => {
     console.log(req.body);
     
-    const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type } = req.body;
+    const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type, status } = req.body;
     const { isValid, errors } = validateFields(req.body, { coupan_name: ["required"], coupan_code: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
@@ -101,7 +101,7 @@ export const couponAdd = asyncHandler(async (req, resp) => {
     const insert = await insertRecord('coupon', [
         'coupan_name', 'coupan_code', 'coupan_percentage', 'end_date', 'user_per_user', 'booking_for', 'status',
     ], [
-        coupan_name, coupan_code, coupan_percentage, fExpiry, user_per_user, service_type, 1
+        coupan_name, coupan_code, coupan_percentage, fExpiry, user_per_user, service_type, status
     ]);
     
 
