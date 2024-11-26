@@ -113,7 +113,6 @@ export const evPreSaleDetail = asyncHandler(async (req, resp) => {
     });
 });
 
-
 // Time Slot 
 export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
     const { page_no, search_text= '', start_date, end_date, } = req.body;
@@ -203,9 +202,9 @@ export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
     }
 
     const values = []; const placeholders = [];
-    const slotId = `PST${generateUniqueId({ length:6 })}`;
     const fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD");
     for (let i = 0; i < start_time.length; i++) {
+        const slotId = `PST${generateUniqueId({ length:6 })}`;
         values.push(slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i]);
         placeholders.push('(?, ?, ?, ?, ?, ?)');
     }
@@ -222,10 +221,10 @@ export const evPreSaleTimeSlotAdd = asyncHandler(async (req, resp) => {
 
 export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
     const { id, slot_id, slot_date, slot_name, start_time, end_time, booking_limit, status } = req.body;
-    const { isValid, errors } = validateFields(req.body, { id: ["required"], slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
+    const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
-    if ( !Array.isArray(id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
+    if ( !Array.isArray(slot_id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
         return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
     }
     if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
@@ -242,14 +241,15 @@ export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
             status: status[i]
         };
         
-        if(id[i]){
-            updateResult = await updateRecord("ev_pre_sale_testing_slot", updates, ["id"], [id[i]]);
-            if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_id ${slot_id}.`);
+        if(slot_id[i]){
+            updateResult = await updateRecord("ev_pre_sale_testing_slot", updates, ["slot_id"], [slot_id[i]]);
+            if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_date ${fSlotDate}.`);
         }else{
+            const slotId = `PST${generateUniqueId({ length:6 })}`;
             insertResult = await insertRecord("ev_pre_sale_testing_slot", ["slot_id", "slot_date", "start_time", "end_time", "booking_limit", "status"],[
-                slot_id, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
+                slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
             ]);
-            if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_id ${slot_id}.`);
+            if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_date ${fSlotDate}.`);
         }
 
         if (errMsg.length > 0) {
@@ -265,7 +265,6 @@ export const evPreSaleTimeSlotDelete = asyncHandler(async (req, resp) => {
     if (!slot_id) return resp.json({ status: 0, code: 422, message: "Slot Id is required." });
 
     const [del] = await db.execute('DELETE FROM ev_pre_sale_testing_slot WHERE slot_id = ?', [slot_id]);
-console.log('del',[del]);
 
     return resp.json({
         status: del.affectedRows > 0 ? 1 : 0,
