@@ -35,7 +35,7 @@ import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleC
 import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
 
 
-import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea } from "../controller/admin/PodDeviceController.js";
+import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea, podAreaDetails, editPodArea, AllpodArea, assignPodDeviceArea, podAreaAssignList } from "../controller/admin/PodDeviceController.js";
 
 const router = Router();
 const adminAuthRoutes = [
@@ -227,11 +227,14 @@ const adminRoutes = [
     /* POD Area Routes */
     { method: 'post',  path: '/pod-area-list',            handler: podAreaList },
     { method: 'post',  path: '/pod-area-add',             handler: addPodArea },
-    // { method: 'post',  path: '/pod-device-details',         handler: podDeviceDetails },
-    // { method: 'post',  path: '/pod-device-update',          handler: editPodDevice },
-    // { method: 'post',  path: '/pod-device-delete',          handler: deletePodDevice },
+    { method: 'post',  path: '/pod-area-details',         handler: podAreaDetails },
+    { method: 'post',  path: '/pod-area-update',          handler: editPodArea },
+    // { method: 'post',  path: '/pod-device-delete',     handler: deletePodDevice },
+    { method: 'post',  path: '/all-pod-area',             handler: AllpodArea},
+    { method: 'post',  path: '/pod-assign-area',          handler: assignPodDeviceArea},
+    { method: 'post',  path: '/pod-assign-area-list',          handler: podAreaAssignList},
     
-];  //
+]; 
 
 adminRoutes.forEach(({ method, path, handler }) => {
     const middlewares = [adminAuthorization];
