@@ -166,20 +166,20 @@ export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
 
 export const evPreSaleTimeSlotDetails = async (req, resp) => {
     try {
-        const { slot_id, } = req.body;
-        const { isValid, errors } = validateFields(req.body, { slot_id: ["required"] });
+        const { slot_date, } = req.body;
+        const { isValid, errors } = validateFields(req.body, { slot_date: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        let slot_date = moment().format("YYYY-MM-DD");
+        let slotDate = moment().format("YYYY-MM-DD");
 
         const [slotDetails] = await db.execute(`
             SELECT 
                 id, slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])},
-                (SELECT COUNT(id) FROM ev_pre_sale_testing AS evpst WHERE evpst.slot_time_id=ev_pre_sale_testing_slot.slot_id AND evpst.slot_date='${slot_date}') AS slot_booking_count
+                (SELECT COUNT(id) FROM ev_pre_sale_testing AS evpst WHERE evpst.slot_time_id=ev_pre_sale_testing_slot.slot_id AND evpst.slot_date='${slotDate}') AS slot_booking_count
             FROM 
                 ev_pre_sale_testing_slot 
             WHERE 
-                slot_id = ?`, 
-            [slot_id]
+                slot_date = ?`, 
+            [slot_date]
         );
 
         return resp.json({ status: 1, code: 200, message: ["EV Time Slot Details fetch successfully!"], data: slotDetails });
@@ -261,10 +261,10 @@ export const evPreSaleTimeSlotEdit = asyncHandler(async (req, resp) => {
 });
 
 export const evPreSaleTimeSlotDelete = asyncHandler(async (req, resp) => {
-    const { slot_id }  = req.body;
-    if (!slot_id) return resp.json({ status: 0, code: 422, message: "Slot Id is required." });
+    const { slot_date }  = req.body;
+    if (!slot_date) return resp.json({ status: 0, code: 422, message: "Slot Id is required." });
 
-    const [del] = await db.execute('DELETE FROM ev_pre_sale_testing_slot WHERE slot_id = ?', [slot_id]);
+    const [del] = await db.execute('DELETE FROM ev_pre_sale_testing_slot WHERE slot_date = ?', [slot_date]);
 
     return resp.json({
         status: del.affectedRows > 0 ? 1 : 0,

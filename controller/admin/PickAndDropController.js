@@ -274,20 +274,20 @@ export const pdSlotList = async (req, resp) => {
 
 export const pdSlotDetails = async (req, resp) => {
     try {
-        const { slot_id, } = req.body;
-        const { isValid, errors } = validateFields(req.body, { slot_id: ["required"] });
+        const { slot_id, slot_date} = req.body;
+        const { isValid, errors } = validateFields(req.body, { slot_date: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         
-        let slot_date = moment().format("YYYY-MM-DD");
+        let slotDate = moment().format("YYYY-MM-DD");
         const [slotDetails] = await db.execute(`
             SELECT 
                 id, slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])},
-                (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
+                (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slotDate}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
             FROM 
                 pick_drop_slot 
             WHERE 
-                slot_id = ?`, 
-            [slot_id]
+                slot_date = ?`, 
+            [slot_date]
         );
 
         return resp.json({
@@ -386,15 +386,15 @@ export const pdEditSlot = async (req, resp) => {
 
 export const pdDeleteSlot = async (req, resp) => {
     try {
-        const { slot_id } = req.body; 
+        const { slot_date } = req.body; 
 
         const { isValid, errors } = validateFields(req.body, {
-            slot_id: ["required"]
+            slot_date: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const [del] = await db.execute(`DELETE FROM pick_drop_slot WHERE slot_id = ?`, [slot_id]);
+        const [del] = await db.execute(`DELETE FROM pick_drop_slot WHERE slot_date = ?`, [slot_date]);
 
         return resp.json({
             code: 200,

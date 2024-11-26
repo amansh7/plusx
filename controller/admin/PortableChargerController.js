@@ -588,21 +588,21 @@ export const slotList = async (req, resp) => {
 
 export const slotDetails = async (req, resp) => {
     try {
-        const { slot_id, } = req.body;
-        const { isValid, errors } = validateFields(req.body, {slot_id: ["required"] });
+        const { slot_id, slot_date} = req.body;
+        const { isValid, errors } = validateFields(req.body, {slot_date: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        let slot_date = moment().format("YYYY-MM-DD");
+        let slotDate = moment().format("YYYY-MM-DD");
         const [slotDetails] = await db.execute(`
             SELECT 
                 id, slot_id,  start_time, end_time, booking_limit, status, 
-                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date='${slot_date}' AND status NOT IN ("PU", "C")) AS slot_booking_count,
+                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date='${slotDate}' AND status NOT IN ("PU", "C")) AS slot_booking_count,
                 ${formatDateInQuery(['slot_date'])}
             FROM 
                 portable_charger_slot 
             WHERE 
-                slot_id = ?`, 
-            [slot_id]
+                slot_date = ?`, 
+            [slot_date]
         );
 
         return resp.json({
@@ -655,6 +655,8 @@ export const addSlot = async (req, resp) => {
 
 export const editSlot = async (req, resp) => {
     try {        
+        console.log(req.body);
+        
         const { id, slot_id, slot_date, start_time, end_time, booking_limit, status = 1 } = req.body;
         const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -701,17 +703,17 @@ export const editSlot = async (req, resp) => {
 
 export const deleteSlot = async (req, resp) => {
     try {
-        const { slot_id } = req.body; 
-        console.log('slotId',req.body.slot_id);
+        const { slot_date } = req.body; 
+        console.log('slot_date',req.body.slot_date);
         
 
         const { isValid, errors } = validateFields(req.body, {
-            slot_id: ["required"]
+            slot_date: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        const [del] = await db.execute(`DELETE FROM portable_charger_slot WHERE slot_id = ?`, [slot_id]);
+        const [del] = await db.execute(`DELETE FROM portable_charger_slot WHERE slot_date = ?`, [slot_date]);
 
         return resp.json({
             code: 200,
