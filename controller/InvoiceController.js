@@ -144,7 +144,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
     const values = Object.values(createObj);
     const insert = await insertRecord('charging_service_invoice', columns, values);
 
-    const data = await queryDB(`
+    /* const data = await queryDB(`
         SELECT 
             csi.invoice_id, csi.amount, csi.invoice_date, csi.currency, cs.name, cs.request_id,
             (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
@@ -177,7 +177,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
         }
     
         emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
-    }
+    } */
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200 });
@@ -229,7 +229,7 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
     const values = Object.values(createObj);
     const insert = await insertRecord('portable_charger_invoice', columns, values);
 
-    const data = await queryDB(`
+    /* const data = await queryDB(`
         SELECT 
             pci.invoice_id, pci.amount, pci.invoice_date, pci.currency, pcb.booking_id,
             (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email,
@@ -263,7 +263,7 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
         };
     
         emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
-    }
+    } */
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Portable Charger Invoice created successfully!"], status:1, code:200 });

@@ -1,10 +1,15 @@
+import path from 'path';
 import moment from "moment";
 import 'moment-duration-format';
+import { fileURLToPath } from 'url';
 import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, formatNumber, mergeParam, numberToWords, pushNotification } from "../../utils.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const chargerList = asyncHandler(async (req, resp) => {
     const {rider_id, page_no } = mergeParam(req);
@@ -665,10 +670,10 @@ const chargingComplete = async (req, resp) => {
 };
 const chargerPickedUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
-
     if (!req.files.image) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
-    
+    const invoiceId = booking_id.replace('PCB', 'INVPC');
+
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
@@ -706,6 +711,42 @@ const chargerPickedUp = async (req, resp) => {
         const message = `Portable Charger picked-up successfully! with booking id : ${booking_id}`;
         await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        const data = await queryDB(`
+            SELECT 
+                pci.invoice_id, pci.amount, pci.invoice_date, pci.currency, pcb.booking_id,
+                (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email,
+                (SELECT rd.rider_name FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_name
+            FROM 
+                portable_charger_invoice AS pci
+            LEFT JOIN
+                portable_charger_booking AS pcb ON pcb.booking_id = pci.request_id
+            WHERE 
+                pci.invoice_id = ?
+            LIMIT 1
+        `, [invoiceId]);
+    
+        const invoiceData = { data, numberToWords, formatNumber  };
+        const templatePath = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs'); 
+        const pdfSavePath = path.join(__dirname, '../public', 'portable-charger-invoice');
+        const filename = `${invoiceId}-invoice.pdf`;
+    
+        const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+        
+        if(pdf.success){
+            const html = `<html>
+                <body>
+                    <h4>Dear ${data.rider_name}</h4>
+                    <p>Thank you for choosing PlusX Electric's Portable Charger. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
+                    <p> Regards,<br/> PlusX Electric App Team </p>
+                </body>
+            </html>`;
+            const attachment = {
+                filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
+            };
+        
+            emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
+        }
 
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
     } else {
