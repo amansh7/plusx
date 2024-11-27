@@ -151,7 +151,7 @@ export const editPodDevice = async (req, resp) => {
             WHERE 
                 pd.pod_id = ? 
             LIMIT 1
-        `, [deviceId, podId, podId, , podId]);
+        `, [deviceId, podId, podId, podId]);
 
         const err = [];
         if( isExist.length == 0 ) return resp.json({ status : 0, code : 422, message : 'POD Id is not registered.'});
@@ -558,5 +558,43 @@ export const podAreaAssignList = async (req, resp) => {
     } catch (error) {
         console.error('Error fetching device list:', error);
         resp.status(500).json({ message: 'Error fetching device lists' });
+    }
+};
+ 
+export const podDeviceStatusChange = async (req, resp) => {
+    try {
+        const { podId, deviceStatus } = req.body;
+        const { isValid, errors } = validateFields({ 
+            podId, deviceStatus 
+        }, {
+            podId        : ["required"],
+            deviceStatus : ["required"]
+        });
+        if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
+        const [[isExist]] = await db.execute(`
+            SELECT 
+                pod_id
+            FROM 
+                pod_devices as pd
+            WHERE 
+                pd.pod_id = ? 
+            LIMIT 1
+        `, [ podId]);
+
+        if( isExist.length == 0 ) return resp.json({ status : 0, code : 422, message : 'POD Id is not registered.'});
+
+        const updates = { 
+            status : deviceStatus,
+        };
+        const update = await updateRecord('pod_devices', updates, ['pod_id'], [podId]);
+        return resp.json({
+            status  : update.affectedRows > 0 ? 1 : 0,
+            code    : 200,
+            message : update.affectedRows > 0 ? ['POD Device status updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
+        });
+
+    } catch (error) {
+        console.error('Something went wrong:', error);
+        resp.status(500).json({ message: 'Something went wrong' });
     }
 };

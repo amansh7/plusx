@@ -584,7 +584,7 @@ const reachedLocation = async (req, resp) => {
 };
 const chargingStart = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
-
+    
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token

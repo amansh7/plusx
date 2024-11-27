@@ -35,7 +35,7 @@ import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleC
 import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
 
 
-import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea, podAreaDetails, editPodArea, AllpodArea, assignPodDeviceArea, podAreaAssignList } from "../controller/admin/PodDeviceController.js";
+import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea, podAreaDetails, editPodArea, AllpodArea, assignPodDeviceArea, podAreaAssignList, podDeviceStatusChange } from "../controller/admin/PodDeviceController.js";
 
 const router = Router();
 const adminAuthRoutes = [
@@ -208,12 +208,14 @@ const adminRoutes = [
     { method: 'post', path: '/portable-charger-cancel',  handler: adminCancelPCBooking },
     { method: 'post', path: '/charging-service-cancel',  handler: adminCancelCSBooking },
     
-    /* POD Device Routes */
+    /* POD Device Routes */ 
     { method: 'post',  path: '/pod-device-list',            handler: podDeviceList },
     { method: 'post',  path: '/pod-device-add',             handler: addPodDevice },
     { method: 'post',  path: '/pod-device-details',         handler: podDeviceDetails },
     { method: 'post',  path: '/pod-device-update',          handler: editPodDevice },
     { method: 'post',  path: '/pod-device-delete',          handler: deletePodDevice },
+    { method: 'post',  path: '/pod-device-status-change',   handler: podDeviceStatusChange },
+
 
     /* POD Device Brand Routes */
     { method: 'post',  path: '/all-pod-device',             handler: AllpodDevice},
