@@ -17,11 +17,6 @@ const PORT = process.env.PORT || 3333;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.static(path.join(__dirname, 'build')));
-app.get('/*', function (req, res) {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
 const corsOptions = {
     origin : [
         'http://192.168.1.87:3000',
@@ -57,13 +52,12 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
-app.use('/web', mainRoutes);
 
 // React build
-// app.use(express.static(path.join(__dirname, 'build')));
-// app.get('/*', function (req, res) {
-//     res.sendFile(path.join(__dirname, 'build', 'index.html'));
-// });
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('/*', function (req, res) {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 
 app.use(errorHandler);
 

@@ -205,20 +205,20 @@ export const chargerBookingList = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit           = 10;
-    const start           = ( page_no[0] * limit ) - limit;
+    const start           = ( page_no * limit ) - limit;
     const statusCondition = (history && history == 1) ? `status IN (?, ?)` : `status NOT IN (?, ?)`;
-    const statusParams = ['PU', 'C'];
+    const statusParams    = ['PU', 'C'];
 
     const totalQuery = `SELECT COUNT(*) AS total FROM portable_charger_booking WHERE rider_id = ? AND ${statusCondition}`;
     const [totalRows] = await db.execute(totalQuery, [rider_id, ...statusParams]);
     const total = totalRows[0].total;
     const totalPage = Math.max(Math.ceil(total / limit), 1);
 
-    const bookingsQuery = `SELECT booking_id, service_name, service_price, service_type, user_name, country_code, contact_no, slot_time, status, 
+    const bookingsQuery = `SELECT booking_id, service_name, ROUND(portable_charger_booking.service_price/100, 2) AS service_price, service_type, user_name, country_code, contact_no, slot_time, status, 
         ${formatDateTimeInQuery(['created_at'])}, ${formatDateInQuery(['slot_date'])}
         FROM portable_charger_booking WHERE rider_id = ? AND ${statusCondition} ORDER BY id DESC LIMIT ${parseInt(start)}, ${parseInt(limit)}
     `;
-    
+    console.log(bookingsQuery);
     const [bookingList] = await db.execute(bookingsQuery, [rider_id, ...statusParams]);
 
     return resp.json({
@@ -242,7 +242,7 @@ export const chargerBookingDetail = asyncHandler(async (req, resp) => {
         const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
         booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
     }
-    const [history] = await db.execute(`SELECT * FROM portable_charger_booking WHERE booking_id = ?`, [booking_id]);
+    const [history] = await db.execute(`SELECT *, ROUND(portable_charger_booking.service_price / 100, 2) AS service_price FROM portable_charger_booking WHERE booking_id = ?`, [booking_id]);
     return resp.json({
         message         : ["Charging Installation Service fetched successfully!"],
         data            : booking,

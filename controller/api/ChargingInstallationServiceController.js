@@ -85,14 +85,12 @@ export const requestList = asyncHandler(async (req, resp) => {
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const sortOrder = sort_by === 'd' ? 'DESC' : 'ASC';
-
     const result = await getPaginatedData({
         tableName: 'charging_installation_service',
         columns: `request_id, name, email, country_code, contact_no, service_type, company_name, address, charger_for, vehicle_model, latitude, longitude, 
             order_status,  ${formatDateTimeInQuery(['created_at'])}`,
         sortColumn: 'id',
-        sortOrder,
+        sortOrder: 'DESC',
         page_no,
         limit: 10,
         whereField: ['rider_id'],

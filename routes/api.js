@@ -72,7 +72,6 @@ authzRoutes.forEach(({ method, path, handler }) => {
     router[method](path, ...middlewares, handler);
 });
 
-
 /* -- Api Auth & Api Authz Middleware -- */
 const authzAndAuthRoutes = [
     { method: 'get',  path: '/rider-home',                 handler: home },
@@ -195,7 +194,7 @@ const authzAndAuthRoutes = [
     /* Invoice */
     // { method: 'post', path: '/create-rsa-invoice',                  handler: rsaInvoice },
     // { method: 'post', path: '/create-pick-drop-invoice',            handler: pickAndDropInvoice },
-    // { method: 'post', path: '/create-portable-charger-invoice',     handler: portableChargerInvoice },
+    { method: 'post', path: '/create-portable-charger-invoice',     handler: portableChargerInvoice },
     // { method: 'post', path: '/create-pre-sale-invoice',             handler: preSaleTestingInvoice },
     // { method: 'get',  path: '/create-charger-installation-invoice', handler: chargerInstallationInvoice },
 ];
@@ -265,7 +264,8 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
     router[method](path, ...middlewares, handler);
 });
-router.post('/validate-coupon', redeemCoupon);
 
+
+router.post('/validate-coupon', redeemCoupon);
 
 export default router;

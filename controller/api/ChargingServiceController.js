@@ -158,7 +158,7 @@ export const listServices = asyncHandler(async (req, resp) => {
     const totalPage = Math.max(Math.ceil(total / limit), 1);
     
     const formatCols = ['slot_date_time', 'created_at'];
-    const servicesQuery = `SELECT request_id, name, country_code, contact_no, slot, price, pickup_address, order_status, ${formatDateTimeInQuery(formatCols)} 
+    const servicesQuery = `SELECT request_id, name, country_code, contact_no, slot, ROUND(charging_service.price / 100, 2) AS price, pickup_address, order_status, ${formatDateTimeInQuery(formatCols)} 
     FROM charging_service WHERE rider_id = ? AND ${statusCondition} ORDER BY id DESC LIMIT ${parseInt(start)}, ${parseInt(limit)}
     `;
     
@@ -181,7 +181,16 @@ export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
 
     const formatCols = ['slot_date_time', 'created_at', 'updated_at'];
     
-    const order = await queryDB(`SELECT charging_service.*, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = charging_service.vehicle_id) as vehicle_data, ${formatDateTimeInQuery(formatCols)} FROM charging_service WHERE request_id = ? LIMIT 1`, [service_id]);
+    const order = await queryDB(`
+        SELECT 
+            charging_service.*, 
+            ROUND(charging_service.price / 100, 2) AS price, 
+            (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = charging_service.vehicle_id) as vehicle_data, 
+            ${formatDateTimeInQuery(formatCols)} 
+        FROM charging_service 
+        WHERE request_id = ? 
+        LIMIT 1
+    `, [service_id]);
     formatCols.shift();
     const [history] = await db.execute(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service_history WHERE service_id = ?`, [service_id]);
 
