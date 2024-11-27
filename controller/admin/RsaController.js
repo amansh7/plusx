@@ -21,29 +21,9 @@ export const rsaList = asyncHandler(async (req, resp) => {
     const whereValues = []
     const whereOperators = []
 
-    // if (rsa_id) {
-    //     searchField.push('rsa_id');
-    //     searchText.push(rsa_id);
-    // }
-    // if (rsa_name) {
-    //     searchField.push('rsa_name');
-    //     searchText.push(rsa_name);
-    // }
-    // if (rsa_email) {
-    //     searchField.push('rsa_email');
-    //     searchText.push(rsa_email);
-    // }
-    // if (rsa_mobile) {
-    //     searchField.push('rsa_mobile');
-    //     searchText.push(rsa_mobile);
-    // }
-    // if (service_type) {
-    //     searchField.push('booking_type');
-    //     searchText.push(service_type);
-    // }
     if (start_date && end_date) {
-        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+        const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
         whereFields.push('created_at', 'created_at');
         whereValues.push(start, end);

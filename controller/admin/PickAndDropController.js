@@ -15,7 +15,6 @@ export const bookingList = async (req, resp) => {
         const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-
         const params = {
             tableName: 'charging_service',
             columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
@@ -33,8 +32,11 @@ export const bookingList = async (req, resp) => {
         };
 
         if (start_date && end_date) {
-            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
             params.whereField = ['created_at', 'created_at'];
             params.whereValue = [start, end];
@@ -130,8 +132,10 @@ export const pdInvoiceList = async (req, resp) => {
         const whereOperators = []
 
         if (start_date && end_date) {
-            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
     
             whereFields.push('created_at', 'created_at');
             whereValues.push(start, end);

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, authenticateAdmin } from "../middleware/admin/authenticationMiddleware.js";
 import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
-import { getDashboardData, riderList, riderDetails,deleteRider } from "../controller/admin/AdminController.js";
+import { getDashboardData, riderList, riderDetails,deleteRider, notificationList } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, assignBooking, chargerDetails, 
     invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail, adminCancelPCBooking
 } from "../controller/admin/PortableChargerController.js";
@@ -50,6 +50,7 @@ const adminRoutes = [
     { method: 'post', path: '/forgot-password', handler: forgotPassword },
     { method: 'put',  path: '/change-password', handler: updatePassword },
     { method: 'post', path: '/dashboard',       handler: getDashboardData },
+    { method: 'post', path: '/notification-list', handler: notificationList },
     { method: 'post', path: '/rider-list',      handler: riderList },
     { method: 'post', path: '/rider-details',   handler: riderDetails },
     { method: 'post', path: '/delete-rider',    handler: deleteRider },

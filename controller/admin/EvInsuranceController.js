@@ -53,8 +53,8 @@ export const evPreSaleList = asyncHandler(async (req, resp) => {
     const whereOperators = []
 
     if (start_date && end_date) {
-        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+        const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
         whereFields.push('created_at', 'created_at');
         whereValues.push(start, end);

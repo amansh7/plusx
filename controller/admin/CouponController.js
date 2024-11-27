@@ -38,10 +38,12 @@ export const couponList = asyncHandler(async (req, resp) => {
     const whereOperators = []
 
     if (start_date && end_date) {
-        const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-        const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+        const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
-        whereFields.push('created_at', 'created_at');
+        whereFields.push('end_date', 'end_date');
         whereValues.push(start, end);
         whereOperators.push('>=', '<=');
     }
@@ -57,6 +59,9 @@ export const couponList = asyncHandler(async (req, resp) => {
         sortOrder: 'DESC',
         page_no,
         limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
     });
 
     return resp.json({

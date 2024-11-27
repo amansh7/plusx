@@ -1,6 +1,8 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
-import {  getPaginatedData } from '../../dbUtils.js';
+import validateFields from "../../validation.js";
+import {  getPaginatedData, queryDB } from '../../dbUtils.js';
+import { asyncHandler,mergeParam, formatDateTimeInQuery } from '../../utils.js';
 import path from 'path';
 import moment from 'moment';
 import { fileURLToPath } from 'url';
@@ -69,6 +71,30 @@ export const getDashboardData = async (req, resp) => {
     }
 };
 
+export const notificationList = asyncHandler(async (req, resp) => {
+    const { page_no } = mergeParam(req);
+
+    const { isValid, errors } = validateFields(mergeParam(req), { page_no: ["required"],});
+
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const limit = 10;
+    const start = parseInt((page_no * limit) - limit, 10);
+
+    const totalRows  = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = ?`, ['Admin']);
+    const total_page = Math.ceil(totalRows.total / limit) || 1; 
+    
+    const [rows] = await db.execute(`SELECT id, heading, description, module_name, panel_to, panel_from, receive_id, status, ${formatDateTimeInQuery(['created_at'])}, href_url
+        FROM notifications WHERE panel_to = 'Admin' ORDER BY id DESC LIMIT ${start}, ${parseInt(limit)} 
+    `, []);
+    
+    const notifications = rows;
+    
+    await db.execute(`UPDATE notifications SET status=? WHERE status=? AND panel_to=?`, ['1', '0', 'Admin']);
+    
+    return resp.json({status:1, code: 200, message: "Notification list fetch successfully", data: notifications, total_page: total_page, totalRows: totalRows.total});
+});
+
 export const riderList = async (req, resp) => {
     let { page_no, sortBy, riderName, riderEmail, riderMobile, addedFrom, emirates, start_date, end_date, search_text = '' } = req.body;
 
@@ -96,8 +122,8 @@ export const riderList = async (req, resp) => {
             whereOperator: []
         };
         if (start_date && end_date) {
-            const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-            const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
             params.whereField.push('created_at', 'created_at');
             params.whereValue.push(start, end);
