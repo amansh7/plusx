@@ -1,4 +1,4 @@
-import { generatePDF, numberToWords, formatNumber, mergeParam, asyncHandler } from '../utils.js';
+import { numberToWords, formatNumber, mergeParam, asyncHandler, generatePdf } from '../utils.js';
 import db from "../config/db.js";
 import validateFields from "../validation.js";
 import path from 'path';
@@ -72,11 +72,14 @@ export const rsaInvoice = asyncHandler(async (req, resp) => {
             rai.invoice_id = ?
         LIMIT 1
     `, [invoiceId]);
-    /* const htmlTemplate = path.join(__dirname, '../views/mail/road-assistance-invoice.ejs');
-    const invoiceData = { data, numberToWords, formatNumber }
-    const pdfPath = path.join(__dirname,  '../public/road-side-invoice',`${invoiceId}-invoice.pdf`);
-    const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req); */
-    /* if(pdf.success){
+
+    const invoiceData = { data, numberToWords, formatNumber  };
+    const templatePath = path.join(__dirname, '../views/mail/road-assistance-invoice.ejs'); 
+    const pdfSavePath = path.join(__dirname, '../public', 'road-side-invoice');
+    const filename = `${invoiceId}-invoice.pdf`;
+
+    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+    if(pdf.success){
         const html = `<html>
             <body>
                 <h4>Dear ${data.name}</h4>
@@ -89,17 +92,8 @@ export const rsaInvoice = asyncHandler(async (req, resp) => {
         }
         
         // emailQueue.addEmail(data.rider_email, 'Roadside Assistance Booking Invoice - PlusX Electric App', html, attachment);
-    } */
+    }
     
-    const html = `<html>
-        <body>
-            <h4>Dear ${data.name}</h4>
-            <p>Thank you for choosing PlusX Electric's Road Side Assistance. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
-            <p> Regards,<br/> PlusX Electric App Team </p>
-        </body>
-    </html>`
-    emailQueue.addEmail(data.rider_email, 'Roadside Assistance Booking Invoice - PlusX Electric App', html);
-
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Invoice created successfully!"], status:1, code:200 });
     }else{
@@ -162,11 +156,15 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
             csi.invoice_id = ?
         LIMIT 1
     `, [invoiceId]);
-    /* const htmlTemplate = path.join(__dirname, '../views/mail/pick-and-drop-invoice.ejs');
-    const invoiceData = { data, numberToWords, formatNumber }
-    const pdfPath = path.join(__dirname,  '../public/pick-drop-invoice',`${invoiceId}-invoice.pdf`);
-    const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req); */
-    /* if(pdf.success){
+    
+    const invoiceData = { data, numberToWords, formatNumber  };
+    const templatePath = path.join(__dirname, '../views/mail/pick-and-drop-invoice.ejs'); 
+    const pdfSavePath = path.join(__dirname, '../public', 'pick-drop-invoice');
+    const filename = `${invoiceId}-invoice.pdf`;
+
+    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+
+    if(pdf.success){
         const html = `<html>
             <body>
                 <h4>Dear ${data.name}</h4>
@@ -179,16 +177,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
         }
     
         emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
-    } */
-    
-    const html = `<html>
-            <body>
-                <h4>Dear ${data.name}</h4>
-                <p>Thank you for choosing PlusX Electric's Valet Charging service. We are pleased to inform you that your booking has been successfully completed. </p> 
-                <p>Regards,<br/> PlusX Electric App Team </p>
-            </body>
-    </html>`;
-    emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html);
+    }
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200 });
@@ -253,37 +242,28 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
             pci.invoice_id = ?
         LIMIT 1
     `, [invoiceId]);
-    /* const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
-    const invoiceData = { ...data, numberToWords, formatNumber, imgUrl  }
-    const pdfPath = path.join(__dirname,  '../public/portable-charger-invoice',`${invoiceId}-invoice.pdf`);
-    const templatePath = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs');
-    const pdf = await generatePDF(invoiceData, templatePath, pdfPath, req);
-    
-    // return resp.json({pdf, templatePath, pdfPath, invoiceData});
 
-/*     if(pdf.success){
+    const invoiceData = { data, numberToWords, formatNumber  };
+    const templatePath = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs'); 
+    const pdfSavePath = path.join(__dirname, '../public', 'portable-charger-invoice');
+    const filename = `${invoiceId}-invoice.pdf`;
+
+    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+    
+    if(pdf.success){
         const html = `<html>
             <body>
-                <h4>Dear ${data.user_name}</h4>
+                <h4>Dear ${data.rider_name}</h4>
                 <p>Thank you for choosing PlusX Electric's Portable Charger. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
                 <p> Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
         const attachment = {
-            filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
+            filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
         };
     
         emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
-    } */
-    
-    const html = `<html>
-        <body>
-            <h4>Dear ${data.rider_name}</h4>
-            <p>Thank you for choosing PlusX Electric's Portable Charger. We are pleased to inform you that your booking has been successfully completed.</p> 
-            <p> Regards,<br/> PlusX Electric App Team </p>
-        </body>
-    </html>`;
-    emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html);
+    }
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Portable Charger Invoice created successfully!"], status:1, code:200 });
@@ -348,11 +328,15 @@ export const preSaleTestingInvoice = asyncHandler(async (req, resp) => {
             psti.invoice_id = ?
         LIMIT 1
     `, [invoiceId]);
-    /* const htmlTemplate = path.join(__dirname, '../views/mail/ev-pre-sale-invoice.ejs');
-    const invoiceData = { data, numberToWords, formatNumber }
-    const pdfPath = path.join(__dirname,  '../public/ev-pre-sale-invoice',`${invoiceId}-invoice.pdf`);
-    const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req); */
-/*     if(pdf.success){
+
+    const invoiceData = { data, numberToWords, formatNumber  };
+    const templatePath = path.join(__dirname, '../views/mail/ev-pre-sale-invoice.ejs'); 
+    const pdfSavePath = path.join(__dirname, '../public', 'ev-pre-sale-invoice');
+    const filename = `${invoiceId}-invoice.pdf`;
+
+    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+
+    if(pdf.success){
         const html = `<html>
             <body>
                 <h4>Dear ${data.owner_name}</h4>
@@ -365,16 +349,7 @@ export const preSaleTestingInvoice = asyncHandler(async (req, resp) => {
         };
     
         emailQueue.addEmail(data.email, 'Your EV-pre Sale Booking Invoice - PlusX Electric App', html, attachment);
-    } */
-    
-    const html = `<html>
-        <body>
-            <h4>Dear ${data.owner_name}</h4>
-            <p>Thank you for choosing PlusX Electric's EV-pre sale testing. We are pleased to inform you that your booking has been successfully completed. </p> 
-            <p> Regards,<br/> PlusX Electric App Team </p>
-        </body>
-    </html>`;
-    emailQueue.addEmail(data.email, 'Your EV-pre Sale Booking Invoice - PlusX Electric App', html);
+    }
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Pre-sale Testing Invoice created successfully!"], status:1, code:200 });
@@ -439,12 +414,15 @@ export const chargerInstallationInvoice = asyncHandler(async (req, resp) => {
             pci.invoice_id = ?
         LIMIT 1
     `, [invoiceId]);
-    /* const htmlTemplate = path.join(__dirname, '../views/mail/charger-installation-invoice.ejs');
-    const invoiceData = { data, numberToWords, formatNumber }
-    const pdfPath = path.join(__dirname,  '../public/charger-installation-invoice',`${invoiceId}-invoice.pdf`);
-    const pdf = await generatePDF(invoiceData, htmlTemplate, pdfPath, req);  */  
 
-    /* if(pdf.success){
+    const invoiceData = { data, numberToWords, formatNumber  };
+    const templatePath = path.join(__dirname, '../views/mail/charger-installation-invoice.ejs'); 
+    const pdfSavePath = path.join(__dirname, '../public', 'charger-installation-invoice');
+    const filename = `${invoiceId}-invoice.pdf`;
+
+    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath, req);
+
+    if(pdf.success){
         const html = `<html>
             <body>
                 <h4>Dear ${data.name}</h4>
@@ -457,16 +435,7 @@ export const chargerInstallationInvoice = asyncHandler(async (req, resp) => {
         };
     
         emailQueue.addEmail(email.email, 'Your Charging Installation Booking Invoice - PlusX Electric App', html, attachment);
-    } */
-
-    const html = `<html>
-        <body>
-            <h4>Dear ${data.name}</h4>
-            <p>Thank you for choosing PlusX Electric's Charging Installation. We are pleased to inform you that your booking has been successfully completed.</p> 
-            <p> Regards,<br/> PlusX Electric App Team </p>
-        </body>
-    </html>`;
-    emailQueue.addEmail(email.email, 'Your Charging Installation Booking Invoice - PlusX Electric App', html);
+    }
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Charger Installation Invoice created successfully!"], status:1, code:200 });

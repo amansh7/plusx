@@ -2,7 +2,6 @@ import NodeCache from "node-cache";
 import axios from "axios";
 import path from 'path';
 import puppeteer from 'puppeteer';
-import htmlPdf from 'html-pdf-node';
 import ejs from 'ejs';
 import { insertRecord } from "./dbUtils.js";
 import { GoogleAuth } from "google-auth-library";
@@ -416,7 +415,7 @@ export const asyncHandler = (fn) => {
 };
 
 /* Generates a PDF from an EJS template. - M1 Not supported using puppeter */
-export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
+/* export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
   const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
   let success = false; 
   try{
@@ -447,45 +446,27 @@ export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req
     console.error('Error generating PDF:', error);
     return { success: false, error: error.message };
   }
-};
+}; */
 
-/* Generates a PDF from an EJS template. - M2 using PDFKit */
-export const generateInvoicePDF = async (data, pdfPath, templatePath) => {
-  let success = false; 
-  try{
-    if (!pdfPath) throw new Error('PDF path is required.');
-    if (!templatePath) throw new Error('Template path is required.');
+export const generatePdf = async (templatePath, invoiceData, fileName, pdfSavePath, req) => {
+  try {
+    const html = await ejs.renderFile(templatePath, { ...invoiceData });
+    
+    const response = await axios.post('http://192.168.1.25:8000/pdf-api.php', {
+      html,
+      fileName,
+      pdfSavePath
+    }, { 
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-    let htmlContent = fs.readFileSync(templatePath, 'utf8');
+    if (response.data.success) {
+      console.log('PDF generated successfully:', response.data.pdfPath);
+      return { success: true, pdfPath: response.data.pdfPath };
+    }
 
-    htmlContent = htmlContent.replace('{{imgUrl}}', data.imgUrl);
-    htmlContent = htmlContent.replace('{{rider_name}}', data.rider_name);
-    htmlContent = htmlContent.replace('{{invoice_date}}', data.invoice_date);
-    htmlContent = htmlContent.replace('{{invoice_id}}', data.invoice_id);
-    htmlContent = htmlContent.replace('{{amount}}', data.amount);
-    htmlContent = htmlContent.replace('{{currency}}', 'AED');
-
-    const options = {
-      format: 'A4',
-      path: pdfPath,
-      printMediaType: true,
-    };
-
-    await new Promise((resolve, reject) => {
-      htmlPdf.create(htmlContent, options).toFile(pdfPath, (err, res) => {
-        if (err) { reject(err); } else { resolve(res); }
-      });
-    })
-
-    // Object.keys(data).forEach((key) => {
-    //   const placeholder = new RegExp(`{{${key}}}`, 'g');
-    //   htmlContent = htmlContent.replace(placeholder, data[key]);
-    // });
-
-    success = true;
-    return { success: true, pdfPath }; 
-  }catch(error){
-    console.error('Error generating PDF:', error);
-    return { success: false, error: error.message };
+  } catch (error) {
+    console.error('Error generating PDF _in_helper:', error);
+    return { success: false, error: error };
   }
 };
