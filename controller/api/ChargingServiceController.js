@@ -4,7 +4,7 @@ import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler, formatDateInQuery } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler, formatDateInQuery, numberToWords, formatNumber } from "../../utils.js";
 
 export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const { slot_date } = mergeParam(req);
@@ -643,9 +643,9 @@ const vehicleDrop = async (req, resp) => {
 };
 const workComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
-
     if (!req.files.image) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
+    const invoiceId = booking_id.replace('CS', 'INVCS');
     
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -683,6 +683,41 @@ const workComplete = async (req, resp) => {
         const message = `Driver has successfully completed your charging service booking with booking id : ${booking_id}`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+
+        const data = await queryDB(`
+            SELECT 
+                csi.invoice_id, csi.amount, csi.invoice_date, csi.currency, cs.name, cs.request_id,
+                (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
+            FROM 
+                charging_service_invoice AS csi
+            LEFT JOIN
+                charging_service AS cs ON cs.request_id = csi.request_id
+            WHERE 
+                csi.invoice_id = ?
+            LIMIT 1
+        `, [invoiceId]);
+
+        const invoiceData = { data, numberToWords, formatNumber  };
+        const templatePath = path.join(__dirname, '../views/mail/pick-and-drop-invoice.ejs'); 
+        const pdfSavePath = path.join(__dirname, '../public', 'pick-drop-invoice');
+        const filename = `${invoiceId}-invoice.pdf`;
+
+        const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+
+        if(pdf.success){
+            const html = `<html>
+                <body>
+                    <h4>Dear ${data.name}</h4>
+                    <p>Thank you for choosing PlusX Electric's Valet Charging service. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
+                    <p>Regards,<br/> PlusX Electric App Team </p>
+                </body>
+            </html>`;
+            const attachment = {
+                filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
+            }
+        
+            emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
+        }
 
         return resp.json({ message: ['Work completed! successfully!'], status: 1, code: 200 });
     } else {
