@@ -8,6 +8,7 @@
         <style>
             body {
                 font-family: 'Poppins', sans-serif;
+                background-color: #000000;
             }
             p {
                 margin: 4px 0px;
@@ -27,6 +28,12 @@
                 padding: 8px;
                 text-align: left;
             }
+            .text-white{
+              color: #ffffff;
+            }
+            .text-neon{
+              color: #00ffcc;
+            }
             /* A4 Page size for print */
             @media print {
                 body {
@@ -40,12 +47,12 @@
             /* Prevent page cutoff */
             @page {
                 size: A4;
-                margin: 20mm;
+                margin: 10mm;
             }
         </style>
     </head>
     <body>
-        <div style="border: 1px solid #99a0ac; width: 100%; margin: auto;">
+        <div style="border: 1px solid #00ffcc; width: 100%; margin: auto;">
             <table style="width: 100%; font-size: 12px;">
                 <tbody>
                     <tr>
@@ -54,15 +61,17 @@
                                 <tr>
                                     <td style="width:60%; vertical-align: baseline; ">
                                         <img src="https://plusx.shunyaekai.com/public/invoice-assets/xPlusLogo.png" alt="companylogo" style="max-width: 110px;" />
-                                        <p style="font-size: 14px;">D55-PBU</p>
-                                        <p style="font-size: 14px;">DUBAI PRODUCTION CITY</p>
-                                        <p style="font-size: 14px;">Dubai-United Arab Emirates</p>
-                                        <p style="font-size: 14px;">+971 54279 6424</p>
+                                        <div class="text-white">
+                                         <p style="font-size: 14px;">D55-PBU</p>
+                                         <p style="font-size: 14px;">DUBAI PRODUCTION CITY</p>
+                                         <p style="font-size: 14px;">Dubai-United Arab Emirates</p>
+                                         <p style="font-size: 14px;">+971 54279 6424</p>
+                                        </div>
                                     </td>
                                     <td style="text-align: right; vertical-align: baseline;">
-                                        <p style="font-size: 38px; line-height: 38px; font-weight: 100;">INVOICE</p>
+                                        <p style="font-size: 38px; line-height: 38px; font-weight: 100; color: #00ffcc;">INVOICE</p>
                                         <div style="text-align: right;">
-                                            <p style="font-size: 12px; font-weight: bold;">Booking ID: &nbsp;<%= data.booking_id %></p>
+                                            <p style="font-size: 12px; font-weight: bold;" class="text-white">Booking ID: &nbsp;<%= data.booking_id %></p>
                                         </div>
                                     </td>
                                 </tr>
@@ -76,12 +85,12 @@
                             <table style="width: 100%; margin-top: 10px;">
                                 <tr>
                                     <td style="width: 40%; padding-right: 20px;">
-                                        <p style="font-size: 16px;">Bill To:</p>
-                                        <p style="font-size: 14px; font-weight: bold;"><%= data.rider_name %></p>
+                                        <p style="font-size: 16px;" class="text-white">Bill To:</p>
+                                        <p style="font-size: 14px; font-weight: bold;" class="text-white"><%= data.rider_name %></p>
                                     </td>
-                                    <td style="text-align: right;">
+                                    <td style="text-align: right;" class="text-white">
                                         <p style="font-size: 14px;">Invoice Date: <%= data.invoice_date %></p>
-                                        <p style="font-size: 14px; padding-top: 10px;">Invoice No.:<%= data.invoice_id %></p>
+                                        <p style="font-size: 14px; padding-top: 10px;" class="text-white">Invoice No: &nbsp;<%= data.invoice_id %></p>
                                     </td>
                                 </tr>
                             </table>
@@ -92,16 +101,23 @@
                             <table style="width: 100%; border-spacing: 0;">
                                 <thead>
                                     <tr style="background-color: #5e676f; color: #FFFFFF;">
-                                        <th style="width: 70%; font-size: 16px; padding: 12px 10px;">Service Name</th>
-                                        <th style="text-align: right; width: 30%; font-size: 16px; padding: 12px 10px;"> Amount</th>
+                                        <th style="width: 70%; font-size: 16px; padding: 12px 10px;" class="text-neon">Item Name</th>
+                                        <th style="text-align: right; width: 30%; font-size: 16px; padding: 12px 10px;" class="text-neon"> Units</th>
+                                        <th style="text-align: right; width: 30%; font-size: 16px; padding: 12px 10px;" class="text-neon"> Amount</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="text-white">
+                                    <tr style="border-bottom: 1px solid #5e676f;">
+                                        <td style="font-size: 14px;">Dewa Chargers (KW Consumed)</td>
+                                        <td style="font-size: 14px;">--</td>
+                                        <td style="text-align: right; font-size: 14px;">Unit X 0.00 AED</td>
+                                    </tr>
                                     <tr style="border-bottom: 1px solid #5e676f;">
                                         <td style="font-size: 14px;">Portable Charger Service</td>
+                                        <td style="font-size: 14px;">--</td>
                                         <td style="text-align: right; font-size: 14px;">
-                                            <%= (data.amount && !isNaN(data.amount)) ? data.amount.toFixed(2) : '0.00' %> 
                                             <%= data.currency ? data.currency.toUpperCase() : 'AED' %>
+                                            <%= (data.amount && !isNaN(data.amount)) ? data.amount.toFixed(2) : '0.00' %> 
                                         </td>
                                     </tr>
                                 </tbody>
@@ -110,12 +126,12 @@
                     </tr>
                     <tr>
                         <td style="width:60%; text-align: left;">
-                            <p style="font-size: 14px; padding: 8px; font-weight: bold;">Total Amount:</p>
+                            <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-neon">Total Amount:</p>
                         </td>
                         <td style="text-align: right;">
-                            <p style="font-size: 14px; padding: 8px; font-weight: bold;">
-                                <%= (data.amount && !isNaN(data.amount)) ? data.amount.toFixed(2) : '0.00' %> 
+                            <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-white">
                                 <%= data.currency ? data.currency.toUpperCase() : 'AED' %>
+                                <%= (data.amount && !isNaN(data.amount)) ? data.amount.toFixed(2) : '0.00' %>
                             </p>
                         </td>
                     </tr>
