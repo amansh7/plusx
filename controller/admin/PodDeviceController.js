@@ -17,7 +17,7 @@ export const podDeviceList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'pod_devices',
-            columns          : 'pod_id, pod_name, device_id, design_model, capacity, inverter, charger, date_of_manufacturing, status, current, voltage',
+            columns          : 'pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status',
             sortColumn       : 'created_at',
             sortOrder        : 'DESC',
             page_no,
@@ -598,3 +598,37 @@ export const podDeviceStatusChange = async (req, resp) => {
         resp.status(500).json({ message: 'Something went wrong' });
     }
 };
+
+export const podAreaInputList = async (req, resp) => {
+    try {
+        const { podId, page_no, search_text = '' } = req.body;
+        const { isValid, errors } = validateFields(req.body, {podId: ["required"], page_no: ["required"]});
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const result = await getPaginatedData({
+            tableName        : 'portable_charger_booking as pcb',
+            columns          : 'pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as date_time',
+            sortColumn       : 'pcb.updated_at',
+            sortOrder        : 'DESC',
+            page_no,
+            limit            : 10,
+            liveSearchFields : [],
+            liveSearchTexts  : [],
+            whereField       : ['pcb.pod_id'],
+            whereValue       : [podId]
+        });
+
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["POD Input History List fetch successfully!"],
+            data       : result.data,
+            total_page : result.totalPage,
+            total      : result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching device list:', error);
+        resp.status(500).json({ message: 'Error fetching device lists' });
+    }
+};
+// 

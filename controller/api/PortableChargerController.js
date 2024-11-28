@@ -588,7 +588,7 @@ const reachedLocation = async (req, resp) => {
     }
 };
 const chargingStart = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
+    const { booking_id, rsa_id, latitude, longitude, pod_id } = mergeParam(req);
     
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -609,20 +609,27 @@ const chargingStart = async (req, resp) => {
     );
 
     if (ordHistoryCount.count === 0) {
+
+        const podBatteryData = await getPodBatteryData(pod_id);
+        const podData    = podBatteryData.data ? JSON.stringify(podBatteryData.data) : [];
+        const sumOfLevel = podBatteryData.sum ?  podBatteryData.sum : 0;
+        // return resp.json({ sumOfLevel : sumOfLevel, data: podData }); 
+
         const insert = await db.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "CS", ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data) VALUES (?, ?, "CS", ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData]
         );
 
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('portable_charger_booking', {status: 'CS', rsa_id}, ['booking_id'], [booking_id] );
+        await updateRecord('portable_charger_booking', {status: 'CS', rsa_id, pod_id, start_charging_level: sumOfLevel}, ['booking_id'], [booking_id] );
 
-        const href = `portable_charger_booking/${booking_id}`;
-        const title = 'Charging Start';
+        const href    = `portable_charger_booking/${booking_id}`;
+        const title   = 'Charging Start';
         const message = `Your Vehicle Charging Start Successfully!`;
         await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        // function for getting value from pod device
 
         return resp.json({ message: ['Vehicle Charging Start successfully!'], status: 1, code: 200 });
     } else {
@@ -630,7 +637,7 @@ const chargingStart = async (req, resp) => {
     }
 };
 const chargingComplete = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
+    const { booking_id, rsa_id, latitude, longitude, pod_id } = mergeParam(req);
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
@@ -649,16 +656,21 @@ const chargingComplete = async (req, resp) => {
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "CC" AND booking_id = ?',[rsa_id, booking_id]
     );
     if (ordHistoryCount.count === 0) {
+
+        const podBatteryData = await getPodBatteryData(pod_id);
+        const podData    = podBatteryData.data ? JSON.stringify(podBatteryData.data) : [];
+        const sumOfLevel = podBatteryData.sum ? podBatteryData.sum : 0;
+
         const insert = await db.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "CC", ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data) VALUES (?, ?, "CC", ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData]
         );
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('portable_charger_booking', {status: 'CC', rsa_id}, ['booking_id'], [booking_id] );
+        await updateRecord('portable_charger_booking', {status: 'CC', rsa_id, end_charging_level:sumOfLevel }, ['booking_id'], [booking_id] );
 
-        const href = `portable_charger_booking/${booking_id}`;
-        const title = 'Charging Completed!';
+        const href    = `portable_charger_booking/${booking_id}`;
+        const title   = 'Charging Completed!';
         const message = `Your Vehicle Charging Start Completed!`;
         await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
@@ -840,3 +852,40 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });
+
+
+
+const getPodBatteryData = async (pod_id) => {
+    try {
+        // const { pod_id, } = req.body;
+        // const { isValid, errors } = validateFields(req.body, {
+        //     pod_id : ["required"]
+        // });
+        // if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const [chargerDetails] = await db.execute(`
+            SELECT 
+                battery_id, capacity, rssi, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, latitude, longitude 
+            FROM 
+                pod_device_battery 
+            WHERE 
+                pod_id = ?`, 
+            [pod_id]
+        );
+        const sum = ( chargerDetails.reduce((total, obj) => total + (obj.percentage || 0), 0)) .toFixed(2);
+        const returnObj = {
+            sum  : sum,
+            data : chargerDetails,
+        };
+        return returnObj;
+    } catch (error) {
+    
+        const returnObj = {
+            sum  : 0,
+            data : [],
+        };
+        return returnObj ;
+    }
+
+
+}

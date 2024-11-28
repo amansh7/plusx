@@ -35,7 +35,7 @@ import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleC
 import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
 
 
-import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea, podAreaDetails, editPodArea, AllpodArea, assignPodDeviceArea, podAreaAssignList, podDeviceStatusChange } from "../controller/admin/PodDeviceController.js";
+import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea, podAreaDetails, editPodArea, AllpodArea, assignPodDeviceArea, podAreaAssignList, podDeviceStatusChange,podAreaInputList } from "../controller/admin/PodDeviceController.js";
 
 const router = Router();
 const adminAuthRoutes = [
@@ -235,7 +235,9 @@ const adminRoutes = [
     // { method: 'post',  path: '/pod-device-delete',     handler: deletePodDevice },
     { method: 'post',  path: '/all-pod-area',             handler: AllpodArea},
     { method: 'post',  path: '/pod-assign-area',          handler: assignPodDeviceArea},
-    { method: 'post',  path: '/pod-assign-area-list',          handler: podAreaAssignList},
+    { method: 'post',  path: '/pod-assign-area-list',     handler: podAreaAssignList},
+    { method: 'post',  path: '/all-pod-input-history',     handler: podAreaInputList},
+    // 
     
 ]; 
 
