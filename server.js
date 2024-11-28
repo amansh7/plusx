@@ -10,18 +10,20 @@ import { fileURLToPath } from 'url';
 import { errorHandler } from './middleware/errorHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
+import { Server } from 'socket.io'
 
 const app  = express();
 const PORT = process.env.PORT || 3333;
+// const io = new Server(server);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const corsOptions = {
     origin : [
-        'http://192.168.1.87:3000',
+        'http://192.168.1.53:3000',
         'http://192.168.1.25:3000',
-        'http://192.168.1.7:3333',
+        'http://192.168.1.53:3333',
         'http://192.168.1.38:1112',
         'http://localhost:3000',
         'http://localhost:3001',
@@ -30,6 +32,7 @@ const corsOptions = {
         'http://192.168.1.19:3000',
         'http://192.168.1.38:3434/',
         'http://localhost:1112',
+        'http://localhost:1113',
         'https://plusx.shunyaekai.com/'
     ],
     // origin : "*",
@@ -61,6 +64,29 @@ app.get('/*', function (req, res) {
 
 app.use(errorHandler);
 
-app.listen(PORT, ()=>{
+const server =app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);
 });
+// app.listen(PORT, ()=>{
+//     console.log(`Server is running on port ${PORT}`);
+// });
+
+const io = new Server(server, {
+    cors: corsOptions // Reuse the corsOptions object here
+  });
+
+io.on('connection', (socket) => {
+    console.log('A user connected:', socket.id);
+  
+    // Send a notification event
+    setInterval(() => {
+      socket.emit('desktop-notification', {
+        title: 'Reminder',
+        message: `Hello, this is a notification at ${new Date().toLocaleTimeString()}`,
+      });
+    }, 300000); // Every 5 min 
+  
+    socket.on('disconnect', () => {
+      console.log('User disconnected:', socket.id);
+    });
+  });

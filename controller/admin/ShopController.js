@@ -40,6 +40,9 @@ export const storeData = asyncHandler(async (req, resp) => {
     const [brands] = await db.execute(`SELECT brand_name FROM store_brands ORDER BY brand_name ASC`);
     const brandNames = brands.map(brand => brand.brand_name);
     const [address] = await db.execute(`SELECT address, area_name, location, latitude, longitude FROM store_address WHERE store_id = ?`, [shop_id]);
+    const [gallery] = await db.execute(`SELECT * FROM store_gallery WHERE store_id = ? ORDER BY id DESC`, [shop_id]);
+    
+    const galleryData = gallery.map(image => image.image_name);
 
     const result = {
         status: 1,
@@ -48,6 +51,7 @@ export const storeData = asyncHandler(async (req, resp) => {
         location: location,
         services: serviceNames,
         brands: brandNames,
+        galleryData,
         base_url: `${req.protocol}://${req.get('host')}/uploads/shop-images/`,
     }
     if(shop_id){
@@ -59,7 +63,7 @@ export const storeData = asyncHandler(async (req, resp) => {
 });
 
 export const storeAdd = asyncHandler(async (req, resp) => {
-    const { shop_name, contact_no ,address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='' } = req.body;
+    const { shop_name, contact_no ,address='', store_website, store_email, always_open='', description='', brands='', services='', days='' } = req.body;
     const { isValid, errors } = validateFields(req.body, { shop_name: ["required"], contact_no: ["required"], address: ["required"], });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
@@ -70,7 +74,9 @@ export const storeAdd = asyncHandler(async (req, resp) => {
     const storeId          = `STOR${generateUniqueId({length:6})}`;
     const brandsArr        = (brands && brands.trim !== '') ? brands : '';
     const servicesArr      = (services && services.trim !== '') ? services : '';
-
+    console.log(req.body);
+    
+// return false
     const insert = await insertRecord('service_shops', [
         'shop_id', 'shop_name', 'contact_no', 'store_website', 'store_email', 'cover_image', 'status', 'always_open', 'open_days', 'open_timing', 'description', 'brands', 'services', 
     ], [
@@ -132,7 +138,7 @@ export const storeView = asyncHandler(async (req, resp) => {
 });
 
 export const storeUpdate = asyncHandler(async (req, resp) => {
-    const { shop_name, contact_no , address='', store_website='', store_email='', always_open='', description='', brands='', services='', days='', shop_id } = req.body;
+    const { shop_name, contact_no , address='', store_website, store_email, always_open='', description='', brands='', services='', days='', shop_id, status } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         shop_name: ["required"], contact_no: ["required"], shop_id: ["required"], 
     });
@@ -154,7 +160,7 @@ export const storeUpdate = asyncHandler(async (req, resp) => {
         store_website, 
         store_email, 
         description,
-        status:1, 
+        status, 
         always_open: always_open, 
         open_days: fDays, 
         open_timing: fTiming, 
