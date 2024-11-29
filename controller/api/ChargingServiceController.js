@@ -81,8 +81,8 @@ export const requestService = asyncHandler(async (req, resp) => {
         await insertRecord('charging_service_history', ['service_id', 'rider_id', 'order_status'], [requestId, rider_id, 'CNF'], conn);
     
         const href = 'charging_service/' + requestId;
-        const heading = 'Valet charging service created!';
-        const desc = `PlusX Electric App - Booking Confirmed! ID: ${requestId}.`;
+        const heading = 'EV Valet Charging Service Booking!';
+        const desc = `Booking Confirmed! ID: ${requestId}.`;
         createNotification(heading, desc, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
@@ -412,8 +412,8 @@ const acceptBooking = async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'A', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Booking Accepted';
-        const message = `PlusX Electric App: Booking Accepted! ID: ${booking_id}.`;
+        const title = 'EV Valet Charging Service Booking Accepted';
+        const message = `Booking Accepted! ID: ${booking_id}.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -427,7 +427,7 @@ const acceptBooking = async (req, resp) => {
         await db.execute('UPDATE rsa SET running_order = running_order + 1 WHERE rsa_id = ?', [rsa_id]);
         await db.execute('UPDATE charging_service_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [booking_id, rsa_id]);
 
-        return resp.json({ message: ['POD Booking accepted successfully!'], status: 1, code: 200 });
+        return resp.json({ message: ['Charging Service Booking accepted successfully!'], status: 1, code: 200 });
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
@@ -455,8 +455,8 @@ const driverEnroute = async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'ER'}, ['request_id'], [booking_id]);
 
         const href    = `charging_service/${booking_id}`;
-        const title   = 'PlusX team is on the way!';
-        const message = `PlusX Electric team is on the way! Please have your EV ready!`;
+        const title   = 'PlusX Electric team is on the way!';
+        const message = `Please have your EV ready.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -503,8 +503,8 @@ const vehiclePickUp = async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'VP', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Vehicle Pickup';
-        const message = `PlusX Electric team has picked up your EV!`;
+        const title = 'EV Pick-Up Confirmed';
+        const message = `PlusX Electric team has picked up your EV.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -545,8 +545,8 @@ const reachedLocation = async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'RS', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Reached Charging Spot';
-        const message = `PlusX Electric : Your EV has reached the charging station.`;
+        const title = 'Reached Charging Spot!';
+        const message = `EV Reached Charging Spot`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -588,7 +588,7 @@ const chargingComplete = async (req, resp) => {
 
         const href = `charging_service/${booking_id}`;
         const title = 'Charging Completed!';
-        const message = `PlusX Electric: Your EV charging is complete!`;
+        const message = `Your EV charging is completed!`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -629,7 +629,7 @@ const vehicleDrop = async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'DO', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Vehicle Drop Off';
+        const title = 'EV Drop Off!';
         const message = 'PlusX Electric Team has dropped off your EV and handed over the key!';
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
@@ -655,7 +655,6 @@ const workComplete = async (req, resp) => {
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
     `,[booking_id, rsa_id]);
-
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
@@ -707,7 +706,7 @@ const workComplete = async (req, resp) => {
                 </body>
             </html>`;
             const attachment = {
-                filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
+                filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
             }
             emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
         }
