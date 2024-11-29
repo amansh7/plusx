@@ -1,6 +1,6 @@
 import { Router } from "express";
 import fs from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const router = Router();
@@ -27,6 +27,7 @@ router.post('/upload-pdf', (req, res) => {
             return res.status(500).json({ success: false, error: 'Failed to save PDF', details: err });
         }
 
+        // const pdfPath =  `https://plusx.shunyaekai.com/public/${dirname}/${fileName}`;
         res.status(200).json({ success: true, pdfPath: savePath });
     });
 });

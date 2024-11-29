@@ -173,7 +173,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will arrive at the scheduled time."; 
         
         if(rsa){
-            const slotDateTime = moment(slot_date, 'DD-MM-YYYY').format('YYYY-MM-DD HH:mm:ss');
+            const slotDateTime = moment(`${slot_date} ${slot_time}`, 'DD-MM-YYYY HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
 
             await insertRecord('portable_charger_booking_assign', 
                 ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider_id, slotDateTime, 0], conn
