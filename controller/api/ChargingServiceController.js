@@ -1,10 +1,15 @@
+import path from 'path';
 import moment from "moment";
 import 'moment-duration-format';
+import { fileURLToPath } from 'url';
 import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler, formatDateInQuery, numberToWords, formatNumber } from "../../utils.js";
+import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler, formatDateInQuery, numberToWords, formatNumber, generatePdf } from "../../utils.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const { slot_date } = mergeParam(req);
@@ -308,7 +313,6 @@ export const getRsaBookingStage = asyncHandler(async (req, resp) => {
 
 export const handleBookingAction = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
-
     let validationRules = {
         rsa_id         : ["required"], 
         booking_id     : ["required"], 
@@ -316,13 +320,7 @@ export const handleBookingAction = asyncHandler(async (req, resp) => {
         longitude      : ["required"], 
         booking_status : ["required"],
     };
-    if (booking_status == "C") {
-        validationRules = {
-            ...validationRules,
-            reason  : ["required"], 
-        };
-    }
-    // const { isValid, errors } = validateFields(mergeParam(req), validationRules);
+    if (booking_status == "C") validationRules = { ...validationRules, reason : ["required"] };
     const { isValid, errors } = validateFields(req.body, validationRules);
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
@@ -335,7 +333,7 @@ export const handleBookingAction = asyncHandler(async (req, resp) => {
         case 'DO': return await vehicleDrop(req, resp);
         case 'WC': return await workComplete(req, resp);
         default: return resp.json({status: 0, code: 200, message: ['Invalid booking status.']});
-    }
+    };
 });
 
 export const handleRejectBooking = asyncHandler(async (req, resp) => {
@@ -643,8 +641,8 @@ const vehicleDrop = async (req, resp) => {
 };
 const workComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
-    if (!req.files.image) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-    const imgName = req.files.image[0].filename; 
+    // if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    // const imgName = req.files.image[0].filename; 
     const invoiceId = booking_id.replace('CS', 'INVCS');
     
     const checkOrder = await queryDB(`
@@ -666,27 +664,28 @@ const workComplete = async (req, resp) => {
     );
 
     if (ordHistoryCount.count === 0) {
-        const insert = await db.execute(
-            'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "WC", ?, ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
-        );
+        // const insert = await db.execute(
+        //     'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "WC", ?, ?, ?, ?)',
+        //     [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
+        // );
 
-        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+        // if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('charging_service', {order_status: 'WC', rsa_id}, ['request_id'], [booking_id]);
-        await db.execute(`DELETE FROM charging_service_assign WHERE rsa_id=? AND order_id = ?`, [rsa_id, booking_id]);
-        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
-        // await db.execute('UPDATE pick_drop_slot SET booking_limit = booking_limit + 1 WHERE slot_id = ?', [checkOrder.slot_id]);
+        // await updateRecord('charging_service', {order_status: 'WC', rsa_id}, ['request_id'], [booking_id]);
+        // await db.execute(`DELETE FROM charging_service_assign WHERE rsa_id=? AND order_id = ?`, [rsa_id, booking_id]);
+        // await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        // // await db.execute('UPDATE pick_drop_slot SET booking_limit = booking_limit + 1 WHERE slot_id = ?', [checkOrder.slot_id]);
 
-        const href    = `charging_service/${booking_id}`;
-        const title   = 'Work Complete';
-        const message = `Driver has successfully completed your charging service booking with booking id : ${booking_id}`;
-        await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-        await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
+        // const href    = `charging_service/${booking_id}`;
+        // const title   = 'Work Complete';
+        // const message = `Driver has successfully completed your charging service booking with booking id : ${booking_id}`;
+        // await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
+        // await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
         const data = await queryDB(`
             SELECT 
-                csi.invoice_id, csi.amount, csi.invoice_date, csi.currency, cs.name, cs.request_id,
+                csi.invoice_id, csi.amount, csi.invoice_date, cs.name, cs.request_id,
+                CASE WHEN csi.currency IS NOT NULL THEN csi.currency ELSE 'AED' END AS currency, 
                 (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
             FROM 
                 charging_service_invoice AS csi
@@ -696,13 +695,14 @@ const workComplete = async (req, resp) => {
                 csi.invoice_id = ?
             LIMIT 1
         `, [invoiceId]);
-
+        data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
+        
         const invoiceData = { data, numberToWords, formatNumber  };
-        const templatePath = path.join(__dirname, '../views/mail/pick-and-drop-invoice.ejs'); 
-        const pdfSavePath = path.join(__dirname, '../public', 'pick-drop-invoice');
+        const templatePath = path.join(__dirname, '../../views/mail/pick-and-drop-invoice.ejs'); 
         const filename = `${invoiceId}-invoice.pdf`;
+        const savePdfDir = 'pick-drop-invoice';
 
-        const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+        const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
 
         if(pdf.success){
             const html = `<html>
@@ -715,7 +715,6 @@ const workComplete = async (req, resp) => {
             const attachment = {
                 filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
             }
-        
             emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
         }
 

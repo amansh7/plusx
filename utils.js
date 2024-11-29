@@ -193,28 +193,6 @@ export const convertTo24HourFormat = (timeStr) => {
   return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`; 
 };
 
-/* Generates a PDF from an EJS template. */
-export const generatePDFOld = async (pdfTemplateContext, templatePath, pdfPath, req) => {
-  const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
-  let success = false; 
-  try{
-    const html = await ejs.renderFile(templatePath, { ...pdfTemplateContext, imgUrl });
-  
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-  
-    page.setViewport({ width: 1280, height: 1050 });
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
-    console.log('pdf generated: ', pdfPath);
-    await browser.close();
-    return { success: true, pdfPath }; 
-  }catch(error){
-    console.error('Error generating PDF:', error);
-    return { success: false, error: error.message };
-  }
-};
-
 /* Amount Number To Word Converter */
 export function numberToWords(num) {
   const ones = [
@@ -448,25 +426,27 @@ export const asyncHandler = (fn) => {
   }
 }; */
 
-export const generatePdf = async (templatePath, invoiceData, fileName, pdfSavePath, req) => {
+export const generatePdf = async (templatePath, invoiceData, fileName, savePdfDir, req) => {
   try {
     const html = await ejs.renderFile(templatePath, { ...invoiceData });
-    
-    const response = await axios.post('http://192.168.1.25:8000/pdf-api.php', {
+    const serverUrl = `https://plusx.shunyaekai.com/web/upload-pdf`;
+    // const serverUrl = `${req.protocol}://${req.get('host')}/web/upload-pdf`;       
+
+    const response = await axios.post('https://plusxmail.shunyaekai.com/pdf-api.php', {
       html,
       fileName,
-      pdfSavePath
+      serverUrl,
+      savePdfDir
     }, { 
       headers: { 'Content-Type': 'application/json' }
     });
-
+    
     if (response.data.success) {
-      console.log('PDF generated successfully:', response.data.pdfPath);
-      return { success: true, pdfPath: response.data.pdfPath };
+      console.log('PDF generated successfully:');
+      return { success: true , pdfPath: response.data.php_response.pdfPath} ;
     }
-
   } catch (error) {
-    console.error('Error generating PDF _in_helper:', error);
-    return { success: false, error: error };
+    console.error('Error generating PDF _from_utils:', error);
+    return { success: false, error };
   }
 };
