@@ -429,8 +429,8 @@ export const asyncHandler = (fn) => {
 export const generatePdf = async (templatePath, invoiceData, fileName, savePdfDir, req) => {
   try {
     const html = await ejs.renderFile(templatePath, { ...invoiceData });
-    const serverUrl = `https://plusx.shunyaekai.com/web/upload-pdf`;
-    // const serverUrl = `${req.protocol}://${req.get('host')}/web/upload-pdf`;       
+    // const serverUrl = `https://plusx.shunyaekai.com/web/upload-pdf`;
+    const serverUrl = `${req.protocol}://${req.get('host')}/web/upload-pdf`;       
 
     const response = await axios.post('https://plusxmail.shunyaekai.com/pdf-api.php', {
       html,

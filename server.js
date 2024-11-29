@@ -75,9 +75,6 @@ app.use(errorHandler);
 const server =app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);
 });
-// app.listen(PORT, ()=>{
-//     console.log(`Server is running on port ${PORT}`);
-// });
 
 const io = new Server(server, {
     cors: corsOptions // Reuse the corsOptions object here

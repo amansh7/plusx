@@ -21,6 +21,7 @@
     "nodemailer": "^6.9.15",
     "puppeteer": "^19.7.5",
     "smsglobal": "^1.2.4",
+    "socket.io": "^4.8.1",
     "stripe": "^17.2.1"
   },
   "name": "plusx",
