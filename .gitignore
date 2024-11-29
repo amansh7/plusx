@@ -10,6 +10,8 @@ build/
 /public/pick-drop-invoice
 /public/portable-charger-invoice
 /public/road-side-invoice
+package.json
+package-lock.json
 # Environment variable files
 .env
 

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 import { errorHandler } from './middleware/errorHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
-// import { Server } from 'socket.io'
+import { Server } from 'socket.io'
 
 const app  = express();
 const PORT = process.env.PORT || 3333;
@@ -71,16 +71,14 @@ app.get('/*', function (req, res) {
 
 app.use(errorHandler);
 
-// const server =app.listen(PORT, ()=>{
-//     console.log(`Server is running on port ${PORT}`);
-// });
-app.listen(PORT, ()=>{
+const server =app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);
 });
 
-// const io = new Server(server, {
-//     cors: corsOptions // Reuse the corsOptions object here
-// });
+
+// export const io = new Server(server, {
+//     cors: corsOptions 
+//   });
 
 // io.on('connection', (socket) => {
 //     console.log('A user connected:', socket.id);
@@ -96,4 +94,12 @@ app.listen(PORT, ()=>{
 //     socket.on('disconnect', () => {
 //       console.log('User disconnected:', socket.id);
 //     });
+//   });
+
+// io.on('connection', (socket) => {
+//   console.log('A user connected:', socket.id);
+
+//   socket.on('disconnect', () => {
+//     console.log('User disconnected:', socket.id);
+//   });
 // });

@@ -83,7 +83,8 @@ export const carData = asyncHandler(async (req, resp) => {
 });
 
 export const carAdd = asyncHandler(async (req, resp) => {
-    const { car_name, available_on, description, car_type, price, contract, feature, lease_url } = req.body;
+    try {
+        const { car_name, available_on, description, car_type, price, contract, feature, lease_url } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
         car_name: ["required"], 
         available_on: ["required"], 
@@ -116,6 +117,11 @@ export const carAdd = asyncHandler(async (req, resp) => {
         status: insert.affectedRows > 0 ? 1 : 0,
         message: insert.affectedRows > 0 ? "Car rental added successfully" : "Failed to insert, Please try again.",
     });
+    } catch (error) {
+        console.log(error);
+        
+    }
+    
 });
 
 export const carEdit = asyncHandler(async (req, resp) => {

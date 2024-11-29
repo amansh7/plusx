@@ -262,10 +262,10 @@ export const deletePublicCharger = asyncHandler(async (req, resp) => {
     
     if (charger.station_image) deleteFile('charging-station-images', charger.station_image);
 
-    await queryDB(`DELETE FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
-    await queryDB(`DELETE FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
+    await db.execute(`DELETE FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
+    await db.execute(`DELETE FROM public_charging_station_list WHERE station_id = ?`, [station_id]);
 
-    return resp.json({ status: 1, msg: "Shop deleted successfully!" });
+    return resp.json({ status: 1, code: 200, message: "Shop deleted successfully!" });
 });
 
 export const deletePublicChargerGallery = asyncHandler(async (req, resp) => {

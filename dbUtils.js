@@ -18,7 +18,7 @@ export const insertRecord = async (table, columns, values, connection = null) =>
   }
   const placeholders = columns.map(() => "?").join(", ");
   const sql = `INSERT INTO ${table} (${columns.join( ", " )}) VALUES (${placeholders})`;
-  // console.log(sql, values);
+  console.log(sql, values);
   
   try {
     const dbConn = connection ? connection : await db.getConnection();
@@ -112,9 +112,12 @@ export const queryDB = async (query, params, connection = null) => {
  * 
  **/
 
+
 // export const getPaginatedData = async ({
 //   tableName,
 //   columns = '*',
+//   joinTable = '',
+//   joinCondition = '',
 //   liveSearchFields = [],
 //   liveSearchTexts = [],
 //   searchFields = [],
@@ -161,11 +164,11 @@ export const queryDB = async (query, params, connection = null) => {
 //     }
 //   });
 
-//   // Final query
-//   let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
-//   // queryParams.push(start, parseInt(limit, 10));
+//   // Apply JOIN 
+//   const joinClause = joinTable && joinCondition ? ` JOIN ${joinTable} ON ${joinCondition}` : '';
 
-//   // console.log("Executing Query:", query, "With Params:", queryParams);
+//   // Final query
+//   let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${joinClause}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
 
 //   const [rows] = await db.execute(query, queryParams);
 
@@ -178,7 +181,6 @@ export const queryDB = async (query, params, connection = null) => {
 //     totalPage
 //   };
 // };
-
 
 
 export const getPaginatedData = async ({
@@ -194,16 +196,17 @@ export const getPaginatedData = async ({
   sortOrder = 'ASC',
   page_no = 1,
   limit = 10,
-  whereField = '',
-  whereValue = '',
-  whereOperator = '=',
+  whereField = [],
+  whereValue = [],
+  whereOperator = [],
 }) => {
   const start = parseInt((page_no * limit) - limit, 10);
 
   let whereCondition = '';
-  let searchCondition = '';
+  let liveSearchCondition = '';
   const queryParams = [];
 
+  // Construct `WHERE` clause for static filters
   if (whereField.length > 0 && whereValue.length > 0) {
     whereField.forEach((field, index) => {
       const operator = whereOperator[index] || '=';
@@ -218,36 +221,45 @@ export const getPaginatedData = async ({
     });
   }
 
-  searchFields.forEach((field, index) => {
-    if (searchTexts[index]) {
-      searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' AND ') + `${field} LIKE ?`;
-      queryParams.push(`%${searchTexts[index].trim()}%`);
-    }
-  });
+  // Construct `OR` condition for live search
+  if (liveSearchFields.length > 0 && liveSearchTexts.length > 0) {
+    liveSearchFields.forEach((field, index) => {
+      if (liveSearchTexts[index]) {
+        liveSearchCondition += `${field} LIKE ? OR `;
+        queryParams.push(`%${liveSearchTexts[index].trim()}%`);
+      }
+    });
 
-  liveSearchFields.forEach((field, index) => {
-    if (liveSearchTexts[index]) {
-      searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' OR ') + `${field} LIKE ?`;
-      queryParams.push(`%${liveSearchTexts[index].trim()}%`);
+    // Trim trailing `OR` and wrap the condition in parentheses
+    if (liveSearchCondition) {
+      liveSearchCondition = liveSearchCondition.slice(0, -4); // Remove last " OR "
+      liveSearchCondition = whereCondition ? ` AND (${liveSearchCondition})` : ` WHERE (${liveSearchCondition})`;
     }
-  });
+  }
 
-  // Apply JOIN 
+  // Final `WHERE` condition combining static filters and live search
+  const finalWhereCondition = `${whereCondition}${liveSearchCondition}`;
+
+  // Apply JOIN clause if necessary
   const joinClause = joinTable && joinCondition ? ` JOIN ${joinTable} ON ${joinCondition}` : '';
 
-  // Final query
-  let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${joinClause}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
+  // Final SQL query
+  const query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${joinClause}${finalWhereCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
 
-  const [rows] = await db.execute(query, queryParams);
+  try {
+    const [rows] = await db.execute(query, queryParams);
+    const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
+    const totalPage = Math.max(Math.ceil(total / limit), 1);
 
-  const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
-  const totalPage = Math.max(Math.ceil(total / limit), 1);
-
-  return {
-    data: rows,
-    total,
-    totalPage
-  };
+    return {
+      data: rows,
+      total,
+      totalPage,
+    };
+  } catch (error) {
+    console.error('Error executing paginated query:', error);
+    throw error;
+  }
 };
 
 

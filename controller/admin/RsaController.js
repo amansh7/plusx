@@ -106,7 +106,7 @@ export const rsaAdd = asyncHandler(async (req, resp) => {
         confirm_password: ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    if(password.length < 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
+    if(password.length < 6) return resp.json({status:1, code: 422, message:["Password must be 6 digit"]});
     if(password != confirm_password) return resp.json({ status: 0, code: 422, message: ['Password and confirm password not matched!'] });
 
     let profile_image = req.files['profile_image'] ? req.files['profile_image'][0].filename  : '';
@@ -134,7 +134,7 @@ export const rsaUpdate = asyncHandler(async (req, resp) => {
         service_type: ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-    if(password && password?.length < 6) return resp.json({status:1, code: 200, message:["Password must be 6 digit"]});
+    if(password && password?.length < 6) return resp.json({status:1, code: 422, message:["Password must be 6 digit"]});
     
     const emailCheck = await queryDB(`SELECT rsa_id FROM rsa WHERE email = ? AND rsa_id != ? UNION SELECT rider_id FROM riders WHERE rider_email = ?`,[rsa_email, rsa_id, rsa_email]);
     const mobileCheck = await queryDB(`SELECT rsa_id FROM rsa WHERE mobile = ? AND rsa_id != ? UNION SELECT rider_id FROM riders WHERE rider_mobile = ?`, [mobile, rsa_id, mobile]);

@@ -96,7 +96,7 @@ export const notificationList = asyncHandler(async (req, resp) => {
 });
 
 export const riderList = async (req, resp) => {
-    let { page_no, sortBy, riderName, riderEmail, riderMobile, addedFrom, emirates, start_date, end_date, search_text = '' } = req.body;
+    let { page_no, sortBy, addedFrom, emirates, start_date, end_date, search_text = '' } = req.body;
 
     page_no = parseInt(page_no, 10);
     if (isNaN(page_no) || page_no < 1) {

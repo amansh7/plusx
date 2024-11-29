@@ -835,10 +835,10 @@ export const assignBooking = async (req, resp) => {
         `, [booking_id ] );
     
         if (!booking_data) {
-            return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+            return resp.json({ message: `Sorry no booking found with this booking id ${booking_id}`, status: 0, code: 404 });
         }
         if(rsa_id == booking_data.rsa_id) {
-            return resp.json({ message: [`This driver already assin on this booking!, please select another driver`], status: 0, code: 404 });
+            return resp.json({ message: `This driver already assigned on this booking!, please select another driver`, status: 0, code: 404 });
         }
         if( booking_data.rsa_id) {
             await updateRecord('portable_charger_booking_assign', {rsa_id: rsa_id, status: 0}, ['order_id'], [booking_id], conn);
@@ -846,7 +846,7 @@ export const assignBooking = async (req, resp) => {
         } else {
             await insertRecord('portable_charger_booking_assign', 
                 [ 'order_id', 'rsa_id', 'rider_id', 'status' ], 
-                [ order_id, booking_data.rider_id, rsa_id ], 
+                [ booking_id, booking_data.rider_id, rsa_id, 1 ], 
             conn);
         }
         await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, ['booking_id'], [booking_id], conn);
