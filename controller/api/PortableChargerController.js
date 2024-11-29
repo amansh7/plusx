@@ -454,7 +454,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
 });
 
 // booking action helper
-const acceptBooking = asyncHandler(async (req, resp) => {
+const acceptBooking = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
@@ -504,8 +504,8 @@ const acceptBooking = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const driverEnroute = asyncHandler(async (req, resp) => {
+};
+const driverEnroute = async (req, resp) => {
     
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
@@ -545,8 +545,8 @@ const driverEnroute = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const reachedLocation = asyncHandler(async (req, resp) => {
+};
+const reachedLocation = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
     const checkOrder = await queryDB(`
@@ -585,8 +585,8 @@ const reachedLocation = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const chargingStart = asyncHandler(async (req, resp) => {
+};
+const chargingStart = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, pod_id='' } = mergeParam(req);
     
     const checkOrder = await queryDB(`
@@ -630,8 +630,8 @@ const chargingStart = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const chargingComplete = asyncHandler(async (req, resp) => {
+};
+const chargingComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, pod_id } = mergeParam(req);
 
     const checkOrder = await queryDB(`
@@ -674,8 +674,8 @@ const chargingComplete = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const chargerPickedUp = asyncHandler(async (req, resp) => {
+};
+const chargerPickedUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
@@ -758,7 +758,7 @@ const chargerPickedUp = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
+};
 
 export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     const { rider_id, booking_id, reason='' } = mergeParam(req);

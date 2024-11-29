@@ -81,8 +81,8 @@ export const requestService = asyncHandler(async (req, resp) => {
         await insertRecord('charging_service_history', ['service_id', 'rider_id', 'order_status'], [requestId, rider_id, 'CNF'], conn);
     
         const href = 'charging_service/' + requestId;
-        const heading = 'Valet charging service created!';
-        const desc = `PlusX Electric App - Booking Confirmed! ID: ${requestId}.`;
+        const heading = 'Valet Charging Service Created!';
+        const desc = `Booking Confirmed! ID: ${requestId}.`;
         createNotification(heading, desc, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
@@ -385,7 +385,7 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
 });
 
 // cs booking action helper
-const acceptBooking = asyncHandler(async (req, resp) => {
+const acceptBooking = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, booking_status } = req.body;
 
     const checkOrder = await queryDB(`
@@ -412,8 +412,8 @@ const acceptBooking = asyncHandler(async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'A', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Booking Accepted';
-        const message = `PlusX Electric App: Booking Accepted! ID: ${booking_id}.`;
+        const title = ' Valet Charging Service Accepted!';
+        const message = `Booking Accepted! ID: ${booking_id}.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -427,12 +427,12 @@ const acceptBooking = asyncHandler(async (req, resp) => {
         await db.execute('UPDATE rsa SET running_order = running_order + 1 WHERE rsa_id = ?', [rsa_id]);
         await db.execute('UPDATE charging_service_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [booking_id, rsa_id]);
 
-        return resp.json({ message: ['POD Booking accepted successfully!'], status: 1, code: 200 });
+        return resp.json({ message: ['Charging Service Booking accepted successfully!'], status: 1, code: 200 });
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const driverEnroute = asyncHandler(async (req, resp) => {
+};
+const driverEnroute = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
     
     const checkOrder = await queryDB(`
@@ -455,8 +455,8 @@ const driverEnroute = asyncHandler(async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'ER'}, ['request_id'], [booking_id]);
 
         const href    = `charging_service/${booking_id}`;
-        const title   = 'PlusX team is on the way!';
-        const message = `PlusX Electric team is on the way! Please have your EV ready!`;
+        const title   = 'PlusX Electric team is on the way!';
+        const message = `Please have your EV ready.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -470,8 +470,8 @@ const driverEnroute = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const vehiclePickUp = asyncHandler(async (req, resp) => {
+};
+const vehiclePickUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -503,8 +503,8 @@ const vehiclePickUp = asyncHandler(async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'VP', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Vehicle Pickup';
-        const message = `PlusX Electric team has picked up your EV!`;
+        const title = 'Vehicle Pick Up!';
+        const message = `PlusX Electric team has picked up your EV.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -512,8 +512,8 @@ const vehiclePickUp = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const reachedLocation = asyncHandler(async (req, resp) => {
+};
+const reachedLocation = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -545,8 +545,8 @@ const reachedLocation = asyncHandler(async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'RS', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Reached Charging Spot';
-        const message = `PlusX Electric : Your EV has reached the charging station.`;
+        const title = 'Reached Charging Spot!';
+        const message = `Your EV has reached the charging station.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -554,8 +554,8 @@ const reachedLocation = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const chargingComplete = asyncHandler(async (req, resp) => {
+};
+const chargingComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -588,7 +588,7 @@ const chargingComplete = asyncHandler(async (req, resp) => {
 
         const href = `charging_service/${booking_id}`;
         const title = 'Charging Completed!';
-        const message = `PlusX Electric: Your EV charging is complete!`;
+        const message = `Your EV charging is complete!`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -596,8 +596,8 @@ const chargingComplete = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const vehicleDrop = asyncHandler(async (req, resp) => {
+};
+const vehicleDrop = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -638,8 +638,8 @@ const vehicleDrop = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
-const workComplete = asyncHandler(async (req, resp) => {
+};
+const workComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
@@ -707,7 +707,7 @@ const workComplete = asyncHandler(async (req, resp) => {
                 </body>
             </html>`;
             const attachment = {
-                filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
+                filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
             }
             emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
         }
@@ -716,7 +716,7 @@ const workComplete = asyncHandler(async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-});
+};
 
 export const cancelValetBooking = asyncHandler(async (req, resp) => {
     const { rider_id, booking_id, reason='' } = mergeParam(req);
