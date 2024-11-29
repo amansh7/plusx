@@ -385,7 +385,7 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
 });
 
 // cs booking action helper
-const acceptBooking = async (req, resp) => {
+const acceptBooking = asyncHandler(async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, booking_status } = req.body;
 
     const checkOrder = await queryDB(`
@@ -431,8 +431,8 @@ const acceptBooking = async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-};
-const driverEnroute = async (req, resp) => {
+});
+const driverEnroute = asyncHandler(async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
     
     const checkOrder = await queryDB(`
@@ -470,8 +470,8 @@ const driverEnroute = async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-};
-const vehiclePickUp = async (req, resp) => {
+});
+const vehiclePickUp = asyncHandler(async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -512,8 +512,8 @@ const vehiclePickUp = async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-};
-const reachedLocation = async (req, resp) => {
+});
+const reachedLocation = asyncHandler(async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -554,8 +554,8 @@ const reachedLocation = async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-};
-const chargingComplete = async (req, resp) => {
+});
+const chargingComplete = asyncHandler(async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -596,8 +596,8 @@ const chargingComplete = async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-};
-const vehicleDrop = async (req, resp) => {
+});
+const vehicleDrop = asyncHandler(async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
 
     const checkOrder = await queryDB(`
@@ -638,8 +638,8 @@ const vehicleDrop = async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-};
-const workComplete = async (req, resp) => {
+});
+const workComplete = asyncHandler(async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
@@ -716,7 +716,7 @@ const workComplete = async (req, resp) => {
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
-};
+});
 
 export const cancelValetBooking = asyncHandler(async (req, resp) => {
     const { rider_id, booking_id, reason='' } = mergeParam(req);

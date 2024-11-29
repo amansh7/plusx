@@ -54,7 +54,7 @@ export const updateRecord = async (table, updates, whereColumns, whereValues, co
   const whereClause = whereColumns.map(col => `${col} = ?`).join(" AND ");
   
   const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereClause}`;
-  console.log('sql', sql);
+  // console.log('sql', sql);
   try {
     const dbConn = connection ? connection : await db.getConnection();
 
