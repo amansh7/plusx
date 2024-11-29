@@ -95,7 +95,8 @@ export const clubCreate = asyncHandler(async (req, resp) => {
     }
 });
 
-export const clubUpdate = asyncHandler(async (req, resp) => {        
+export const clubUpdate = asyncHandler(async (req, resp) => {      
+    const uploadedFiles = req.files;  
     const { club_id, club_name, location, description, club_url, category, age_group, no_of_members='', url_link='', preference='', status=1 } = req.body;
     const { isValid, errors } = validateFields(req.body, {
         club_name: ["required"],
