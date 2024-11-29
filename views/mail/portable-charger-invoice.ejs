@@ -109,16 +109,13 @@
                                 <tbody class="text-white">
                                     <tr style="border-bottom: 1px solid #5e676f;">
                                         <td style="font-size: 14px;">Dewa Chargers (KW Consumed)</td>
-                                        <td style="font-size: 14px;">--</td>
-                                        <td style="text-align: right; font-size: 14px;">Unit X 0.00 AED</td>
+                                        <td style="font-size: 14px;"><%= data.kw_consumed %></td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.unit %> <%= data.currency %></td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #5e676f;">
                                         <td style="font-size: 14px;">Portable Charger Service</td>
-                                        <td style="font-size: 14px;">--</td>
-                                        <td style="text-align: right; font-size: 14px;">
-                                            <%= data.currency ? data.currency.toUpperCase() : 'AED' %>
-                                            <%= (data.amount && !isNaN(data.amount)) ? data.amount.toFixed(2) : '0.00' %> 
-                                        </td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.currency %> <%= data.amount %></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -128,11 +125,9 @@
                         <td style="width:60%; text-align: left;">
                             <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-neon">Total Amount:</p>
                         </td>
+
                         <td style="text-align: right;">
-                            <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-white">
-                                <%= data.currency ? data.currency.toUpperCase() : 'AED' %>
-                                <%= (data.amount && !isNaN(data.amount)) ? data.amount.toFixed(2) : '0.00' %>
-                            </p>
+                            <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-white"><%= data.currency %> <%= data.total_amt.toFixed(2) %></p>
                         </td>
                     </tr>
                 </tbody>

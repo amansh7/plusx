@@ -6,7 +6,7 @@ import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
-import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, formatNumber, mergeParam, numberToWords, pushNotification } from "../../utils.js";
+import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, formatNumber, generatePdf, mergeParam, numberToWords, pushNotification } from "../../utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -379,8 +379,7 @@ export const rsaBookingStage = asyncHandler(async (req, resp) => {
     
 });
 
-export const bookingAction = asyncHandler(async (req, resp) => {
-    
+export const bookingAction = asyncHandler(async (req, resp) => {  
     const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
     let validationRules = {
         rsa_id         : ["required"], 
@@ -682,7 +681,7 @@ const chargingComplete = async (req, resp) => {
 };
 const chargerPickedUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
-    if (!req.files.image) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
     const invoiceId = booking_id.replace('PCB', 'INVPC');
 
@@ -704,7 +703,7 @@ const chargerPickedUp = async (req, resp) => {
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "PU" AND booking_id = ?',[rsa_id, booking_id]
     );
-
+    
     if (ordHistoryCount.count === 0) {
         const insert = await db.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "PU", ?, ?, ?, ?)',
@@ -716,7 +715,7 @@ const chargerPickedUp = async (req, resp) => {
         await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id] );
         await db.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
-        await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
+        // await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
         
         const href = `portable_charger_booking/${booking_id}`;
         const title = 'POD Picked Up';
@@ -726,7 +725,10 @@ const chargerPickedUp = async (req, resp) => {
 
         const data = await queryDB(`
             SELECT 
-                pci.invoice_id, pci.amount, pci.invoice_date, pci.currency, pcb.booking_id,
+                pci.invoice_id, pci.amount, pci.invoice_date, pcb.booking_id,
+                CASE WHEN pci.currency IS NOT NULL THEN pci.currency ELSE 'AED' END AS currency, 
+                ROUND((pcb.end_charging_level - pcb.start_charging_level) * 0.25, 2) AS unit,
+                ROUND(((pcb.end_charging_level - pcb.start_charging_level) * 0.25 * 0.48), 2) AS unit_amt,
                 (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email,
                 (SELECT rd.rider_name FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_name
             FROM 
@@ -737,13 +739,15 @@ const chargerPickedUp = async (req, resp) => {
                 pci.invoice_id = ?
             LIMIT 1
         `, [invoiceId]);
-    
+        
+        data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
+        data.total_amt = data.amount + data.unit_amt;
         const invoiceData = { data, numberToWords, formatNumber  };
-        const templatePath = path.join(__dirname, '../views/mail/portable-charger-invoice.ejs'); 
-        const pdfSavePath = path.join(__dirname, '../public', 'portable-charger-invoice');
+        const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
         const filename = `${invoiceId}-invoice.pdf`;
-    
-        const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+        const savePdfDir = 'portable-charger-invoice';
+
+        const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
         
         if(pdf.success){
             const html = `<html>
@@ -757,7 +761,7 @@ const chargerPickedUp = async (req, resp) => {
                 filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
             };
         
-            emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
+            emailQueue.addEmail('data.rider_email', 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
         }
 
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });

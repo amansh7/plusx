@@ -2,7 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import adminRoutes from './routes/admin.js';
 import apiRoutes from './routes/api.js';
-import mainRoutes from './routes/main.js';
+import webRoutes from './routes/web.js';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -21,6 +21,10 @@ const __dirname = path.dirname(__filename);
 
 const corsOptions = {
     origin : [
+        'http://192.168.1.87:3000',
+        'http://192.168.1.30:3000',
+        'http://192.168.1.30:8000',
+        'http://192.168.1.7:3333',
         'http://192.168.1.53:3000',
         'http://192.168.1.25:3000',
         'http://192.168.1.53:3333',
@@ -32,6 +36,9 @@ const corsOptions = {
         'http://192.168.1.19:3000',
         'http://192.168.1.38:3434/',
         'http://localhost:1112',
+        'http://localhost:8000/',
+        'https://plusx.shunyaekai.com/',
+        'https://plusxmail.shunyaekai.com/',
         'http://localhost:1113',
         'https://plusx.shunyaekai.com/'
     ],
@@ -55,6 +62,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+app.use('/web', webRoutes);
 
 // React build
 app.use(express.static(path.join(__dirname, 'build')));
