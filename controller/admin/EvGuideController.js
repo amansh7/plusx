@@ -62,6 +62,7 @@ export const guideList = asyncHandler(async (req, resp) => {
 
 export const addGuide = asyncHandler(async (req, resp) => {
     try {
+        const uploadedFiles = req.files;
         const{ vehicle_type, vehicle_name, vehicle_model, description, engine, horse_power, max_speed, price, best_feature } = req.body;
         const { isValid, errors } = validateFields(req.body, { 
             vehicle_type : ["required"],

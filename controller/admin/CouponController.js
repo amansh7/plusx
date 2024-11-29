@@ -92,7 +92,7 @@ export const couponData = asyncHandler(async (req, resp) => {
 });
 
 export const couponAdd = asyncHandler(async (req, resp) => {
-    const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type, status } = req.body;
+    const { coupan_name, coupan_code, coupan_percentage, expiry_date, user_per_user, service_type, status = '1' } = req.body;
     const { isValid, errors } = validateFields(req.body, { coupan_name: ["required"], coupan_code: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
@@ -140,7 +140,7 @@ export const couponDelete = asyncHandler(async (req, resp) => {
     const { coupan_code } = req.body;
     if (!coupan_code) return resp.json({ status: 0, code: 422, message: "Coupon Code is required" });
     
-    const del = await db.execute(`DELETE FROM coupon WHERE coupan_code = ?`, [coupan_code]);
+    const [del] = await db.execute(`DELETE FROM coupon WHERE coupan_code = ?`, [coupan_code]);
 
     return resp.json({ 
         status: del.affectedRows > 0 ? 1 : 0, 
