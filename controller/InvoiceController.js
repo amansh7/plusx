@@ -14,92 +14,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const rsaInvoice = asyncHandler(async (req, resp) => {
-    const {rider_id, request_id, payment_intent_id } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"], /* payment_intent_id: ["required"] */ });
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-
-    const invoiceId = request_id.replace('RAO', 'INVR');
-    
-    const createObj = {
-        invoice_id: invoiceId,
-        request_id: request_id,
-        rider_id: rider_id,
-        invoice_date: moment().format('YYYY-MM-DD HH:mm:ss'),
-    }
-    
-    if(payment_intent_id && payment_intent_id.trim() != '' ){
-        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
-        const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
-        const cardData = {
-            brand:     charge.payment_method_details.card.brand,
-            country:   charge.payment_method_details.card.country,
-            exp_month: charge.payment_method_details.card.exp_month,
-            exp_year:  charge.payment_method_details.card.exp_year,
-            last_four: charge.payment_method_details.card.last4,
-        };
-
-        createObj.amount = charge.amount;  
-        createObj.payment_intent_id = charge.payment_intent;  
-        createObj.payment_method_id = charge.payment_method;  
-        createObj.payment_cust_id = charge.customer;  
-        createObj.charge_id = charge.id;  
-        createObj.transaction_id = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
-        createObj.payment_type = charge.payment_method_details.type;  
-        createObj.payment_status = charge.status;  
-        createObj.currency = charge.currency;  
-        createObj.invoice_date = moment(charge.created).format('YYYY-MM-DD HH:mm:ss');
-        createObj.receipt_url = charge.receipt_url;
-        createObj.card_data = cardData;
-    }
-
-    const columns = Object.keys(createObj);
-    const values = Object.values(createObj);
-    const insert = await insertRecord('road_assistance_invoice', columns, values);
-
-    const data = await queryDB(`
-        SELECT 
-            rai.invoice_id, rai.amount AS price, rai.payment_status, rai.invoice_date, rai.currency, rai.payment_type, rai.rider_id,
-            r.name, r.country_code, r.contact_no, r.types_of_issue, r.pickup_address, r.drop_address, r.request_id,
-            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = rai.rider_id) AS rider_email
-        FROM 
-            road_assistance_invoice AS rai
-        LEFT JOIN
-            road_assistance AS r
-        ON 
-            r.request_id = rai.request_id
-        WHERE 
-            rai.invoice_id = ?
-        LIMIT 1
-    `, [invoiceId]);
-
-    const invoiceData = { data, numberToWords, formatNumber  };
-    const templatePath = path.join(__dirname, '../views/mail/road-assistance-invoice.ejs'); 
-    const pdfSavePath = path.join(__dirname, '../public', 'road-side-invoice');
-    const filename = `${invoiceId}-invoice.pdf`;
-
-    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
-    if(pdf.success){
-        const html = `<html>
-            <body>
-                <h4>Dear ${data.name}</h4>
-                <p>Thank you for choosing PlusX Electric's Road Side Assistance. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
-                <p> Regards,<br/> PlusX Electric App Team </p>
-            </body>
-        </html>`;
-        const attachment = {
-            filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
-        }
-        
-        // emailQueue.addEmail(data.rider_email, 'Roadside Assistance Booking Invoice - PlusX Electric App', html, attachment);
-    }
-    
-    if(insert.affectedRows > 0){
-        return resp.json({ message: ["Invoice created successfully!"], status:1, code:200 });
-    }else{
-        return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
-    }
-});
 
 export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
     const {rider_id, request_id, payment_intent_id = '' } = mergeParam(req);
@@ -143,41 +57,6 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
     const columns = Object.keys(createObj);
     const values = Object.values(createObj);
     const insert = await insertRecord('charging_service_invoice', columns, values);
-
-    /* const data = await queryDB(`
-        SELECT 
-            csi.invoice_id, csi.amount, csi.invoice_date, csi.currency, cs.name, cs.request_id,
-            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
-        FROM 
-            charging_service_invoice AS csi
-        LEFT JOIN
-            charging_service AS cs ON cs.request_id = csi.request_id
-        WHERE 
-            csi.invoice_id = ?
-        LIMIT 1
-    `, [invoiceId]);
-    
-    const invoiceData = { data, numberToWords, formatNumber  };
-    const templatePath = path.join(__dirname, '../views/mail/pick-and-drop-invoice.ejs'); 
-    const pdfSavePath = path.join(__dirname, '../public', 'pick-drop-invoice');
-    const filename = `${invoiceId}-invoice.pdf`;
-
-    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
-
-    if(pdf.success){
-        const html = `<html>
-            <body>
-                <h4>Dear ${data.name}</h4>
-                <p>Thank you for choosing PlusX Electric's Valet Charging service. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
-                <p>Regards,<br/> PlusX Electric App Team </p>
-            </body>
-        </html>`;
-        const attachment = {
-            filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
-        }
-    
-        emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
-    } */
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200 });
@@ -267,6 +146,93 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Portable Charger Invoice created successfully!"], status:1, code:200 });
+    }else{
+        return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
+    }
+});
+
+export const rsaInvoice = asyncHandler(async (req, resp) => {
+    const {rider_id, request_id, payment_intent_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"], /* payment_intent_id: ["required"] */ });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const invoiceId = request_id.replace('RAO', 'INVR');
+    
+    const createObj = {
+        invoice_id: invoiceId,
+        request_id: request_id,
+        rider_id: rider_id,
+        invoice_date: moment().format('YYYY-MM-DD HH:mm:ss'),
+    }
+    
+    if(payment_intent_id && payment_intent_id.trim() != '' ){
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
+        const cardData = {
+            brand:     charge.payment_method_details.card.brand,
+            country:   charge.payment_method_details.card.country,
+            exp_month: charge.payment_method_details.card.exp_month,
+            exp_year:  charge.payment_method_details.card.exp_year,
+            last_four: charge.payment_method_details.card.last4,
+        };
+
+        createObj.amount = charge.amount;  
+        createObj.payment_intent_id = charge.payment_intent;  
+        createObj.payment_method_id = charge.payment_method;  
+        createObj.payment_cust_id = charge.customer;  
+        createObj.charge_id = charge.id;  
+        createObj.transaction_id = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
+        createObj.payment_type = charge.payment_method_details.type;  
+        createObj.payment_status = charge.status;  
+        createObj.currency = charge.currency;  
+        createObj.invoice_date = moment(charge.created).format('YYYY-MM-DD HH:mm:ss');
+        createObj.receipt_url = charge.receipt_url;
+        createObj.card_data = cardData;
+    }
+
+    const columns = Object.keys(createObj);
+    const values = Object.values(createObj);
+    const insert = await insertRecord('road_assistance_invoice', columns, values);
+
+    const data = await queryDB(`
+        SELECT 
+            rai.invoice_id, rai.amount AS price, rai.payment_status, rai.invoice_date, rai.currency, rai.payment_type, rai.rider_id,
+            r.name, r.country_code, r.contact_no, r.types_of_issue, r.pickup_address, r.drop_address, r.request_id,
+            (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = rai.rider_id) AS rider_email
+        FROM 
+            road_assistance_invoice AS rai
+        LEFT JOIN
+            road_assistance AS r
+        ON 
+            r.request_id = rai.request_id
+        WHERE 
+            rai.invoice_id = ?
+        LIMIT 1
+    `, [invoiceId]);
+
+    const invoiceData = { data, numberToWords, formatNumber  };
+    const templatePath = path.join(__dirname, '../views/mail/road-assistance-invoice.ejs'); 
+    const pdfSavePath = path.join(__dirname, '../public', 'road-side-invoice');
+    const filename = `${invoiceId}-invoice.pdf`;
+
+    const pdf = await generatePdf(templatePath, invoiceData, filename, pdfSavePath);
+    if(pdf.success){
+        const html = `<html>
+            <body>
+                <h4>Dear ${data.name}</h4>
+                <p>Thank you for choosing PlusX Electric's Road Side Assistance. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
+                <p> Regards,<br/> PlusX Electric App Team </p>
+            </body>
+        </html>`;
+        const attachment = {
+            filename: `${invoiceId}-invoice.pdf`, path: pdfPath, contentType: 'application/pdf'
+        }
+        
+        // emailQueue.addEmail(data.rider_email, 'Roadside Assistance Booking Invoice - PlusX Electric App', html, attachment);
+    }
+    
+    if(insert.affectedRows > 0){
+        return resp.json({ message: ["Invoice created successfully!"], status:1, code:200 });
     }else{
         return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
     }
