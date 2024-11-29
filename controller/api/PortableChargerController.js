@@ -149,7 +149,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 <p>Thank you for choosing our portable charger service for your EV. We are pleased to confirm that your booking has been successfully received.</p> 
                 <p>Booking Details:</p>
                 Booking ID: ${bookingId}<br>
-                Date and Time of Service: ${moment(slot_date).format('D MMM, YYYY')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>
+                Date and Time of Service: ${moment(slot_date, 'YYYY MM DD').format('D MMM, YYYY')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>
                 <p>We look forward to serving you and providing a seamless EV charging experience.</p>                  
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
@@ -751,7 +751,7 @@ const chargerPickedUp = async (req, resp) => {
                 filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
             };
         
-            emailQueue.addEmail('data.rider_email', 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
+            emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
         }
 
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
@@ -761,8 +761,8 @@ const chargerPickedUp = async (req, resp) => {
 };
 
 export const userCancelPCBooking = asyncHandler(async (req, resp) => {
-    const { rider_id, booking_id, reason } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"]});
+    const { rider_id, booking_id, reason='' } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const checkOrder = await queryDB(`

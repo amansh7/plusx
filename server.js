@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 import { errorHandler } from './middleware/errorHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
-import { Server } from 'socket.io'
+import { Server } from 'socket.io';
 
 const app  = express();
 const PORT = process.env.PORT || 3333;

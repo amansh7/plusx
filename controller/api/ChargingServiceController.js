@@ -719,8 +719,8 @@ const workComplete = async (req, resp) => {
 };
 
 export const cancelValetBooking = asyncHandler(async (req, resp) => {
-    const { rider_id, booking_id, reason } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"], reason: ["required"] });
+    const { rider_id, booking_id, reason='' } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
     const checkOrder = await queryDB(`
