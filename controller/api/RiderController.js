@@ -176,7 +176,7 @@ export const forgotPassword = asyncHandler(async (req, resp) => {
         </html>`;
         emailQueue.addEmail(email, `Forgot Password Request - PlusX Electric App`, html);
     
-        resp.status(200).json({ status: 1, code: 200, message: "An email has been sent to your given email address. Kindly check your email" });
+        resp.status(200).json({ status: 1, code: 200, message: "Password Reset Request! We have sent the new password to your registered email." });
     } catch (error) {
         resp.status(500).json({ status: 0, code: 500, message: "Failed to send email." });
     }

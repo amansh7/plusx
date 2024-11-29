@@ -259,8 +259,8 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
         middlewares.push(handleFileUpload('rsa_images', ['profile-image'], 1));
     }
 
-    // middlewares.push(apiAuthorization);
-    // middlewares.push(apiRsaAuthentication);
+    middlewares.push(apiAuthorization);
+    middlewares.push(apiRsaAuthentication);
 
     router[method](path, ...middlewares, handler);
 });
