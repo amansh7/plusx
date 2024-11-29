@@ -61,12 +61,22 @@ export const podDeviceDetails = async (req, resp) => {
                 pod_id = ?`, 
             [pod_id]
         );
+        const [batteryData] = await db.execute(`
+            SELECT 
+                id, battery_id as batteryId, capacity
+            FROM 
+                pod_device_battery 
+            WHERE 
+                pod_id = ?`, 
+            [pod_id]
+        );
 
         return resp.json({
             status  : 1,
             code    : 200,
             message : ["POD Device Details fetched successfully!"],
             data    : chargerDetails[0],
+            batteryData 
         });
     } catch (error) {
         console.error('Error fetching device details:', error);
@@ -75,23 +85,32 @@ export const podDeviceDetails = async (req, resp) => {
 };
 
 export const addPodDevice = async (req, resp) => {
+    console.log(req.body);
+    // return resp.json({ status: 0, code: 422, message: 'Battery data must be in array format.' });
     try {
-        const { podId, podName, deviceId, device_model, capacity, charger, inverter, date_of_manufacturing, status = 1 } = req.body;
+        const { podId, podName, deviceId, device_model, charger, inverter, date_of_manufacturing, status = 1, battery_ids, capacities } = req.body;
         // Validation
         const { isValid, errors } = validateFields({ 
-            podId, podName, deviceId, device_model, capacity, charger, inverter, date_of_manufacturing
+            podId, podName, deviceId, device_model, charger, inverter, date_of_manufacturing, battery_ids, capacities
         }, {
             podId                 : ["required"],
             podName               : ["required"],
             deviceId              : ["required"],
             device_model          : ["required"],
-            capacity              : ["required"],
             charger               : ["required"],
             inverter              : ["required"],
-            date_of_manufacturing : ["required"]
+            date_of_manufacturing : ["required"],
+            battery_ids           : ["required"],
+            capacities            : ["required"]
         });
         if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
-    
+
+        if ( !Array.isArray( battery_ids ) || !Array.isArray( capacities )  ) {
+            return resp.json({ status: 0, code: 422, message: 'Battery data must be in array format.' });
+        }
+        if ( battery_ids.length !== capacities.length ) {
+            return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
+        }
         const [[isExist]] = await db.execute(`
             SELECT 
                 (SELECT COUNT(id) FROM pod_devices where device_id = ? ) AS check_device,
@@ -101,19 +120,27 @@ export const addPodDevice = async (req, resp) => {
             LIMIT 1
         `, [deviceId, podId]);
 
-        const err = [];
-        if( isExist.check_device ) err.push('Device Id is already registered.');
-        if( isExist.check_pod ) err.push('POD Id is already registered.');
-        if(err.length > 0) return resp.json({ status : 0, code : 422, message : err });
-
+        if( isExist.check_device ) return resp.json({ status : 0, code : 422, message : 'Device Id is already registered.'});
+        if( isExist.check_pod ) return resp.json({ status : 0, code : 422, message : 'POD Id is already registered.'});
+        
         let date_manufacturing    = date_of_manufacturing.split("-");
         const dateOfManufacturing = date_manufacturing[2] +'-'+ date_manufacturing[1] +'-'+date_manufacturing[0];
         
         const insert = await insertRecord('pod_devices', [
-            'pod_id', 'pod_name', 'device_id', 'design_model', 'capacity', 'charger', 'inverter', 'date_of_manufacturing', 'status'
+            'pod_id', 'pod_name', 'device_id', 'design_model', 'charger', 'inverter', 'date_of_manufacturing', 'status'
         ],[
-            podId, podName, deviceId, device_model, capacity, charger, inverter, dateOfManufacturing, status
+            podId, podName, deviceId, device_model, charger, inverter, dateOfManufacturing, status
         ]);
+
+        const values = []; const placeholders = [];
+        for (let i = 0; i < battery_ids.length; i++) {            
+           
+            values.push(podId, deviceId, battery_ids[i], capacities[i], 1);
+            placeholders.push('(?, ?, ?, ?, ?)');
+        }   
+        const query = `INSERT INTO pod_device_battery (pod_id, device_id, battery_id, capacity, status) VALUES ${placeholders.join(', ')}`;
+        await db.execute(query, values);
+
         return resp.json({
             code    : 200,
             message : insert.affectedRows > 0 ? ['POD Device added successfully!'] : ['Oops! Something went wrong. Please try again.'],
@@ -126,22 +153,31 @@ export const addPodDevice = async (req, resp) => {
 };
 
 export const editPodDevice = async (req, resp) => {
+    // console.log(req.body)
+    // return resp.json({ status : 0, code : 422, message : 'POD Id is not registered.'});
     try {
-        const { podId, podName, deviceId, device_model, capacity, charger, inverter, date_of_manufacturing } = req.body;
+        const { podId, podName, deviceId, device_model, charger, inverter, date_of_manufacturing, battery_ids, capacities } = req.body;
        
         const { isValid, errors } = validateFields({ 
-            podId, podName, deviceId, device_model, capacity, charger, inverter, date_of_manufacturing
+            podId, podName, deviceId, device_model, charger, inverter, date_of_manufacturing
         }, {
             podId                 : ["required"],
             podName               : ["required"],
             deviceId              : ["required"],
             device_model          : ["required"],
-            capacity              : ["required"],
             charger               : ["required"],
             inverter              : ["required"],
             date_of_manufacturing : ["required"]
         });
         if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
+
+        if ( !Array.isArray( battery_ids ) || !Array.isArray( capacities )  ) {
+            return resp.json({ status: 0, code: 422, message: 'Battery data must be in array format.' });
+        }
+        if ( battery_ids.length !== capacities.length ) {
+            return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
+        }
+
         const [[isExist]] = await db.execute(`
             SELECT 
                 (SELECT COUNT(id) FROM pod_devices where device_id = ? and pod_id != ? ) AS check_device,
@@ -165,12 +201,45 @@ export const editPodDevice = async (req, resp) => {
             device_id    : deviceId,
             pod_name     : podName,
             design_model : device_model,
-            capacity,
             charger,
             inverter,
             date_of_manufacturing : dateOfManufacturing,
         };
         const update = await updateRecord('pod_devices', updates, ['pod_id'], [podId]);
+
+        // update or delete record
+        let errMsg = [];
+        for (let i = 0; i < battery_ids.length; i++) {            
+           
+            const [isExist] = await db.execute(`
+                SELECT 
+                    id 
+                FROM 
+                    pod_device_battery
+                WHERE 
+                    battery_id = ? and pod_id = ? 
+                LIMIT 1
+            `, [battery_ids[i], podId]);
+            if( isExist.length > 0 ) {
+                
+                const [updateResult] = await db.execute(`UPDATE pod_device_battery SET capacity = ? 
+                    WHERE battery_id = ? AND pod_id = ?`, [ capacities[i], battery_ids[i], podId ]
+                );
+                if (updateResult.affectedRows === 0)
+                    errMsg.push(`Failed to update ${capacities[i]} for battery_ids ${battery_ids[i]}.`);
+
+            } else {
+               
+                const [insertResult] = await db.execute(`INSERT INTO pod_device_battery (pod_id, device_id, battery_id, capacity, status)  VALUES (?, ?, ?, ?, ?)`,
+                    [ podId, deviceId, battery_ids[i], capacities[i], 1 ]
+                );
+                if (insertResult.affectedRows === 0)
+                    errMsg.push(`Failed to add ${capacities[i]} for slot_date ${battery_ids[i]}.`);
+            }
+        }   
+        if (errMsg.length > 0) {
+            return resp.json({ status: 0, code: 400, message: errMsg.join(" | ") });
+        }
         return resp.json({
             status  : update.affectedRows > 0 ? 1 : 0,
             code    : 200,
@@ -560,7 +629,7 @@ export const podAreaAssignList = async (req, resp) => {
         resp.status(500).json({ message: 'Error fetching device lists' });
     }
 };
- 
+
 export const podDeviceStatusChange = async (req, resp) => {
     try {
         const { podId, deviceStatus } = req.body;
@@ -631,4 +700,35 @@ export const podAreaInputList = async (req, resp) => {
         resp.status(500).json({ message: 'Error fetching device lists' });
     }
 };
-// 
+export const podAreaBookingList = async (req, resp) => {
+    try {
+        const { podId, page_no, search_text = '' } = req.body;
+        const { isValid, errors } = validateFields(req.body, {podId: ["required"], page_no: ["required"]});
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const result = await getPaginatedData({
+            tableName        : 'portable_charger_booking as pcb',
+            columns          : 'pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CS") as start_time, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as end_time',
+            sortColumn       : 'pcb.updated_at',
+            sortOrder        : 'DESC',
+            page_no,
+            limit            : 10,
+            liveSearchFields : [],
+            liveSearchTexts  : [],
+            whereField       : ['pcb.pod_id'],
+            whereValue       : [podId]
+        });
+
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["POD Booking History List fetch successfully!"],
+            data       : result.data,
+            total_page : result.totalPage,
+            total      : result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching device list:', error);
+        resp.status(500).json({ message: 'Error fetching device lists' });
+    }
+};

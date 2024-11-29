@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 import { errorHandler } from './middleware/errorHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
-import { Server } from 'socket.io';
+// import { Server } from 'socket.io'
 
 const app  = express();
 const PORT = process.env.PORT || 3333;
@@ -55,7 +55,6 @@ app.use(express.json());
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-
 // Set EJS as the templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -72,26 +71,29 @@ app.get('/*', function (req, res) {
 
 app.use(errorHandler);
 
-const server =app.listen(PORT, ()=>{
+// const server =app.listen(PORT, ()=>{
+//     console.log(`Server is running on port ${PORT}`);
+// });
+app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);
 });
 
-const io = new Server(server, {
-    cors: corsOptions // Reuse the corsOptions object here
-  });
+// const io = new Server(server, {
+//     cors: corsOptions // Reuse the corsOptions object here
+// });
 
-io.on('connection', (socket) => {
-    console.log('A user connected:', socket.id);
+// io.on('connection', (socket) => {
+//     console.log('A user connected:', socket.id);
   
-    // Send a notification event
-    setInterval(() => {
-      socket.emit('desktop-notification', {
-        title: 'Reminder',
-        message: `Hello, this is a notification at ${new Date().toLocaleTimeString()}`,
-      });
-    }, 300000); // Every 5 min 
+//     // Send a notification event
+//     setInterval(() => {
+//       socket.emit('desktop-notification', {
+//         title: 'Reminder',
+//         message: `Hello, this is a notification at ${new Date().toLocaleTimeString()}`,
+//       });
+//     }, 300000); // Every 5 min 
   
-    socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.id);
-    });
-  });
+//     socket.on('disconnect', () => {
+//       console.log('User disconnected:', socket.id);
+//     });
+// });
