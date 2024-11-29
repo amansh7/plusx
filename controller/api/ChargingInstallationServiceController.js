@@ -5,8 +5,7 @@ import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import { asyncHandler, createNotification, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
 
 export const serviceRequest = asyncHandler(async (req, resp) => {
-    const {
-        rider_id, name, email, country_code, contact_no, service_type, address, latitude, longitude, charger_for, no_of_charger, description,
+    const { rider_id, name, email, country_code, contact_no, service_type, address, latitude, longitude, charger_for, no_of_charger, description,
         company_name='', resident_type='', vehicle_model='', region_specification=''
     } = mergeParam(req);
 
@@ -36,23 +35,27 @@ export const serviceRequest = asyncHandler(async (req, resp) => {
         
         const href = 'charging_installation_service/' + requestId;
         const heading = 'Order Created!';
-        const desc = `Your request for charging installation service at home order no. ${requestId} has been placed.`;
-        createNotification(heading, desc, 'Charging Installation Service', 'Rider', 'Admin','', rider_id, href);
-        pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
+        const desc = `New Booking: EV Charger Installation. ID: ${requestId}, User: ${name}`;
+        createNotification(heading, desc, 'Charging Installation Service', 'Admin', 'Rider',rider_id, '', href);
 
         const now = new Date();
         const formattedDateTime = now.toISOString().replace('T', ' ').substring(0, 19);
+        
         const htmlUser = `<html>
             <body>
                 <h4>Dear ${name},</h4>
-                <p>Thank you for using the PlusX Electric App for Charging Installation service. We have successfully received your booking request. Below are the details of your roadside assistance booking:</p> <br/>
-                <p>Booking Reference: ${requestId}</p>
-                <p>Date & Time of Request: ${formattedDateTime}</p> 
-                <p>Address: ${address}</p>                         
-                <p>Service Type: ${service_type}</p> <br/>
-                <p> Regards,<br/> PlusX Electric App </p>
+                <p>Thank you for booking our Charger Installation service. We are pleased to confirm that we have successfully received your booking.</p>
+                <p>Booking Details:</p>
+                Service: EV Charger Installation</br>
+                Booking ID: ${requestId}</br>
+                <p>Our team will get in touch with you shortly to coordinate the installation and ensure a smooth experience.</p>
+                <p>If you have any questions or need assistance, feel free to reach out to us. We're here to help!</p>
+                <p>Thank you for choosing PlusX Electric. We look forward to serving you soon.</p>
+                <p>Best Regards,<br/>The PlusX Electric Team </p>
             </body>
         </html>`;
+        emailQueue.addEmail(email, 'PlusX Electric App: EV Charger Installation Booking Confirmation', htmlUser);
+
         const htmlAdmin = `<html>
             <body>
                 <h4>Dear Admin,</h4>
@@ -63,14 +66,12 @@ export const serviceRequest = asyncHandler(async (req, resp) => {
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
         </html>`;
-
-        emailQueue.addEmail(email, 'Your Charging Installation Booking Confirmation - PlusX Electric App', htmlUser);
         emailQueue.addEmail('admin@plusxelectric.com', `Charging Installation Booking - ${requestId}`, htmlAdmin);
 
         return resp.json({
             status: 1, 
             code: 200, 
-            message: ['Your request has been received. You will hear from us shortly.'],
+            message: ['Thank you! We have received your booking for EV Charger Installation. Our team will get in touch with you soon.'],
             service_id: requestId,
             rsa_id: ''
         });       
