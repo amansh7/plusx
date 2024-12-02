@@ -100,7 +100,7 @@ export const requestService = asyncHandler(async (req, resp) => {
                 <li>Address : ${pickup_address}</li>
                 </ul>
                 <p>We look forward to serving you and providing a seamless EV experience.</p>   
-                <p> Regards,<br/> PlusX Electric App Team </p>
+                <p>Best Regards,<br/> PlusX Electric App Team </p>
             </body>
         </html>`;
         emailQueue.addEmail(rider.rider_email, 'PlusX Electric App: Booking Confirmation for Your EV Pickup and Drop Off Service', htmlUser);
@@ -545,8 +545,8 @@ const reachedLocation = async (req, resp) => {
         await updateRecord('charging_service', {order_status: 'RS', rsa_id}, ['request_id'], [booking_id]);
 
         const href = `charging_service/${booking_id}`;
-        const title = 'Reached Charging Spot!';
-        const message = `EV Reached Charging Spot`;
+        const title = 'EV Reached Charging Spot';
+        const message = `Your EV has reached the charging station.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
@@ -724,7 +724,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
     
     const checkOrder = await queryDB(`
         SELECT 
-            name, rsa_id, slot_date_time,
+            name, rsa_id, DATE_FORMAT(slot_date_time}, '%Y-%m-%d %H:%i:%s') AS slot_date_time,
             (select cancel_reason from charging_service_history as csh where csh.service_id = cs.request_id ) as cancel_reason, 
             concat( country_code, "-", contact_no) as contact_no, 
             (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = cs.rider_id) AS rider_email,
@@ -760,34 +760,30 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
         await db.execute(`DELETE FROM charging_service_assign WHERE rider_id=? AND order_id = ?`, [rider_id, booking_id]);
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
     }
-    const slot_date_time = moment(checkOrder.slot_date_time).format('YYYY-MM-DD');
+
     const html = `<html>
         <body>
-            <h4>Dear ${checkOrder.user_name},</h4>
+            <h4>Dear ${checkOrder.rider_name},</h4>
             <p>We wanted to inform you that your booking for the EV Pickup and Drop Off charging service has been successfully canceled. Below are the details of your canceled booking:</p>
-            Booking ID    : ${booking_id}</br>
-            Booking Date : ${slot_date_time}</br>
+            Booking ID    : ${booking_id}<br>
+            Booking Date : ${moment(checkOrder.slot_date, 'YYYY-MM-DD HH:mm:ss').format('D MMM, YYYY h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
             <p>Thank you for using PlusX Electric. We hope to serve you again soon.</p>
             <p>Best regards,<br/>The PlusX Electric App Team </p>
         </body>
     </html>`;
-
     emailQueue.addEmail(checkOrder.rider_email, `PlusX Electric App: Booking Cancellation`, html);
 
     const adminHtml = `<html>
         <body>
             <h4>Dear Admin,</h4>
             <p>This is to notify you that a customer has canceled their PlusX Electric Pickup and Drop-Off EV Charging Service booking. Please find the details below:</p>
-
             <p>Booking Details:</p>
-
-            Name         : ${checkOrder.name}</br>
-            Contact      : ${checkOrder.contact_no}</br>
-            Booking ID   : ${booking_id}</br>
-            Booking Date : ${checkOrder.slot_date_time}</br> 
-            Reason       : ${checkOrder.cancel_reason}</br>
-
+            Name         : ${checkOrder.name}<br>
+            Contact      : ${checkOrder.contact_no}<br>
+            Booking ID   : ${booking_id}<br>
+            Booking Date : ${checkOrder.slot_date_time}<br> 
+            Reason       : ${checkOrder.cancel_reason}<br>
             <p>Thank you,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
