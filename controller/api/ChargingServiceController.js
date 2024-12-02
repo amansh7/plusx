@@ -724,9 +724,8 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
     
     const checkOrder = await queryDB(`
         SELECT 
-            name, rsa_id, DATE_FORMAT(slot_date_time}, '%Y-%m-%d %H:%i:%s') AS slot_date_time,
-            (select cancel_reason from charging_service_history as csh where csh.service_id = cs.request_id ) as cancel_reason, 
-            concat( country_code, "-", contact_no) as contact_no, 
+            name, rsa_id, DATE_FORMAT(slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time,
+            CONCAT( country_code, "-", contact_no) as contact_no, 
             (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = cs.rider_id) AS rider_email,
             (SELECT rd.rider_name FROM riders AS rd WHERE rd.rider_id = cs.rider_id) AS rider_name,
             (SELECT fcm_token FROM riders WHERE rider_id = cs.rider_id) AS fcm_token,
