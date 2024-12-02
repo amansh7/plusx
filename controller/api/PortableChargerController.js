@@ -79,12 +79,12 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         longitude       : ["required"],
         slot_date       : ["required"],
         slot_time       : ["required"],
-    });
+    });   
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const conn = await startTransaction();
     try{
-        const fSlotDate  = moment(slot_date, 'DD-MM-YYYY').format('YYYY-MM-DD');
+        const fSlotDate  = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
         const currDate = moment().format('YYYY-MM-DD');
 
         const rider = await queryDB(` SELECT fcm_token, rider_name, rider_email,
@@ -678,7 +678,7 @@ const chargingComplete = async (req, resp) => {
 const chargerPickedUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-    const imgName = req.files.image[0].filename; 
+    const imgName = req.files['image'] ? req.files.image[0].filename : ''; 
     const invoiceId = booking_id.replace('PCB', 'INVPC');
 
     const checkOrder = await queryDB(`
@@ -713,7 +713,7 @@ const chargerPickedUp = async (req, resp) => {
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
         // await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
 
-        const data = await queryDB(`
+        /* const data = await queryDB(`
             SELECT 
                 pci.invoice_id, pci.amount, pci.invoice_date, pcb.booking_id,
                 CASE WHEN pci.currency IS NOT NULL THEN pci.currency ELSE 'AED' END AS currency, 
@@ -736,9 +736,9 @@ const chargerPickedUp = async (req, resp) => {
         const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
         const filename = `${invoiceId}-invoice.pdf`;
         const savePdfDir = 'portable-charger-invoice';
-
+        console.log('data', data);
         const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
-        
+        console.log('pdf', pdf);
         if(pdf.success){
             const html = `<html>
                 <body>
@@ -752,7 +752,7 @@ const chargerPickedUp = async (req, resp) => {
             };
         
             emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
-        }
+        } */
 
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
     } else {
@@ -767,7 +767,8 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
 
     const checkOrder = await queryDB(`
         SELECT 
-            rsa_id, address, slot_date, slot_time, user_name, 
+            rsa_id, address, slot_time, user_name, 
+            DATE_FORMAT(slot_date, '%Y-%m-%d') AS slot_date,
             concat( country_code, "-", contact_no) as contact_no, 
             (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = pcb.rider_id) AS rider_email,
             (SELECT rd.rider_name FROM riders AS rd WHERE rd.rider_id = pcb.rider_id) AS rider_name,
@@ -805,8 +806,8 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
             <p>We wanted to inform you that your booking for the portable charger has been successfully canceled. Below are the details of your canceled booking:</p>
-            Booking ID    : ${booking_id}</br>
-            Date and Time : ${checkOrder.slot_date} - ${checkOrder.slot_time}
+            Booking ID    : ${booking_id}<br>
+            Date and Time : ${moment(checkOrder.slot_date, 'YYYY MM DD').format('D MMM, YYYY')} ${moment(checkOrder.slot_time, 'HH:mm').format('h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
             <p>Thank you for using PlusX Electric. We hope to serve you again soon.</p>
             <p>Best regards,<br/>The PlusX Electric App Team </p>
