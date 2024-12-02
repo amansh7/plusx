@@ -312,38 +312,39 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
         const clickActionParts = clickAction.split("/");
         
         const notification = {
-            title: title,
-            body: body,
+          title: title,
+          body: body,
         };
         const data = {
-            title: title,
-            body: body,
-            click_action: clickActionParts[0],
-            refrence_id: clickActionParts[1],
+          title: title,
+          body: body,
+          click_action: clickActionParts[0],
+          refrence_id: clickActionParts[1],
         };
+        
         const message = {
-            message: {
-                token: deviceToken,
-                notification: notification,
-                data: data,
-                apns: {
-                    payload: {
-                        aps: {
-                            sound: "default",
-                        },
-                    },
+          message: {
+            token: deviceToken,
+            notification: notification,
+            data: data,
+            apns: {
+              payload: {
+                aps: {
+                  sound: "default",
                 },
-                android: {
-                    priority: "high",
-                    notification: {
-                        click_action: clickActionParts[0],
-                    },
-                },
+              },
             },
-        };
+            android: {
+              priority: "high",
+              notification: {
+                click_action: clickActionParts[0],
+              },
+            },
+          },
+        };        
+
         const projectId = (fcmType === 'RSAFCM') ? 'plusx-support' : 'plusx-electric-27f64';
         const url       = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
-
         const response = await axios.post(url, message, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
