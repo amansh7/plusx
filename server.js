@@ -13,6 +13,7 @@ dotenv.config();
 import { Server } from 'socket.io'
 
 const app  = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3333;
 // const io = new Server(server);
 
@@ -37,7 +38,6 @@ const corsOptions = {
         'http://192.168.1.38:3434/',
         'http://localhost:1112',
         'http://localhost:8000/',
-        'https://plusx.shunyaekai.com/',
         'https://plusxmail.shunyaekai.com/',
         'http://localhost:1113',
         'https://plusx.shunyaekai.com/'

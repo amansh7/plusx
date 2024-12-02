@@ -145,7 +145,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
         const htmlUser = `<html>
             <body>
-                <h4>Dear Admin,</h4>
+                <h4>Dear ${user_name},</h4>
                 <p>Thank you for choosing our portable charger service for your EV. We are pleased to confirm that your booking has been successfully received.</p> 
                 <p>Booking Details:</p>
                 Booking ID: ${bookingId}<br>
