@@ -345,11 +345,11 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
 
         const projectId = (fcmType === 'RSAFCM') ? 'plusx-support' : 'plusx-electric-27f64';
         const url       = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
-        const response = await axios.post(url, message, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
+        const response  = await axios.post(url, message, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
         });
         // console.log('Notification sent successfully:', message);
     } catch (error) {

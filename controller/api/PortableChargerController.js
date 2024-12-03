@@ -41,6 +41,25 @@ export const chargerList = asyncHandler(async (req, resp) => {
     });
 });
 
+export const getActivePodList = asyncHandler(async (req, resp) => {
+    const { rider_id, page_no } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const result = await getPaginatedData({
+        tableName: 'pod_devices',
+        columns: 'pod_id, pod_name, design_model',
+        sortColumn: 'id',
+        sortOrder: 'DESC',
+        page_no,
+        limit: 10,
+        whereField: ['status'],
+        whereValue: ['1']
+    });
+
+    return resp.json({status:1, code:200, message:["POD List fetch successfully!"], data: result.data });
+});
+
 export const getPcSlotList = asyncHandler(async (req, resp) => {
     const { slot_date } = mergeParam(req);
     if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
@@ -149,7 +168,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 <p>Thank you for choosing our portable charger service for your EV. We are pleased to confirm that your booking has been successfully received.</p> 
                 <p>Booking Details:</p>
                 Booking ID: ${bookingId}<br>
-                Date and Time of Service: ${moment(slot_date, 'YYYY MM DD').format('D MMM, YYYY')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>
+                Date and Time of Service: ${moment(slot_date, 'YYYY MM DD').format('D MMM, YYYY,')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>
                 <p>We look forward to serving you and providing a seamless EV charging experience.</p>                  
                 <p> Best regards,<br/> PlusX Electric App </p>
             </body>
@@ -243,7 +262,7 @@ export const chargerBookingDetail = asyncHandler(async (req, resp) => {
 
     const booking = await queryDB(`SELECT portable_charger_booking.*, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
 
-    if (booking.status == 'PU') {
+    if (booking && booking.status == 'PU') {
         const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
         booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
     }
@@ -379,7 +398,7 @@ export const rsaBookingStage = asyncHandler(async (req, resp) => {
 });
 
 export const bookingAction = asyncHandler(async (req, resp) => {  
-    const {rsa_id, booking_id, reason, latitude, longitude, booking_status } = req.body;
+    const {rsa_id, booking_id, reason, latitude, longitude, booking_status, pod_id } = req.body;
     let validationRules = {
         rsa_id         : ["required"], 
         booking_id     : ["required"], 
@@ -388,7 +407,8 @@ export const bookingAction = asyncHandler(async (req, resp) => {
         booking_status : ["required"],
     };
 
-    if (booking_status == "C") validationRules = { ...validationRules, reason  : ["required"] };
+    if (booking_status == "C")  validationRules = { ...validationRules, reason  : ["required"] };
+    // if (booking_status == "CS") validationRules = { ...validationRules, pod_id  : ["required"] };
 
     const { isValid, errors } = validateFields(req.body, validationRules);
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -805,9 +825,9 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
-            <p>We wanted to inform you that your booking for the portable charger has been successfully cancelled. Below are the details of your cancelled booking:</p>
+            <p>We would like to inform you that your booking for the portable charger has been successfully cancelled. Below are the details of your cancelled booking:</p>
             Booking ID    : ${booking_id}<br>
-            Date and Time : ${moment(checkOrder.slot_date, 'YYYY MM DD').format('D MMM, YYYY')} ${moment(checkOrder.slot_time, 'HH:mm').format('h:mm A')}
+            Date and Time : ${moment(checkOrder.slot_date, 'YYYY MM DD').format('D MMM, YYYY,')} ${moment(checkOrder.slot_time, 'HH:mm').format('h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
             <p>Thank you for using PlusX Electric. We hope to serve you again soon.</p>
             <p>Best regards,<br/>The PlusX Electric App Team </p>
