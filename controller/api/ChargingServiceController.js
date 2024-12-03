@@ -751,7 +751,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
     
     const href    = `charging_service/${booking_id}`;
     const title   = 'Valet Service Cancel!';
-    const message = `Pickup and Drop Off EV Charging : Booking ID ${booking_id} - ${checkOrder.rider_name} canceled the booking.`;
+    const message = `Pickup and Drop Off EV Charging : Booking ID ${booking_id} - ${checkOrder.rider_name} cancelled the booking.`;
     await createNotification(title, message, 'Charging Service', 'Admin', 'Rider', rider_id, '', href);
 
 
@@ -763,7 +763,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.rider_name},</h4>
-            <p>We wanted to inform you that your booking for the EV Pickup and Drop Off charging service has been successfully canceled. Below are the details of your canceled booking:</p>
+            <p>We wanted to inform you that your booking for the EV Pickup and Drop Off charging service has been successfully cancelled. Below are the details of your cancelled booking:</p>
             Booking ID    : ${booking_id}<br>
             Booking Date : ${moment(checkOrder.slot_date, 'YYYY-MM-DD HH:mm:ss').format('D MMM, YYYY h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>

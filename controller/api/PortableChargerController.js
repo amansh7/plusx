@@ -794,7 +794,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
 
     const href    = `portable_charger_booking/${booking_id}`;
     const title   = 'Portable Charger Cancel!';
-    const message = `YPortable Charger: Booking ID ${booking_id} - ${checkOrder.rider_name} canceled the booking.`;
+    const message = `YPortable Charger: Booking ID ${booking_id} - ${checkOrder.rider_name} cancelled the booking.`;
     await createNotification(title, message, 'Portable Charging', 'Admin', 'Rider',  rider_id, '', href);
 
     if(checkOrder.rsa_id) {
@@ -805,7 +805,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
-            <p>We wanted to inform you that your booking for the portable charger has been successfully canceled. Below are the details of your canceled booking:</p>
+            <p>We wanted to inform you that your booking for the portable charger has been successfully cancelled. Below are the details of your cancelled booking:</p>
             Booking ID    : ${booking_id}<br>
             Date and Time : ${moment(checkOrder.slot_date, 'YYYY MM DD').format('D MMM, YYYY')} ${moment(checkOrder.slot_time, 'HH:mm').format('h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
