@@ -319,7 +319,6 @@ export const invoiceList = asyncHandler(async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
     });
 });
-
 export const invoiceDetails = asyncHandler(async (req, resp) => {
     const {rider_id, invoice_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], invoice_id: ["required"]});
@@ -348,7 +347,7 @@ export const invoiceDetails = asyncHandler(async (req, resp) => {
     });
 });
 
-/* RSA */
+/* RSA - Booking Action */
 export const rsaBookingStage = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"]});
@@ -453,7 +452,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
 });
 
-// booking action helper
+/* POD booking action helper */
 const acceptBooking = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
 
@@ -760,6 +759,7 @@ const chargerPickedUp = async (req, resp) => {
     }
 };
 
+/* User Cancel Booking */
 export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     const { rider_id, booking_id, reason='' } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"] });

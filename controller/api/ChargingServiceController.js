@@ -254,7 +254,6 @@ export const getInvoiceList = asyncHandler(async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/pick-drop-invoice/`,
     });
 });
-
 export const getInvoiceDetail = asyncHandler(async (req, resp) => {
     const {rider_id, invoice_id } = mergeparam(req);
     const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], invoice_id: ["required"]});
@@ -281,7 +280,7 @@ export const getInvoiceDetail = asyncHandler(async (req, resp) => {
     });
 });
 
-/* RSA */
+/* RSA - Booking Action */
 export const getRsaBookingStage = asyncHandler(async (req, resp) => {
     const {rsa_id, booking_id } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], booking_id: ["required"]});
@@ -384,7 +383,7 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
 });
 
-// cs booking action helper
+/* CS booking action helper */
 const acceptBooking = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, booking_status } = req.body;
 
@@ -717,6 +716,7 @@ const workComplete = async (req, resp) => {
     }
 };
 
+/* User Booking Cancel */
 export const cancelValetBooking = asyncHandler(async (req, resp) => {
     const { rider_id, booking_id, reason='' } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"] });
@@ -765,7 +765,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
             <h4>Dear ${checkOrder.rider_name},</h4>
             <p>We wanted to inform you that your booking for the EV Pickup and Drop Off charging service has been successfully cancelled. Below are the details of your cancelled booking:</p>
             Booking ID    : ${booking_id}<br>
-            Booking Date : ${moment(checkOrder.slot_date, 'YYYY-MM-DD HH:mm:ss').format('D MMM, YYYY h:mm A')}
+            Date and Time : ${moment(checkOrder.slot_date, 'YYYY-MM-DD HH:mm:ss').format('D MMM, YYYY h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
             <p>Thank you for using PlusX Electric. We hope to serve you again soon.</p>
             <p>Best regards,<br/>The PlusX Electric App Team </p>
