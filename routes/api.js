@@ -31,7 +31,8 @@ import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, all
     updateSellVehicleImg
 } from '../controller/api/VehicleController.js';
 import { 
-    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking
+    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking,
+    getActivePodList
 } from '../controller/api/PortableChargerController.js';
 import { 
     getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking, cancelValetBooking
@@ -56,6 +57,9 @@ const authzRoutes = [
     /* Dynamic List */
     {method: 'get', path: '/location-list', handler: locationList},
     {method: 'get', path: '/location-add', handler: locationAdd},
+
+    /* POD */
+    { method: 'get', path: '/pod-list',  handler: getActivePodList },
     
     /* Vehicle Routes */
     { method: 'get',  path: '/location-area-list',         handler: areaList },

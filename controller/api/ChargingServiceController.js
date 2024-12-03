@@ -763,9 +763,9 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
     const html = `<html>
         <body>
             <h4>Dear ${checkOrder.rider_name},</h4>
-            <p>We wanted to inform you that your booking for the EV Pickup and Drop Off charging service has been successfully cancelled. Below are the details of your cancelled booking:</p>
+            <p>We would like to inform you that your booking for the EV Pickup and Drop Off charging service has been successfully cancelled. Below are the details of your cancelled booking:</p>
             Booking ID    : ${booking_id}<br>
-            Date and Time : ${moment(checkOrder.slot_date, 'YYYY-MM-DD HH:mm:ss').format('D MMM, YYYY h:mm A')}
+            Date and Time : ${moment(checkOrder.slot_date_time, 'YYYY-MM-DD HH:mm:ss').format('D MMM, YYYY, h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
             <p>Thank you for using PlusX Electric. We hope to serve you again soon.</p>
             <p>Best regards,<br/>The PlusX Electric App Team </p>
