@@ -336,9 +336,9 @@ export const pushNotification = async ( deviceToken, title, body, fcmType, click
             },
             android: {
               priority: "high",
-              notification: {
-                click_action: clickActionParts[0],
-              },
+              // notification: {
+              //   click_action: clickActionParts[0],
+              // },
             },
           },
         };        
