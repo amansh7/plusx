@@ -39,6 +39,7 @@ const corsOptions = {
         'http://localhost:1112',
         'http://localhost:8000/',
         'https://plusxmail.shunyaekai.com/',
+        'http://supro.shunyaekai.tech:8801/',
         'http://localhost:1113',
         'https://plusx.shunyaekai.com/'
     ],

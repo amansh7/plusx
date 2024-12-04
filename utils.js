@@ -434,7 +434,7 @@ export const generatePdf = async (templatePath, invoiceData, fileName, savePdfDi
     // const serverUrl = `https://plusx.shunyaekai.com/web/upload-pdf`;
     const serverUrl = `${req.protocol}://${req.get('host')}/web/upload-pdf`;       
 
-    const response = await axios.post('https://plusxmail.shunyaekai.com/pdf-api.php', {
+    const response = await axios.post('http://supro.shunyaekai.tech:8801/pdf-api.php', {
       html,
       fileName,
       serverUrl,
