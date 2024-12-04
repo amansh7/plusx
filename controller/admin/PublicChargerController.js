@@ -105,8 +105,10 @@ export const stationDetail = asyncHandler(async (req, resp) => {
     //     galleryData[row.id] = row.image_name;
     // });
 
-    [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC LIMIT 5`, [station_id]);
+    [gallery] = await db.execute(`SELECT id, image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC `, [station_id]);
     const imgName = gallery.map(row => row.image_name);
+    const imgId = gallery.map(row => row.id);
+    // const imgName = gallery.map(row => ({ id: row.id, image_name: row.image_name }));
     const chargingFor = ['All EV`s', 'Tesla', 'BYD', 'Polestar', 'GMC', 'Porsche', 'Volvo', 'Audi', 'Chevrolet', 'BMW', 'Mercedes', 'Zeekr', 'Volkswagen', 'HiPhi', 'Kia', 'Hyundai', 'Lotus', 'Ford', 'Rabdan'];
     const chargerType = ['Level 2', 'Fast Charger', 'Super Charger'];
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' ];
@@ -129,6 +131,7 @@ export const stationDetail = asyncHandler(async (req, resp) => {
         data: station,
         // gallery_data: galleryData,
         gallery_data: imgName,
+        gallery_id: imgId,
         result,
         base_url: `${req.protocol}://${req.get('host')}/uploads/charging-station-images/`
     });
@@ -279,5 +282,5 @@ export const deletePublicChargerGallery = asyncHandler(async (req, resp) => {
         await db.execute('DELETE FROM public_charging_station_gallery WHERE id = ?', [gallery_id]);
     }
 
-    return resp.json({status: 1, message: "Gallery Img deleted successfully"});
+    return resp.json({status: 1, code: 200,  message: "Gallery image deleted successfully"});
 });

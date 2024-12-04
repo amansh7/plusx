@@ -91,7 +91,7 @@ const adminRoutes = [
     { method: 'post',   path: '/public-charger-add-station',     handler: addPublicCharger },
     { method: 'post',   path: '/public-charger-edit-station',    handler: editPublicCharger },
     { method: 'post', path: '/public-chargers-delete',         handler: deletePublicCharger },
-    { method: 'delete', path: '/chargers-gallery-del',           handler: deletePublicChargerGallery },
+    { method: 'post', path: '/chargers-gallery-del',           handler: deletePublicChargerGallery },
 
     /* Charger Installation */
     { method: 'post', path: '/charger-installation-list',    handler: chargerInstallationList },
