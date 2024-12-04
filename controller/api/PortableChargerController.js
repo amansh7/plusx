@@ -445,7 +445,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
     }
 
     const insert = await db.execute(
-        'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id ) VALUES (?, ?, "C", ?)',
+        'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id) VALUES (?, ?, "C", ?)',
         [booking_id, checkOrder.rider_id, rsa_id ]
     );
     if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
@@ -457,7 +457,6 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
     const title   = 'Booking Rejected';
     const message = `Driver has rejected the portable charger booking with booking id: ${booking_id}`;
     await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-    await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
     const html = `<html>
         <body>

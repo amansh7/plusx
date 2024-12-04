@@ -368,7 +368,6 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
     const title = 'Booking Rejected';
     const message = `Driver has rejected the valet service booking with booking id: ${booking_id}`;
     await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
-    await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
     const html = `<html>
         <body>

@@ -13,6 +13,7 @@ router.get('web-h', async (req, resp) => {
 
 router.post('/upload-pdf', (req, res) => {
     const { file, fileName, dirName } = req.body;
+    console.log(req.body);
 
     if (!file || !fileName) {
         return res.status(400).json({ success: false, error: 'Missing file or fileName' });

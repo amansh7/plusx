@@ -46,8 +46,8 @@ export const serviceRequest = asyncHandler(async (req, resp) => {
                 <h4>Dear ${name},</h4>
                 <p>Thank you for booking our Charger Installation service. We are pleased to confirm that we have successfully received your booking.</p>
                 <p>Booking Details:</p>
-                Service: EV Charger Installation</br>
-                Booking ID: ${requestId}</br>
+                Service: EV Charger Installation<br>
+                Booking ID: ${requestId}
                 <p>Our team will get in touch with you shortly to coordinate the installation and ensure a smooth experience.</p>
                 <p>If you have any questions or need assistance, feel free to reach out to us. We're here to help!</p>
                 <p>Thank you for choosing PlusX Electric. We look forward to serving you soon.</p>
