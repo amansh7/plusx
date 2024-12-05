@@ -70,7 +70,7 @@ export const generateOTP = (length) => {
 };
 
 /* Sore & Retrieve OTP from Cache Memory */
-const otpCache = new NodeCache({ stdTTL: 60 });
+const otpCache = new NodeCache({ stdTTL: 240 });
 export const storeOTP = (key, otp) => {
   otpCache.set(key, otp);
 };

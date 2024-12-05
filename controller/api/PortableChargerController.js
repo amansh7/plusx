@@ -42,22 +42,18 @@ export const chargerList = asyncHandler(async (req, resp) => {
 });
 
 export const getActivePodList = asyncHandler(async (req, resp) => {
-    const { rider_id, page_no } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
+    const { latitude, longitude } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {latitude: ["required"], longitude: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const result = await getPaginatedData({
-        tableName: 'pod_devices',
-        columns: 'pod_id, pod_name, design_model',
-        sortColumn: 'id',
-        sortOrder: 'DESC',
-        page_no,
-        limit: 10,
-        whereField: ['status'],
-        whereValue: ['1']
-    });
+    const [result] = await db.execute(`SELECT 
+        pod_id, pod_name, design_model,
+        (6367 * ACOS(COS(RADIANS(?)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(latitude)))) AS distance 
+        FROM pod_devices
+        ORDER BY distance
+    `, [latitude, longitude, latitude]);
 
-    return resp.json({status:1, code:200, message:["POD List fetch successfully!"], data: result.data });
+    return resp.json({status:1, code:200, message:["POD List fetch successfully!"], data: result });
 });
 
 export const getPcSlotList = asyncHandler(async (req, resp) => {
@@ -761,7 +757,9 @@ const chargerPickedUp = async (req, resp) => {
             const html = `<html>
                 <body>
                     <h4>Dear ${data.rider_name}</h4>
-                    <p>Thank you for choosing PlusX Electric's Portable Charger. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
+                    <p>We hope you are doing well!</p>
+                    <p>Thank you for choosing our Portable EV Charger service for your EV. We are pleased to inform you that your booking has been successfully completed, and the details of your invoice are attached.</p>
+                    <p>We appreciate your trust in PlusX Electric and look forward to serving you again.</p>
                     <p> Regards,<br/> PlusX Electric App Team </p>
                 </body>
             </html>`;
@@ -769,7 +767,7 @@ const chargerPickedUp = async (req, resp) => {
                 filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
             };
         
-            emailQueue.addEmail(data.rider_email, 'Your Portable Charger Booking Invoice - PlusX Electric App', html, attachment);
+            emailQueue.addEmail(data.rider_email, 'PlusX Electric: Invoice for Your Portable EV Charger Service', html, attachment);
         } */
 
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
