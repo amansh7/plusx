@@ -699,14 +699,16 @@ const workComplete = async (req, resp) => {
             const html = `<html>
                 <body>
                     <h4>Dear ${data.name}</h4>
-                    <p>Thank you for choosing PlusX Electric's Valet Charging service. We are pleased to inform you that your booking has been successfully completed. Please find your invoice attached to this email.</p> 
+                    <p>We hope you are doing well!</p>
+                    <p>Thank you for choosing our EV pickup and drop-off service for your vehicle. We are pleased to inform you that your booking has been successfully completed, and the details of your invoice are attached.</p>
+                    <p>We appreciate your trust in PlusX Electric and look forward to serving you again.</p>
                     <p>Regards,<br/> PlusX Electric App Team </p>
                 </body>
             </html>`;
             const attachment = {
                 filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
             }
-            emailQueue.addEmail(data.rider_email, 'Your Pick & Drop Booking Invoice - PlusX Electric App', html, attachment);
+            emailQueue.addEmail(data.rider_email, 'PlusX Electric: Invoice for Your EV Pickup and Drop-off Service', html, attachment);
         }
 
         return resp.json({ message: ['Work completed! successfully!'], status: 1, code: 200 });
