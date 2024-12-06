@@ -31,7 +31,7 @@ export const authenticateAdmin = async (req, resp, next) => {
   
   const userId = req.body.userId;
   const email  = req.body.email
-  const token  = req.headers["access_token"];
+  const token  = req.headers["accesstoken"];
 
   if (!token) {
     return resp.status(401).json({ message: 'Access token is missing' });
