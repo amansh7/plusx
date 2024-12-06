@@ -42,16 +42,27 @@ export const chargerList = asyncHandler(async (req, resp) => {
 });
 
 export const getActivePodList = asyncHandler(async (req, resp) => {
-    const { latitude, longitude } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {latitude: ["required"], longitude: ["required"]});
+    const { booking_id, booking_type } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), { booking_id: ["required"], booking_type: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if (!['PCB', 'CS'].includes(booking_type)) return resp.json({status:0, code:422, message:"Booking type should be PCB or CS"});
+
+    let query;
+    if(booking_type === 'PCB'){
+        query = `SELECT latitude AS lat, longitude AS lon FROM portable_charger_booking WHERE booking_id = ?`;
+    }else if(booking_type === 'CS'){
+        query = `SELECT pickup_latitude AS lat, pickup_longitude AS lon FROM charging_service WHERE request_id = ?`;
+    }
+
+    const data = await queryDB(query, [booking_id]);
+    if(!data) return resp.json({status:0, code:422, message:"Invalid id."});
 
     const [result] = await db.execute(`SELECT 
         pod_id, pod_name, design_model,
         (6367 * ACOS(COS(RADIANS(?)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(latitude)))) AS distance 
         FROM pod_devices
         ORDER BY distance
-    `, [latitude, longitude, latitude]);
+    `, [data.lat, data.lon, data.lat]);
 
     return resp.json({status:1, code:200, message:["POD List fetch successfully!"], data: result });
 });
