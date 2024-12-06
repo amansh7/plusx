@@ -10,7 +10,8 @@ import { fileURLToPath } from 'url';
 import { errorHandler } from './middleware/errorHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
-import { Server } from 'socket.io'
+import { Server } from 'socket.io';
+import logger from './logger.js';
 
 const app  = express();
 app.set('trust proxy', true);
@@ -72,7 +73,7 @@ app.get('/*', function (req, res) {
 
 app.use(errorHandler);
 
-const server =app.listen(PORT, ()=>{
+const server = app.listen(PORT, ()=>{
     console.log(`Server is running on port ${PORT}`);
 });
 
