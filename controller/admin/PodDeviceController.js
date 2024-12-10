@@ -54,7 +54,7 @@ export const podDeviceDetails = async (req, resp) => {
 
         const [chargerDetails] = await db.execute(`
             SELECT 
-                pod_id, pod_name, device_id, design_model, capacity, inverter, charger, date_of_manufacturing, status, current, voltage, percentage, temp1, temp2, temp3
+                pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status 
             FROM 
                 pod_devices 
             WHERE 
@@ -63,7 +63,7 @@ export const podDeviceDetails = async (req, resp) => {
         );
         const [batteryData] = await db.execute(`
             SELECT 
-                id, battery_id as batteryId, capacity
+                id, battery_id as batteryId, capacity, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle
             FROM 
                 pod_device_battery 
             WHERE 

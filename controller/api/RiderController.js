@@ -207,7 +207,7 @@ export const createOTP = asyncHandler(async (req, resp) => {
     storeOTP(fullMobile, otp);
     
     // storeOTP(fullMobile, '0587');
-    // return resp.json({ status: 1, code: 200, data: '0587', message: ['OTP sent successfully!'] });
+    // return resp.json({ status: 1, code: 200, data: '', message: ['OTP sent successfully!'] });
     
     sendOtp(
         fullMobile,
@@ -215,12 +215,12 @@ export const createOTP = asyncHandler(async (req, resp) => {
     )
     .then(result => {
         if (result.status === 0) return resp.json(result);
-        return resp.json({ status: 1, code: 200, data: "", message: ['OTP sent successfully!'] });
+        return resp.json({ status: 1, code: 200, data: '', message: ['OTP sent successfully!'] });
     })
     .catch(err => {
         console.error('Error in otpController:', err.message);
         return resp.json({ status: 'error', msg: 'Failed to send OTP' });
-    });
+    }); 
 });
 
 export const verifyOTP = asyncHandler(async (req, resp) => {
@@ -229,7 +229,7 @@ export const verifyOTP = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const fullMobile = `${country_code}${mobile}`;
-    const cachedOtp = getOTP(fullMobile);
+    const cachedOtp  = getOTP(fullMobile);
     let result, isLogin, loginStatus, respResult = {};
 
     if(user_type === 'Rider'){
@@ -444,7 +444,7 @@ export const deleteImg = asyncHandler(async (req, resp) => {
     return resp.json({
         status: update.affectedRows > 0 ? 1 : 0,
         code: 200,
-        message: update.affectedRows > 0 ? 'Rider profile image deleted successfully!' : 'Oops! Something went wrong. Please try again.',
+        message: update.affectedRows > 0 ? ['Rider profile image deleted successfully!'] : ['Oops! Something went wrong. Please try again.'],
     });
 });
 
@@ -459,8 +459,8 @@ export const deleteAccount = asyncHandler(async (req, resp) => {
         await connection.beginTransaction();
         
         const rider = await queryDB('SELECT profile_img FROM riders WHERE rider_id = ?', [riderId]);
-        if(rider) return resp.json({status:0, message: 'Rider not found.'});
-        deleteFile('rider_profile', rider.profile_img);
+        if(!rider) return resp.json({status:0, message: 'Rider not found.'});
+        if(rider.profile_img) deleteFile('rider_profile', rider.profile_img);
 
         const deleteQueries = [
             'DELETE FROM notifications                         WHERE receive_id = ?',

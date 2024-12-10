@@ -635,7 +635,7 @@ const chargingStart = async (req, resp) => {
     if (ordHistoryCount.count === 0) {
         const podBatteryData = await getPodBatteryData(pod_id);
         const podData        = podBatteryData.data.length > 0 ? JSON.stringify(podBatteryData.data) : null;
-        const sumOfLevel     = podBatteryData.sum ?  podBatteryData.sum : 0;
+        const sumOfLevel     = podBatteryData.sum ?  podBatteryData.sum : '';
         
         const insert = await db.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data) VALUES (?, ?, "CS", ?, ?, ?, ?)',
@@ -658,10 +658,11 @@ const chargingStart = async (req, resp) => {
 };
 const chargingComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, pod_id } = mergeParam(req);
-
+    // 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
+            (SELECT pod_id FROM portable_charger_booking as pcb WHERE pcb.booking_id = portable_charger_booking_assign.order_id) AS pod_id
         FROM 
             portable_charger_booking_assign
         WHERE 
@@ -677,9 +678,9 @@ const chargingComplete = async (req, resp) => {
     );
     if (ordHistoryCount.count === 0) {
 
-        const podBatteryData = await getPodBatteryData(pod_id);
-        const podData    = podBatteryData.data ? JSON.stringify(podBatteryData.data) : [];
-        const sumOfLevel = podBatteryData.sum ? podBatteryData.sum : 0;
+        const podBatteryData = await getPodBatteryData(checkOrder.pod_id);  //POD ID nikalana hoga 
+        const podData        = podBatteryData.data ? JSON.stringify(podBatteryData.data) : [];
+        const sumOfLevel     = podBatteryData.sum ? podBatteryData.sum : 0;
 
         const insert = await db.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data) VALUES (?, ?, "CC", ?, ?, ?, ?)',
@@ -738,9 +739,10 @@ const chargerPickedUp = async (req, resp) => {
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
         // await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
 
-        /* const data = await queryDB(`
+        // yaha calculation sahi karna hai   pcb.start_charging_level, cb.end_charging_level,
+        const data = await queryDB(`
             SELECT 
-                pci.invoice_id, pci.amount, pci.invoice_date, pcb.booking_id,
+                pci.invoice_id, pci.amount, pci.invoice_date, pcb.booking_id, pcb.start_charging_level, cb.end_charging_level,
                 CASE WHEN pci.currency IS NOT NULL THEN pci.currency ELSE 'AED' END AS currency, 
                 ROUND((pcb.end_charging_level - pcb.start_charging_level) * 0.25, 2) AS unit,
                 ROUND(((pcb.end_charging_level - pcb.start_charging_level) * 0.25 * 0.48), 2) AS unit_amt,
@@ -755,15 +757,13 @@ const chargerPickedUp = async (req, resp) => {
             LIMIT 1
         `, [invoiceId]);
         
-        data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
-        data.total_amt = data.amount + data.unit_amt;
-        const invoiceData = { data, numberToWords, formatNumber  };
+        data.invoice_date  = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';  // kw_consumed
+        data.total_amt     = data.amount + data.unit_amt;
+        const invoiceData  = { data, numberToWords, formatNumber  };
         const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
-        const filename = `${invoiceId}-invoice.pdf`;
-        const savePdfDir = 'portable-charger-invoice';
-        console.log('data', data);
-        const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
-        console.log('pdf', pdf);
+        const filename     = `${invoiceId}-invoice.pdf`;
+        const savePdfDir   = 'portable-charger-invoice';
+        const pdf          = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
         if(pdf.success){
             const html = `<html>
                 <body>
@@ -779,7 +779,7 @@ const chargerPickedUp = async (req, resp) => {
             };
         
             emailQueue.addEmail(data.rider_email, 'PlusX Electric: Invoice for Your Portable EV Charger Service', html, attachment);
-        } */
+        } 
 
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
     } else {
@@ -863,7 +863,6 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
 });
 
 
-
 const getPodBatteryData = async (pod_id) => {
     try {
         // const { pod_id, } = req.body;
@@ -874,23 +873,23 @@ const getPodBatteryData = async (pod_id) => {
 
         const [chargerDetails] = await db.execute(`
             SELECT 
-                battery_id, capacity, rssi, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, latitude, longitude 
+                battery_id, capacity, rssi, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, latitude, longitude, cells 
             FROM 
                 pod_device_battery 
             WHERE 
                 pod_id = ?`, 
             [pod_id]
         );
-        const sum = ( chargerDetails.reduce((total, obj) => total + (obj.percentage || 0), 0)) .toFixed(2);
+        const sum = chargerDetails.map( obj  => (obj.percentage || 0).toFixed(2) ) ;
         const returnObj = {
-            sum  : sum,
+            sum  : sum.join(','),
             data : chargerDetails,
         };
         return returnObj;
     } catch (error) {
     
         const returnObj = {
-            sum  : 0,
+            sum  : '',
             data : [],
         };
         return returnObj ;
