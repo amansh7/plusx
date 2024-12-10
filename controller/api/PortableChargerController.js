@@ -703,8 +703,9 @@ const chargingComplete = async (req, resp) => {
 };
 const chargerPickedUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
+    let imgName = '';
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-    const imgName = req.files['image'] ? req.files.image[0].filename : ''; 
+    if(req.files && req.files['image']) imgName = req.files['image'] ? req.files['image'][0].filename : ''; 
     const invoiceId = booking_id.replace('PCB', 'INVPC');
 
     const checkOrder = await queryDB(`
@@ -725,27 +726,24 @@ const chargerPickedUp = async (req, resp) => {
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "PU" AND booking_id = ?',[rsa_id, booking_id]
     );
-    
+    const conn = await startTransaction();
     if (ordHistoryCount.count === 0) {
-        const insert = await db.execute(
+        const insert = await conn.execute(
             'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "PU", ?, ?, ?, ?)',
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
         );
         
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id] );
-        await db.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
-        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
-        // await db.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
+        await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id], conn );
+        await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
+        await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        // await conn.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
 
-        // yaha calculation sahi karna hai   pcb.start_charging_level, cb.end_charging_level,
         const data = await queryDB(`
             SELECT 
-                pci.invoice_id, pci.amount, pci.invoice_date, pcb.booking_id, pcb.start_charging_level, cb.end_charging_level,
-                CASE WHEN pci.currency IS NOT NULL THEN pci.currency ELSE 'AED' END AS currency, 
-                ROUND((pcb.end_charging_level - pcb.start_charging_level) * 0.25, 2) AS unit,
-                ROUND(((pcb.end_charging_level - pcb.start_charging_level) * 0.25 * 0.48), 2) AS unit_amt,
+                pci.invoice_id, pci.amount, pci.invoice_date, pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level,
+                CASE WHEN pci.currency IS NOT NULL THEN pci.currency ELSE 'AED' END AS currency,
                 (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email,
                 (SELECT rd.rider_name FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_name
             FROM 
@@ -756,14 +754,30 @@ const chargerPickedUp = async (req, resp) => {
                 pci.invoice_id = ?
             LIMIT 1
         `, [invoiceId]);
+
+        const startChargingLevels = data.start_charging_level.split(',').map(Number);
+        const endChargingLevels = data.end_charging_level.split(',').map(Number);
         
-        data.invoice_date  = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';  // kw_consumed
-        data.total_amt     = data.amount + data.unit_amt;
-        const invoiceData  = { data, numberToWords, formatNumber  };
+        data.currency = data.currency.toUpperCase();
+        data.kw          = ((endChargingLevels[0] - startChargingLevels[0]) + (endChargingLevels[1] - startChargingLevels[1])) * 0.25;
+        data.kw_dewa_amt = data.kw * 0.44;
+        data.kw_cpo_amt  = data.kw * 0.26;
+        data.delv_charge = 30;
+        data.t_vat_amt   = Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5)) * 100) / 100;
+        data.total_amt   = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
+        
+        data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
+        const invoiceData = { data, numberToWords, formatNumber  };
         const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
-        const filename     = `${invoiceId}-invoice.pdf`;
-        const savePdfDir   = 'portable-charger-invoice';
-        const pdf          = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
+        const filename = `${invoiceId}-invoice.pdf`;
+        const savePdfDir = 'portable-charger-invoice';
+        
+        const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
+        
+        if(!pdf || !pdf.success){
+            await rollbackTransaction(conn);
+            return resp.json({ message: ['Failed to generate invoice. Please Try Again!'], status: 0, code: 200 });
+        }
         if(pdf.success){
             const html = `<html>
                 <body>
@@ -779,8 +793,8 @@ const chargerPickedUp = async (req, resp) => {
             };
         
             emailQueue.addEmail(data.rider_email, 'PlusX Electric: Invoice for Your Portable EV Charger Service', html, attachment);
-        } 
-
+        }
+        await commitTransaction(conn);
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
     } else {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });

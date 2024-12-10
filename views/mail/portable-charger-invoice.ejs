@@ -109,13 +109,23 @@
                                 <tbody class="text-white">
                                     <tr style="border-bottom: 1px solid #5e676f;">
                                         <td style="font-size: 14px;">Dewa Chargers (KW Consumed)</td>
-                                        <td style="font-size: 14px;"><%= data.kw_consumed %></td>
-                                        <td style="text-align: right; font-size: 14px;"><%= data.unit %> <%= data.currency %></td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.kw %></td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.currency %> <%= data.kw_dewa_amt %></td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #5e676f;">
-                                        <td style="font-size: 14px;">Portable Charger Service</td>
+                                        <td style="font-size: 14px;">CPO Chargers (KW Consumed)</td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.kw %></td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.currency %> <%= data.kw_cpo_amt %></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #5e676f;">
+                                        <td style="font-size: 14px;">Delivery Charge</td>
                                         <td style="font-size: 14px;"></td>
-                                        <td style="text-align: right; font-size: 14px;"><%= data.currency %> <%= data.amount %></td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.currency %> <%= data.delv_charge %></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #5e676f;">
+                                        <td style="font-size: 14px;">VAT 5%</td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="text-align: right; font-size: 14px;"><%= data.currency %> <%= data.t_vat_amt %></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -125,9 +135,8 @@
                         <td style="width:60%; text-align: left;">
                             <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-neon">Total Amount:</p>
                         </td>
-
                         <td style="text-align: right;">
-                            <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-white"><%= data.currency %> <%= data.total_amt.toFixed(2) %></p>
+                            <p style="font-size: 14px; padding: 8px; font-weight: bold;" class="text-white"><%= data.currency %> <%= data.total_amt %></p>
                         </td>
                     </tr>
                 </tbody>
