@@ -27,15 +27,9 @@ dotenv.config();
 
 
 export const authenticateAdmin = async (req, resp, next) => {
-  // console.log(req.body);
-  
   const userId = req.body.userId;
   const email  = req.body.email
-<<<<<<< Updated upstream
   const token  = req.headers["accesstoken"];
-=======
-  const token  = req.headers["accesstoken"]; //accesstoken
->>>>>>> Stashed changes
 
   if (!token) {
     return resp.status(401).json({ message: 'Access token is missing' });
