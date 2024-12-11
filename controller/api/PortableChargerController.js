@@ -761,7 +761,7 @@ const chargerPickedUp = async (req, resp) => {
         data.kw           = ((endChargingLevels[0] - startChargingLevels[0]) + (endChargingLevels[1] - startChargingLevels[1])) * 0.25;
         data.kw_dewa_amt  = data.kw * 0.44;
         data.kw_cpo_amt   = data.kw * 0.26;
-        data.delv_charge  = 30;
+        data.delv_charge  = 0; // 30 when start accepting payment
         data.t_vat_amt    = Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
         data.total_amt    = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
         data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
