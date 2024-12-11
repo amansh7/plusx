@@ -14,7 +14,8 @@ import {
 import { addPublicCharger, editPublicCharger, stationDetail, stationList, deletePublicCharger, deletePublicChargerGallery, stationData } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
 import { 
-    storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete,serviceList, serviceCreate, serviceUpdate, serviceDelete, brandList, brandCreate, brandUpdate, brandDelete
+    storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete,serviceList, serviceCreate, serviceUpdate, serviceDelete, brandList, brandCreate, brandUpdate, brandDelete,
+    deleteStoreGallery
 } from "../controller/admin/ShopController.js";
 import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange,  } from "../controller/admin/RsaController.js";
 import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg } from "../controller/admin/RiderClubController.js"
@@ -104,6 +105,7 @@ const adminRoutes = [
     { method: 'post',   path: '/shop-view',           handler: storeView },
     { method: 'post',   path: '/shop-update',         handler: storeUpdate },
     { method: 'post',   path: '/shop-delete',         handler: storeDelete },
+    { method: 'post',   path: '/shop-gallery-delete', handler: deleteStoreGallery },
     { method: 'post',   path: '/shop-service-list',   handler: serviceList },
     { method: 'post',   path: '/shop-service-create', handler: serviceCreate },
     { method: 'post',   path: '/shop-service-update', handler: serviceUpdate },
@@ -127,7 +129,7 @@ const adminRoutes = [
     { method: 'post',   path: '/add-club',        handler: clubCreate },
     { method: 'post',   path: '/edit-club',       handler: clubUpdate },
     { method: 'post',   path: '/club-delete',     handler: clubDelete },
-    { method: 'delete', path: '/club-delete-img', handler: clubDeleteImg },
+    { method: 'post', path: '/club-delete-img', handler: clubDeleteImg },
 
     /* Electric Cars Leasing */
     { method: 'post',    path: '/electric-cars-list',     handler: carsList },
@@ -135,7 +137,7 @@ const adminRoutes = [
     { method: 'post',    path: '/electric-car-add',       handler: carAdd },
     { method: 'post',    path: '/electric-car-edit',      handler: carEdit },
     { method: 'post',    path: '/electric-car-delete',    handler: carDelete },
-    { method: 'delete',  path: '/electric-car-gallery-d', handler: carGalleryDelete },
+    { method: 'post',    path: '/electric-car-gallery-delete', handler: carGalleryDelete },
 
     /* Electric Bikes Leasing */
     { method: 'post',    path: '/electric-bikes-list',     handler: bikesList },
@@ -143,7 +145,7 @@ const adminRoutes = [
     { method: 'post',    path: '/electric-bike-add',       handler: bikeAdd },
     { method: 'post',    path: '/electric-bike-edit',      handler: bikeEdit },
     { method: 'post',    path: '/electric-bike-delete',    handler: bikeDelete },
-    { method: 'delete',  path: '/electric-bike-gallery-d', handler: bikeGalleryDelete },
+    { method: 'post',  path: '/electric-bike-gallery-delete', handler: bikeGalleryDelete },
 
     /* EV Road Assistance */
     { method: 'post', path: '/ev-road-assistance-booking-list',    handler: evRoadAssistanceBooking },

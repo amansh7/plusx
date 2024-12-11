@@ -121,17 +121,17 @@ export const guideDetail = asyncHandler(async (req, resp) => {
                 message: 'Vehicle not found.',
             });
         }
-        const [galleryImages] = await db.execute(
-            `SELECT image_name FROM vehicle_gallery WHERE vehicle_id = ?`,
-            [vehicle_id]
-        );
+        const [galleryImages] = await db.execute(`SELECT id, image_name FROM vehicle_gallery WHERE vehicle_id = ? ORDER BY id DESC`, [vehicle_id]);
         const imgName = galleryImages?.map(row => row.image_name);
+        const imgId= galleryImages?.map(image => image.id);
+
         return resp.json({
             status: 1,
             code: 200,
             message: ["Ev Guide Details fetched successfully!"],
             data: vehicleDetails[0],
             gallery_data: imgName,
+            gallery_id: imgId,
             base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
         });
 
@@ -197,16 +197,16 @@ export const deleteGuide = asyncHandler(async (req, resp) => {
     return resp.json({ status: 1, code: 200, message: "Vehicle deleted successfully!" });
 });
 
-export const deleteEvGuideGallery = asyncHandler(async (req, resp) => {
+export const deleteEvGuideGallery = asyncHandler(async (req, resp) => {  
     const { gallery_id } = req.body;
     if(!gallery_id) return resp.json({status:0, message: "Gallery Id is required"});
 
     const galleryData = await queryDB(`SELECT image_name FROM vehicle_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
     
     if(galleryData){
-        await db.execute('DELETE FROM electric_bike_rental_gallery WHERE id = ?', [gallery_id]);
         deleteFile('vehicle-image', galleryData.image_name);
-    }
+        await db.execute('DELETE FROM vehicle_gallery WHERE id = ?', [gallery_id]);
+    } 
 
-    return resp.json({status: 1, message: "Vehicle Img deleted successfully"});
+    return resp.json({status: 1, code: 200, message: "Vehicle image deleted successfully"});
 });

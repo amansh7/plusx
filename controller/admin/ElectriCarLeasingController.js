@@ -50,15 +50,17 @@ export const carDetail = asyncHandler(async (req, resp) => {
     if(!rental_id) return resp.json({status: 0, message: "Rental Id is required"});
 
     const car = await queryDB(`SELECT * FROM electric_car_rental WHERE rental_id = ?`, [rental_id]);
-    const [gallery] = await db.execute(`SELECT image_name FROM electric_car_rental_gallery WHERE rental_id = ? ORDER BY id DESC`, [rental_id]);
-    const galleryData = gallery.map(image => image.image_name);
+    const [gallery] = await db.execute(`SELECT id, image_name FROM electric_car_rental_gallery WHERE rental_id = ? ORDER BY id DESC`, [rental_id]);
+    const imgName = gallery.map(image => image.image_name);
+    const imgId= gallery.map(image => image.id);
 
     return resp.status(200).json({
          status: 1, 
          code: 200,
          message: "Car Detail fetch successfully",
          car, 
-         galleryData,
+         galleryData : imgName,
+         galleryId : imgId,
          base_url: `${req.protocol}://${req.get('host')}/uploads/car-rental-images/`
         });
 });
@@ -203,7 +205,7 @@ export const carGalleryDelete = asyncHandler(async (req, resp) => {
         await db.execute('DELETE FROM electric_car_rental_gallery WHERE id = ?', [gallery_id]);
     }
 
-    return resp.json({status: 1, message: "Gallery Img deleted successfully"});
+    return resp.json({status: 1, code: 200, message: "Gallery image deleted successfully"});
 });
 
 
