@@ -754,8 +754,8 @@ const chargerPickedUp = async (req, resp) => {
             LIMIT 1
         `, [invoiceId]);
 
-        const startChargingLevels = data.start_charging_level.split(',').map(Number);
-        const endChargingLevels = data.end_charging_level.split(',').map(Number);
+        const startChargingLevels = data.start_charging_level ? data.start_charging_level.split(',').map(Number) : '';
+        const endChargingLevels = data.end_charging_level ? data.end_charging_level.split(',').map(Number) : '';
         
         data.currency     = data.currency.toUpperCase();
         data.kw           = ((endChargingLevels[0] - startChargingLevels[0]) + (endChargingLevels[1] - startChargingLevels[1])) * 0.25;
@@ -772,7 +772,7 @@ const chargerPickedUp = async (req, resp) => {
         const savePdfDir = 'portable-charger-invoice';
         
         const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
-        
+        return resp.json(pdf);
         if(!pdf || !pdf.success){
             await rollbackTransaction(conn);
             return resp.json({ message: ['Failed to generate invoice. Please Try Again!'], status: 0, code: 200 });

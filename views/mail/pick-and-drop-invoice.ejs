@@ -104,19 +104,14 @@
                             <thead>
                                 <tr style="background-color: #1f1f1f;">
                                     <th style="width: 50%; font-size: 16px; padding: 12px 10px;">Item Name</th>
-                                    <th style="width: 20%; font-size: 16px; text-align: left; padding: 12px 10px;">Units</th>
+                                    <!-- <th style="width: 20%; font-size: 16px; text-align: left; padding: 12px 10px;">Units</th> -->
                                     <th style="width: 30%; font-size: 16px; text-align: right; padding: 12px 10px;">Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td style="font-size: 14px; color: #ffffff;">Dewa Chargers (KW consumed)</td>
-                                    <td style="font-size: 14px; color: #ffffff;">--</td>
-                                    <td style="font-size: 14px; color: #ffffff; text-align: right;">Unit X 0.48</td>
-                                </tr>
-                                <tr>
                                     <td style="font-size: 14px; color: #ffffff;">Valet Charging Service</td>
-                                    <td style="font-size: 14px; color: #ffffff;"></td>
+                                    <!-- <td style="font-size: 14px; color: #ffffff;"></td> -->
                                     <td style="font-size: 14px; color: #ffffff; text-align: right;"><%= data.currency %> <%= data.amount %></td>
                                 </tr>
                             </tbody>
@@ -128,7 +123,7 @@
                         <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #00ffcc;">Total Amount:</p>
                     </td>
                     <td style="text-align: right;">
-                        <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #ffffff;"><%= data.currency %> <%= data.amount * 0.48 %></td></p>
+                        <p style="font-size: 14px; padding: 8px; font-weight: bold; color: #ffffff;"><%= data.currency %> <%= data.amount.toFixed(2) %></td></p>
                     </td>
                 </tr>
             </tbody>

@@ -270,7 +270,7 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
         const [valetCompleted] = await db.execute(`
             SELECT
                 request_id, pickup_address, pickup_latitude, pickup_longitude, order_status, parking_number, parking_floor, 
-                CONCAT(name, ",", country_code, "-", contact_no) as riderDetails, ${formatDateInQuery(['created_at', 'updated_at', 'slot_date_time'])} 
+                CONCAT(name, ",", country_code, "-", contact_no) as riderDetails, ${formatDateInQuery(['slot_date_time'])}, ${formatDateTimeInQuery(['created_at', 'updated_at',])} 
             FROM charging_service
             WHERE rsa_id = ? AND order_status IN ('WC', 'C')
             ORDER BY slot_date_time DESC
