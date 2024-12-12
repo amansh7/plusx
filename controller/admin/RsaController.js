@@ -62,19 +62,22 @@ export const rsaData = asyncHandler(async (req, resp) => {
     const { rsa_id } = req.body; 
     const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging'];
-
     const bookingHistory = [];
 
-    if (rsaData.length > 0) {
+    if (rsaData) {
         const bookingTypeValue = rsaData.booking_type;
 
         if (bookingTypeValue === 'Valet Charging') {
-            const chargingServiceData = await queryDB(`SELECT * FROM charging_service WHERE rsa_id = ?`, [rsa_id]);
+            let chargingServiceData = await queryDB(`SELECT *  FROM charging_service WHERE rsa_id = ?`, [rsa_id]);
+          
+            chargingServiceData = Array.isArray(chargingServiceData) ? chargingServiceData : (chargingServiceData ? [chargingServiceData] : []);
             bookingHistory.push(...chargingServiceData);
         } else if (bookingTypeValue === 'Portable Charger') {
-            const portableChargerData = await queryDB(`SELECT * FROM portable_charger_booking WHERE rsa_id = ?`, [rsa_id]);
-            bookingHistory.push(...portableChargerData); 
-        } 
+            let portableChargerData = await queryDB(` SELECT * FROM portable_charger_booking  WHERE rsa_id = ?`, [rsa_id]);
+            
+            portableChargerData = Array.isArray(portableChargerData) ? portableChargerData : (portableChargerData ? [portableChargerData] : []);
+            bookingHistory.push(...portableChargerData);
+        }
         // else if (bookingTypeValue === 'Charger Installation') {
         //     const chargerInstallationData = await queryDB(`SELECT * FROM charging_installation_service WHERE rsa_id = ?`, [rsa_id]);
         //     bookingHistory.push(...chargerInstallationData); 
@@ -90,7 +93,8 @@ export const rsaData = asyncHandler(async (req, resp) => {
         message: "RSA data fetched successfully",
         rsaData,
         bookingType,
-        bookingHistory 
+        bookingHistory ,
+        base_url: `${req.protocol}://${req.get('host')}/uploads/rsa_images/`
     });
 });
 
