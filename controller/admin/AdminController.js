@@ -24,20 +24,27 @@ export const getDashboardData = async (req, resp) => {
                 (SELECT COUNT(*) FROM public_charging_station_list) AS total_station
         `);
 
-        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, latitude AS lat, longitude AS lng FROM rsa`);
-        const [podRecords] = await db.execute(`SELECT id, device_id, pod_name, status, latitude AS lat, longitude AS lng FROM pod_devices`);
+        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa`);
+        const [podRecords] = await db.execute(`SELECT id, device_id, pod_name, status, charging_status, latitude AS lat, longitude AS lng FROM pod_devices`);
 
         const location = rsaRecords.map((rsa, i) => ({
-            key: rsa.rsa_id,
-            location: { lat: parseFloat(rsa.lat), lng: parseFloat(rsa.lng) },
+            key         : rsa.rsa_id,
+            rsaId       : rsa.rsa_id,
+            rsaName     : rsa.rsa_name,
+            email       : rsa.email,
+            countryCode : rsa.country_code,
+            mobile      : rsa.mobile,
+            status      : rsa.status,
+            location    : { lat: parseFloat(rsa.lat), lng: parseFloat(rsa.lng) },
         }));
 
         const podLocation = podRecords.map((pod, i) => ({
-            podId: pod.pod_id,
-            deviceId: pod.device_id,
-            podName: pod.pod_name,
-            status : pod.status,
-            location: { lat: parseFloat(pod.lat), lng: parseFloat(pod.lng) },
+            podId           : pod.pod_id,
+            deviceId        : pod.device_id,
+            podName         : pod.pod_name,
+            status          : pod.status,
+            charging_status : pod.charging_status,
+            location        : { lat: parseFloat(pod.lat), lng: parseFloat(pod.lng) },
         }));
 
 
