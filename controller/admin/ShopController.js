@@ -42,7 +42,8 @@ export const storeData = asyncHandler(async (req, resp) => {
     const [address] = await db.execute(`SELECT address, area_name, location, latitude, longitude FROM store_address WHERE store_id = ?`, [shop_id]);
     const [gallery] = await db.execute(`SELECT * FROM store_gallery WHERE store_id = ? ORDER BY id DESC`, [shop_id]);
     
-    const galleryData = gallery.map(image => image.image_name);
+    const imgName = gallery.map(image => image.image_name);
+    const imgId= gallery?.map(image => image.id);
 
     const result = {
         status: 1,
@@ -51,7 +52,8 @@ export const storeData = asyncHandler(async (req, resp) => {
         location: location,
         services: serviceNames,
         brands: brandNames,
-        galleryData,
+        galleryData: imgName,
+        galleryId: imgId,
         base_url: `${req.protocol}://${req.get('host')}/uploads/shop-images/`,
     }
     if(shop_id){
@@ -223,6 +225,20 @@ export const storeDelete = asyncHandler(async (req, resp) => {
     await db.execute(`DELETE FROM service_shops WHERE shop_id = ?`, [shop_id]);
 
     return resp.json({ status: 1, code: 200, message: "Shop deleted successfully!" });
+});
+
+export const deleteStoreGallery = asyncHandler(async (req, resp) => {
+    const { gallery_id } = req.body;
+    if(!gallery_id) return resp.json({status:0, message: "Gallery Id is required"});
+
+    const galleryData = await queryDB(`SELECT image_name FROM store_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
+    
+    if(galleryData){
+        deleteFile('shop-images', galleryData.image_name);
+        await db.execute('DELETE FROM store_gallery WHERE id = ?', [gallery_id]);
+    }
+
+    return resp.json({status: 1, code: 200,  message: "Gallery image deleted successfully"});
 });
 
 /* Shop Service */

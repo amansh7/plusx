@@ -30,8 +30,9 @@ export const clubList = asyncHandler(async (req, resp) => {
 export const clubData = asyncHandler(async (req, resp) => {
     const { club_id } = req.body;
     const club = await queryDB(`SELECT * FROM clubs WHERE club_id = ?`, [club_id]);
-    const [gallery] = await db.execute(`SELECT image_name FROM club_gallery WHERE club_id = ? ORDER BY id DESC`, [club_id]);
-    const galleryData = gallery.map(image => image.image_name);
+    const [gallery] = await db.execute(`SELECT id, image_name FROM club_gallery WHERE club_id = ? ORDER BY id DESC`, [club_id]);
+    const imgName = gallery.map(image => image.image_name);
+    const imgId= gallery.map(image => image.id);
     const location = await db.execute(`SELECT location_name FROM locations WHERE status = 1 ORDER BY location_name ASC`);
     const clubCategory = ['Women`s Cycling Club', 'Junior Cycling Club', 'Mountain Cycling Club', 'Road Cycling Club', 'Emirates Group Staff'];
     const ageGroup = ['17 & Younger', 'Above 18', 'All age group'];
@@ -46,7 +47,8 @@ export const clubData = asyncHandler(async (req, resp) => {
     }
     if(club_id){
         result.club = club;
-        result.galleryData = galleryData;
+        result.galleryData = imgName;
+        result.galleryId = imgId;
     }
 
     return resp.status(200).json(result);
@@ -147,9 +149,10 @@ export const clubDeleteImg = asyncHandler(async (req, resp) => {
     if(!gallery_id) return resp.json({status:0, code:422, message:"Gallery Id is required"});
 
     const gallery = await queryDB(`SELECT image_name FROM club_gallery WHERE id = ? LIMIT 1`, [gallery_id]);
-    
-    deleteFile('club-images', gallery.image_name);
-    await queryDB(`DELETE FROM club_gallery WHERE id = ?`, [gallery_id]);
+    if(gallery){
+        deleteFile('club-images', gallery.image_name);
+        await db.execute(`DELETE FROM club_gallery WHERE id = ?`, [gallery_id]);
+    } 
 
     return resp.json({ status: 1, code: 200, message: "Club Image deleted successfully!" });
 });
