@@ -17,7 +17,7 @@ export const podDeviceList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'pod_devices',
-            columns          : 'pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status',
+            columns          : 'pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status, created_at, (SELECT AVG(percentage) FROM pod_device_battery as pb where pb.pod_id = pod_devices.pod_id) AS avgBattery',
             sortColumn       : 'created_at',
             sortOrder        : 'DESC',
             page_no,
@@ -54,7 +54,7 @@ export const podDeviceDetails = async (req, resp) => {
 
         const [chargerDetails] = await db.execute(`
             SELECT 
-                pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status 
+                pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status, created_at 
             FROM 
                 pod_devices 
             WHERE 
@@ -63,7 +63,7 @@ export const podDeviceDetails = async (req, resp) => {
         );
         const [batteryData] = await db.execute(`
             SELECT 
-                id, battery_id as batteryId, capacity, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle
+                id, battery_id as batteryId, capacity, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, updated_at
             FROM 
                 pod_device_battery 
             WHERE 

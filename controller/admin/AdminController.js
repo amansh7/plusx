@@ -24,8 +24,8 @@ export const getDashboardData = async (req, resp) => {
                 (SELECT COUNT(*) FROM public_charging_station_list) AS total_station
         `);
 
-        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa`);
-        const [podRecords] = await db.execute(`SELECT id, device_id, pod_name, status, charging_status, latitude AS lat, longitude AS lng FROM pod_devices`);
+        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa where latitude != ''`);
+        const [podRecords] = await db.execute(`SELECT id, pod_id, device_id, pod_name, status, charging_status, latitude AS lat, longitude AS lng FROM pod_devices where latitude != ''`);
 
         const location = rsaRecords.map((rsa, i) => ({
             key         : rsa.rsa_id,
@@ -47,8 +47,6 @@ export const getDashboardData = async (req, resp) => {
             location        : { lat: parseFloat(pod.lat), lng: parseFloat(pod.lng) },
         }));
 
-
-        
         const count_arr = [ 
             { module: 'App Sign Up', count: counts[0].total_rider },
             { module: 'POD Bookings', count: counts[0].total_charger_booking },

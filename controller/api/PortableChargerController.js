@@ -645,6 +645,8 @@ const chargingStart = async (req, resp) => {
 
         await updateRecord('portable_charger_booking', {status: 'CS', rsa_id, pod_id, start_charging_level: sumOfLevel}, ['booking_id'], [booking_id] );
 
+        await updateRecord('pod_devices', { charging_status : 1}, ['pod_id'], [pod_id] );
+
         const href    = `portable_charger_booking/${booking_id}`;
         const title   = 'EV Charging Start';
         const message = `POD has started charging your EV!`;
@@ -689,6 +691,7 @@ const chargingComplete = async (req, resp) => {
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'CC', rsa_id, end_charging_level:sumOfLevel }, ['booking_id'], [booking_id] );
+        await updateRecord('pod_devices', { charging_status : 0 }, ['pod_id'], [checkOrder.pod_id] );
 
         const href    = `portable_charger_booking/${booking_id}`;
         const title   = 'Charging Completed!';
