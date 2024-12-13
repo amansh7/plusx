@@ -1,7 +1,7 @@
 import db from '../../config/db.js';
 import dotenv from 'dotenv';
 import validateFields from "../../validation.js";
-import {  getPaginatedData, queryDB } from '../../dbUtils.js';
+import {  getPaginatedData, queryDB, updateRecord } from '../../dbUtils.js';
 import { asyncHandler,mergeParam, formatDateTimeInQuery } from '../../utils.js';
 import path from 'path';
 import moment from 'moment';
@@ -24,7 +24,7 @@ export const getDashboardData = async (req, resp) => {
                 (SELECT COUNT(*) FROM public_charging_station_list) AS total_station
         `);
 
-        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa where latitude != ''`);
+        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa where latitude != '' and status = '2'`);
         const [podRecords] = await db.execute(`SELECT id, pod_id, device_id, pod_name, status, charging_status, latitude AS lat, longitude AS lng FROM pod_devices where latitude != ''`);
 
         const location = rsaRecords.map((rsa, i) => ({
@@ -378,6 +378,70 @@ export const deleteRider = async (req, resp) => {
         connection.release();
     }
 };
+
+
+//admin profile
+export const profileDetails = async (req, resp) => {
+    const { email, userId } = req.body;
+
+    if (!userId) {
+        return resp.status(400).json({
+            status: 0,
+            code: 400,
+            message: 'User ID is required'
+        });
+    }
+
+    try {
+        const [user] = (await db.execute('SELECT * FROM users WHERE email=? and id = ?', [email, userId]));
+
+        resp.status(200).json({
+            message:"Profile Details",
+            code: 200, 
+            userDetails: user[0], 
+            base_url: `${req.protocol}://${req.get('host')}/uploads/profile-image/`,
+        })
+       
+    } catch (error) {
+        console.error('Error fetching profile details:', error);
+        return resp.status(500).json({
+            status: 0,
+            code: 500,
+            message: 'Error fetching profile details',
+        });
+    }
+};
+
+export const profileUpdate = asyncHandler(async (req, resp) => {
+    const{ user_id, name, email, phone, } = req.body;
+    const { isValid, errors } = validateFields(req.body, { 
+        user_id : ["required"],
+        name    : ["required"],
+        email   : ["required"],
+        phone   : ["required"],
+    });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+   
+    const [users] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+      
+      if (users.length === 0) {
+          return resp.status(404).json({ message: "Entered email is not registered with us, try with another one." });
+      }
+    const profile_image = req.files['profile_image'] ? files['profile_image'][0].filename : users[0].image;
+    const updates       = { name, email, phone, image: profile_image};
+
+    // if(password) updates.password = await bcrypt.hash(password, 10);
+
+    const update = await updateRecord('users', updates, ['email'], [email]);
+
+    if(userData.image) deleteFile('profile-image', users[0].image);
+
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0, 
+        code: 200, 
+        message: update.affectedRows > 0 ? "Profile updated successfully" : "Failed to update, Please Try Again!", 
+    });
+});
 
 
 
