@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import db from "../../config/db.js";
 import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
-import { queryDB, updateRecord } from '../../dbUtils.js';
+import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import { asyncHandler, formatDateInQuery, formatDateTimeInQuery, generateRandomPassword, mergeParam } from "../../utils.js";
 
 export const rsaLogin = asyncHandler(async (req, resp) => {
@@ -345,6 +345,7 @@ export const rsaUpdateLatLong = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const update = await updateRecord('rsa', {latitude, longitude}, ['rsa_id'], [rsa_id]);
+    const insert = await insertRecord('rsa_location_history', ['rsa_id', 'latitude', 'longitude'], [rsa_id, latitude, longitude]);
     
     return resp.json({
         status: update.affectedRows > 0 ? 1 : 0,
