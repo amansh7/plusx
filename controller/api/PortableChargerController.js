@@ -644,8 +644,7 @@ const chargingStart = async (req, resp) => {
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'CS', rsa_id, pod_id, start_charging_level: sumOfLevel}, ['booking_id'], [booking_id] );
-
-        await updateRecord('pod_devices', { charging_status : 1}, ['pod_id'], [pod_id] );
+        await updateRecord('pod_devices', { charging_status : 1, latitude, longitude}, ['pod_id'], [pod_id] );
 
         const href    = `portable_charger_booking/${booking_id}`;
         const title   = 'EV Charging Start';
@@ -714,13 +713,15 @@ const chargerPickedUp = async (req, resp) => {
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
-            (select slot from portable_charger_booking as pb where pb.booking_id = portable_charger_booking_assign.order_id ) as slot_id
+            (select CONCAT(slot, "/" ,pod_id) from portable_charger_booking as pb where pb.booking_id = portable_charger_booking_assign.order_id ) as slot_pod
         FROM 
             portable_charger_booking_assign
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
     `,[booking_id, rsa_id]);
+
+    const [slot, pod_id] = checkOrder.slot_pod.split('/');
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -740,7 +741,8 @@ const chargerPickedUp = async (req, resp) => {
         await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id], conn );
         await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
         await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
-        // await conn.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot_id]);
+        await updateRecord('pod_devices', { latitude, longitude}, ['pod_id'], [pod_id] );
+        // await conn.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot]);
 
         const data = await queryDB(`
             SELECT 
@@ -777,7 +779,7 @@ const chargerPickedUp = async (req, resp) => {
         const savePdfDir = 'portable-charger-invoice';
         
         const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
-        
+
         if(!pdf || !pdf.success){
             await rollbackTransaction(conn);
             return resp.json({ message: ['Failed to generate invoice. Please Try Again!'], status: 0, code: 200 });
