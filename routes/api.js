@@ -13,7 +13,7 @@ import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalContro
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
 import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
 import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
-import { rsaLogin, rsaUpdatePassword, rsaForgotPassword, rsaLogout, rsaLogutAll, rsaUpdateProfile, rsaStatusChange, rsaHome, rsaBookingHistory } from '../controller/api/RsaController.js';
+import { rsaLogin, rsaUpdatePassword, rsaForgotPassword, rsaLogout, rsaLogutAll, rsaUpdateProfile, rsaStatusChange, rsaHome, rsaBookingHistory, rsaUpdateLatLong } from '../controller/api/RsaController.js';
 import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList } from '../controller/api/EvInsuranceController.js';
 import { 
     login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, locationAdd, notificationList, 
@@ -235,6 +235,7 @@ const authzRsaAndAuthRoutes = [
     { method: 'post',  path: '/rsa-status-change',   handler: rsaStatusChange },
     { method: 'get',   path: '/rsa-change-password', handler: rsaUpdatePassword },
     { method: 'get',   path: '/rsa-booking-history', handler: rsaBookingHistory },
+    { method: 'post',  path: '/rsa-update-lat-long', handler: rsaUpdateLatLong },
 
     /* Road Assitance with RSA */
     { method: 'get', path: '/rsa-order-stage',  handler: getRsaOrderStage },

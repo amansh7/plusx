@@ -338,3 +338,16 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
         code: 200
     }); 
 });
+
+export const rsaUpdateLatLong = asyncHandler(async (req, resp) => {
+    const { rsa_id, latitude, longitude } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), { rsa_id: ["required"], latitude: ["required"], longitude: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const update = await updateRecord('rsa', {latitude, longitude}, ['rsa_id'], [rsa_id]);
+    console.log('update lat long: ', update);
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0,
+        message: update.affectedRows > 0 ? "Latitude Longitude updated successfully" : "Failed to update, Please try again.",
+    });
+});
