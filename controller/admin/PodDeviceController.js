@@ -708,17 +708,16 @@ export const podAreaBookingList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'portable_charger_booking as pcb',
-            columns          : 'pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CS") as start_time, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as end_time',
+            columns          : 'pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CS") as start_time, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as end_time, (select pod_data from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as pod_data',
             sortColumn       : 'pcb.updated_at',
             sortOrder        : 'DESC',
             page_no,
             limit            : 10,
             liveSearchFields : [],
             liveSearchTexts  : [],
-            whereField       : ['pcb.pod_id'],
-            whereValue       : [podId]
+            whereField       : ['pcb.pod_id', 'pcb.status'],  
+            whereValue       : [podId, 'PU']
         });
-
         return resp.json({
             status     : 1,
             code       : 200,
