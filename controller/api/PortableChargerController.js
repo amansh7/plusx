@@ -882,6 +882,37 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });
 
+/* Save POD Charging History */
+export const storePodChargerHistory = asyncHandler(async (req, resp) => {
+    const { rsa_id, pod_id, charging_status, latitude, longitude } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rsa_id: ["required"], pod_id: ["required"], charging_status: ["required"], latitude: ["required"], longitude: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    if (!['CS', 'CE'].includes(charging_status)) return resp.json({status:0, code:422, message:"Status should be CS or CE"});
+
+    const podBatteryData = await getPodBatteryData(pod_id);
+    const podData        = podBatteryData.data.length > 0 ? JSON.stringify(podBatteryData.data) : null;
+    const sumOfLevel     = podBatteryData.sum ?  podBatteryData.sum : '';
+    const status         = charging_status === 'CS' ? 1 : 2;
+    let   isStored       = 0;
+    
+    if(charging_status === 'CS'){
+        const insert = await insertRecord('pod_charge_history', 
+            ['pod_id', 'start_charging_level', 'pod_data_start', 'status', 'longitude', 'latitude'],
+            [pod_id, sumOfLevel, podData, status, latitude, longitude]
+        );
+        isStored = insert.affectedRows > 0 ? 1 : 0;
+    }
+    if(charging_status === 'CE'){
+        const update = await updateRecord('pod_charge_history', {end_charging_level: sumOfLevel, pod_data_end: podData, status, latitude, longitude}, ['pod_id'], [pod_id]);
+        isStored = update.affectedRows > 0 ? 1 : 0;
+    }
+
+    return resp.json({
+        status: isStored ? 1 : 0,
+        message: isStored ? 'POD charger history saved successfully' : 'Failed to store, Please Try Again.'
+    });
+
+});
 
 const getPodBatteryData = async (pod_id) => {
     try {
