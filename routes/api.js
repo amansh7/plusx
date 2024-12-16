@@ -32,7 +32,8 @@ import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, all
 } from '../controller/api/VehicleController.js';
 import { 
     chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking,
-    getActivePodList
+    getActivePodList,
+    storePodChargerHistory
 } from '../controller/api/PortableChargerController.js';
 import { 
     getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking, cancelValetBooking
@@ -247,9 +248,10 @@ const authzRsaAndAuthRoutes = [
     { method: 'post', path: '/charger-service-reject', handler: handleRejectBooking },
     
     /* POD with RSA */
-    { method: 'get',  path: '/portable-charger-stage',  handler: rsaBookingStage },
-    { method: 'post', path: '/portable-charger-action', handler: bookingAction },
-    { method: 'post', path: '/portable-charger-reject', handler: rejectBooking }
+    { method: 'get',  path: '/portable-charger-stage',    handler: rsaBookingStage },
+    { method: 'post', path: '/portable-charger-action',   handler: bookingAction },
+    { method: 'post', path: '/portable-charger-reject',   handler: rejectBooking },
+    { method: 'post', path: '/store-pod-charger-history', handler: storePodChargerHistory },
 ];
 authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
