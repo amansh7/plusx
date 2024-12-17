@@ -87,7 +87,6 @@ export const rsaData = asyncHandler(async (req, resp) => {
     });
 });
 
-
 export const rsaAdd = asyncHandler(async (req, resp) => {
     const{ rsa_name, rsa_email, mobile, service_type, password, confirm_password } = req.body;
     const { isValid, errors } = validateFields(req.body, { 

@@ -171,7 +171,7 @@ export const forgotPassword = asyncHandler(async (req, resp) => {
             <p>Look for the "Reset Password" option within the profile settings.</p>                         
             <p>Enter your new password and confirm it.</p> 
             <p>Save the changes.</p> 
-            <p>Regards,<br/> PlusX Electric App </p>
+            <p>Regards,<br/>PlusX Electric Team </p>
           </body>
         </html>`;
         emailQueue.addEmail(email, `Forgot Password Request - PlusX Electric App`, html);

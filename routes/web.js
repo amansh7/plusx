@@ -13,7 +13,6 @@ router.get('web-h', async (req, resp) => {
 
 router.post('/upload-pdf', (req, res) => {
     const { file, fileName, dirName } = req.body;
-    console.log(req.body);
 
     if (!file || !fileName) {
         return res.status(400).json({ success: false, error: 'Missing file or fileName' });
@@ -28,7 +27,6 @@ router.post('/upload-pdf', (req, res) => {
             return res.status(500).json({ success: false, error: 'Failed to save PDF', details: err });
         }
 
-        // const pdfPath =  `https://plusx.shunyaekai.com/public/${dirname}/${fileName}`;
         res.status(200).json({ success: true, pdfPath: savePath });
     });
 });
