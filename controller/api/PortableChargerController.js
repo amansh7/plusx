@@ -72,6 +72,7 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
     if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
     
     const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
+
     let query = `SELECT slot_id, ${formatDateInQuery([('slot_date')])}, start_time, end_time, booking_limit`;
     
     if(fSlotDate >=  moment().format('YYYY-MM-DD')){
@@ -83,7 +84,21 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
     const [slot] = await db.execute(query, [1, fSlotDate]);
     const {is_booking} = await queryDB(`SELECT EXISTS (SELECT 1 FROM portable_charger_booking WHERE slot_date=? AND status NOT IN ("PU", "C") AND rider_id=? ) AS is_booking`, [fSlotDate, rider_id]);
 
-    return resp.json({ message: "Slot List fetch successfully!",  data: slot, is_booking, status: 1, code: 200 });
+    if(moment(fSlotDate).day() === 0){
+        slot.forEach((val) => {
+            val.booking_limit = 0;
+            val.slot_booking_count = 0;
+        })
+    }
+
+    return resp.json({ 
+        message: "Slot List fetch successfully!",  
+        data: slot, 
+        is_booking, 
+        status: 1, 
+        code: 200, 
+        alert: "To ensure a smooth experience and efficient service, users can make only one booking per day. This helps maintain availability for all. Thank you for your understanding." 
+    });
 });
 
 export const chargerBooking = asyncHandler(async (req, resp) => {
