@@ -62,7 +62,6 @@ export const rsaData = asyncHandler(async (req, resp) => {
     const { rsa_id } = req.body; 
     const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging'];
-    // const bookingHistory  = [];
     if (rsaData) {
         const bookingTypeValue = rsaData.booking_type;
 

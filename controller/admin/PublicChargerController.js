@@ -98,16 +98,10 @@ export const stationDetail = asyncHandler(async (req, resp) => {
     if (!station) return resp.status(404).json({status: 0, code: 404, message: 'Station not found.'});
     
     station.schedule = getOpenAndCloseTimings(station);
-    // const [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ?`, [station_id]);
-    // const galleryData = {};
-
-    // gallery.forEach(row => {
-    //     galleryData[row.id] = row.image_name;
-    // });
 
     [gallery] = await db.execute(`SELECT id, image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC `, [station_id]);
     const imgName = gallery.map(row => row.image_name);
-    const imgId = gallery.map(row => row.id);
+    const imgId   = gallery.map(row => row.id);
     // const imgName = gallery.map(row => ({ id: row.id, image_name: row.image_name }));
     const chargingFor = ['All EV`s', 'Tesla', 'BYD', 'Polestar', 'GMC', 'Porsche', 'Volvo', 'Audi', 'Chevrolet', 'BMW', 'Mercedes', 'Zeekr', 'Volkswagen', 'HiPhi', 'Kia', 'Hyundai', 'Lotus', 'Ford', 'Rabdan'];
     const chargerType = ['Level 2', 'Fast Charger', 'Super Charger'];
