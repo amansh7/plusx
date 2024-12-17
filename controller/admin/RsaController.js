@@ -62,38 +62,28 @@ export const rsaData = asyncHandler(async (req, resp) => {
     const { rsa_id } = req.body; 
     const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging'];
-    const bookingHistory = [];
-
+    // const bookingHistory  = [];
     if (rsaData) {
         const bookingTypeValue = rsaData.booking_type;
 
         if (bookingTypeValue === 'Valet Charging') {
-            let chargingServiceData = await queryDB(`SELECT *  FROM charging_service WHERE rsa_id = ?`, [rsa_id]);
+            var [bookingData] = await db.execute(`SELECT request_id, order_status, name as user_name, slot_date_time as created_at  FROM charging_service WHERE rsa_id = ? and order_status In ('WC', 'C') order by id desc`, [rsa_id]);
           
-            chargingServiceData = Array.isArray(chargingServiceData) ? chargingServiceData : (chargingServiceData ? [chargingServiceData] : []);
-            bookingHistory.push(...chargingServiceData);
         } else if (bookingTypeValue === 'Portable Charger') {
-            let portableChargerData = await queryDB(` SELECT * FROM portable_charger_booking  WHERE rsa_id = ?`, [rsa_id]);
-            
-            portableChargerData = Array.isArray(portableChargerData) ? portableChargerData : (portableChargerData ? [portableChargerData] : []);
-            bookingHistory.push(...portableChargerData);
+            var [bookingData] = await db.execute(` SELECT booking_id as request_id, status as order_status, user_name, concat(slot_date, " ", slot_time) as created_at FROM portable_charger_booking  WHERE rsa_id = ? and status In ('PU', 'C')  order by id desc`, [rsa_id]);
         }
-        // else if (bookingTypeValue === 'Charger Installation') {
-        //     const chargerInstallationData = await queryDB(`SELECT * FROM charging_installation_service WHERE rsa_id = ?`, [rsa_id]);
-        //     bookingHistory.push(...chargerInstallationData); 
-        // } else if (bookingTypeValue === 'EV Pre-Sale') {
-        //     const chargerInstallationData = await queryDB(`SELECT * FROM charging_installation_service WHERE rsa_id = ?`, [rsa_id]);
-        //     bookingHistory.push(...chargerInstallationData); 
-        // } 
     }
-
+    const bookingHistory    = bookingData;
+    const [locationHistory] = await db.execute(` SELECT * FROM rsa_location_history  WHERE rsa_id = ? order by id desc limit 10`, [rsa_id]);
+           
     return resp.json({
         status: 0,
         code: 200,
         message: "RSA data fetched successfully",
         rsaData,
         bookingType,
-        bookingHistory ,
+        bookingHistory,
+        locationHistory,
         base_url: `${req.protocol}://${req.get('host')}/uploads/rsa_images/`
     });
 });
