@@ -24,7 +24,7 @@ export const getDashboardData = async (req, resp) => {
                 (SELECT COUNT(*) FROM public_charging_station_list) AS total_station
         `);
 
-        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa where latitude != '' and status = '2'`);
+        const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa where latitude != '' and status In(1, 2)`);
         const [podRecords] = await db.execute(`SELECT id, pod_id, device_id, pod_name, status, charging_status, latitude AS lat, longitude AS lng FROM pod_devices where latitude != ''`);
 
         const location = rsaRecords.map((rsa, i) => ({
