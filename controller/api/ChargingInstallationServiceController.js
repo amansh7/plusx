@@ -51,7 +51,7 @@ export const serviceRequest = asyncHandler(async (req, resp) => {
                 <p>Our team will get in touch with you shortly to coordinate the installation and ensure a smooth experience.</p>
                 <p>If you have any questions or need assistance, feel free to reach out to us. We're here to help!</p>
                 <p>Thank you for choosing PlusX Electric. We look forward to serving you soon.</p>
-                <p>Best Regards,<br/>The PlusX Electric Team </p>
+                <p>Best Regards,<br/>PlusX Electric Team </p>
             </body>
         </html>`;
         emailQueue.addEmail(email, 'PlusX Electric App: EV Charger Installation Booking Confirmation', htmlUser);
@@ -63,7 +63,7 @@ export const serviceRequest = asyncHandler(async (req, resp) => {
                 <p>Customer Name  : ${name}</p>
                 <p>Address : ${address}</p>
                 <p>Booking Time   : ${formattedDateTime}</p> <br/>                        
-                <p> Best regards,<br/> PlusX Electric App </p>
+                <p> Best regards,<br/>PlusX Electric Team </p>
             </body>
         </html>`;
         emailQueue.addEmail('admin@plusxelectric.com', `Charging Installation Booking - ${requestId}`, htmlAdmin);

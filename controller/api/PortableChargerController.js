@@ -77,12 +77,13 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
     if(fSlotDate >=  moment().format('YYYY-MM-DD')){
         query += `,(SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date='${slot_date}' AND status NOT IN ("PU", "C")) AS slot_booking_count`;
     }
-
+    
     query += ` FROM portable_charger_slot WHERE status = ? AND slot_date = ? ORDER BY id ASC`;
-
+    
     const [slot] = await db.execute(query, [1, fSlotDate]);
+    const {is_booking} = await queryDB(`SELECT EXISTS (SELECT 1 FROM portable_charger_booking WHERE slot_date = ? AND status NOT IN ("PU", "C")) AS is_booking`, [fSlotDate]);
 
-    return resp.json({ message: "Slot List fetch successfully!",  data: slot, status: 1, code: 200 });
+    return resp.json({ message: "Slot List fetch successfully!",  data: slot, is_booking, status: 1, code: 200 });
 });
 
 export const chargerBooking = asyncHandler(async (req, resp) => {
@@ -117,14 +118,16 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 (SELECT MAX(id) FROM portable_charger_booking) AS last_index,
                 (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
                 (SELECT booking_limit FROM portable_charger_slot AS pcs WHERE pcs.slot_id = ?) AS booking_limit,
-                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot=? and pod.slot_date=? and status NOT IN ("PU", "C") ) as slot_booking_count 
+                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot=? and pod.slot_date=? and status NOT IN ("PU", "C") ) as slot_booking_count,
+                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot_date=? AND status NOT IN ("PU", "C")) as today_count
             FROM riders AS r
             WHERE r.rider_id = ?
-        `, [charger_id, slot_id, slot_id, fSlotDate, rider_id], conn);
+        `, [charger_id, slot_id, slot_id, fSlotDate, fSlotDate, rider_id], conn);
     
-        const { charg_count, booking_limit, slot_booking_count } = rider;
+        const { charg_count, booking_limit, slot_booking_count, today_count } = rider;
     
-        if (charg_count === 0) return resp.json({ message: "Charger id invalid!", status: 0, code: 405, error: true });
+        if (charg_count === 0) return resp.json({ message: "Charger Id invalid!", status: 0, code: 405, error: true });
+        if ( today_count > 0 ) return resp.json({ message: "Note: Only one EV charging booking is allowed per day. Plan your charging accordingly!", status: 0, code: 405, error: true });
         if ( slot_booking_count >= booking_limit ) return resp.json({ message: "Booking Slot Full!, please select another slot", status: 0, code: 405, error: true });
     
         if (service_type.toLowerCase() === "get monthly subscription") {
@@ -177,7 +180,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 Booking ID: ${bookingId}<br>
                 Date and Time of Service: ${moment(slot_date, 'YYYY MM DD').format('D MMM, YYYY,')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>
                 <p>We look forward to serving you and providing a seamless EV charging experience.</p>                  
-                <p> Best regards,<br/> PlusX Electric App </p>
+                <p> Best regards,<br/>PlusX Electric Team </p>
             </body>
         </html>`;
         emailQueue.addEmail(rider.rider_email, 'PlusX Electric App: Booking Confirmation for Your Portable EV Charger', htmlUser);
@@ -190,7 +193,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 Address : ${address}<br>
                 Booking Time : ${formattedDateTime}<br>                    
                 Vechile Details : ${vechile.vehicle_data}<br>                      
-                <p> Best regards,<br/> PlusX Electric App </p>
+                <p> Best regards,<br/>PlusX Electric Team </p>
             </body>
         </html>`;
         emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
@@ -791,7 +794,7 @@ const chargerPickedUp = async (req, resp) => {
                     <p>We hope you are doing well!</p>
                     <p>Thank you for choosing our Portable EV Charger service for your EV. We are pleased to inform you that your booking has been successfully completed, and the details of your invoice are attached.</p>
                     <p>We appreciate your trust in PlusX Electric and look forward to serving you again.</p>
-                    <p> Regards,<br/> PlusX Electric App Team </p>
+                    <p> Regards,<br/>PlusX Electric Team </p>
                 </body>
             </html>`;
             const attachment = {
@@ -858,7 +861,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
             Date and Time : ${moment(checkOrder.slot_date, 'YYYY MM DD').format('D MMM, YYYY,')} ${moment(checkOrder.slot_time, 'HH:mm').format('h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
             <p>Thank you for using PlusX Electric. We hope to serve you again soon.</p>
-            <p>Best regards,<br/>The PlusX Electric App Team </p>
+            <p>Best regards,<br/>PlusX Electric Team </p>
         </body>
     </html>`;
     emailQueue.addEmail(checkOrder.rider_email, `PlusX Electric App: Booking Cancellation`, html);
@@ -874,7 +877,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
             Scheduled Date and Time : ${checkOrder.slot_date} - ${checkOrder.slot_time}</br> 
             Location      : ${checkOrder.address}</br>
             <p>Thank you for your attention to this update.</p>
-            <p>Best regards,<br/> The PlusX Electric Team </p>
+            <p>Best regards,<br/>PlusX Electric Team </p>
         </body>
     </html>`;
     emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);

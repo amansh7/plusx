@@ -70,6 +70,7 @@ export const stationDetail = asyncHandler(async (req, resp) => {
     );
     
     station.schedule = getOpenAndCloseTimings(station);
+    return resp.json({open_days: station.open_days, open_timing: station.open_timing, schedule: station.schedule} );
 
     [gallery] = await db.execute(`SELECT image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC LIMIT 5`, [station_id]);
     const imgName = gallery.map(row => row.image_name);

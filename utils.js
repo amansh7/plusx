@@ -122,8 +122,8 @@ export const getOpenAndCloseTimings = (data) => {
 
         if (timing !== 'Closed') {
           const times = timing.split('-');
-          const startTime = new Date(`1970-01-01T${times[0]}:00`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const endTime = new Date(`1970-01-01T${times[1]}:00`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const startTime = formatTime(times[0]);
+          const endTime = formatTime(times[1]);
           formattedTiming = `${startTime}-${endTime}`;
         }
 
@@ -151,6 +151,17 @@ export const getOpenAndCloseTimings = (data) => {
   } else {
     return [{ days: 'Always Open', time: '' }];
   }
+};
+const formatTime = (timeStr) => {
+  const [hour, minute, second] = timeStr.split(':').map(Number);
+  const isPM = hour >= 12 || (hour === 0 && timeStr === '00:00:00');
+
+  const adjustedHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+
+  const period = isPM ? 'PM' : 'AM';
+  const formattedTime = `${adjustedHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${period}`;
+
+  return formattedTime;
 };
 
 export const formatOpenAndCloseTimings = (alwaysOpen, data) => {
@@ -383,9 +394,13 @@ export const formatDateInQuery = (columns) => {
 /* Helper to delete a image from uploads/ */
 export const deleteFile = (directory, filename) => {
   const file_path = path.join('uploads', directory, filename);
-  fs.unlink(file_path, (err) => {
-      if (err) console.error(`Failed to delete ${directory} image ${filename}:`, err);
-  });
+  if(file_path){
+    fs.unlink(file_path, (err) => {
+        if (err) console.error(`Failed to delete ${directory} image ${filename}:`, err);
+    });
+  }else{
+    console.log('File does not exist.');
+  }
 };
 
 export const asyncHandler = (fn) => {
@@ -395,38 +410,6 @@ export const asyncHandler = (fn) => {
 };
 
 /* Generates a PDF from an EJS template. - M1 Not supported using puppeter */
-/* export const generatePDF = async (pdfTemplateContext, templatePath, pdfPath, req) => {
-  const imgUrl = `${req.protocol}://${req.get('host')}/public/invoice-assets/`;
-  let success = false; 
-  try{
-    const html = await ejs.renderFile(templatePath, { ...pdfTemplateContext, imgUrl });
-  
-    const browser = await puppeteer.launch({ 
-      // headless: true,
-      // executablePath: '/usr/bin/google-chrome-stable',  // Use Chromium if needed
-      // args: [
-      //   '--no-sandbox',
-      //   '--disable-setuid-sandbox',
-      //   '--disable-gpu',
-      //   '--disable-dev-shm-usage',  // This is essential if you're running on WSL or Docker
-      //   '--remote-debugging-port=9222',
-      //   '--single-process',          // Keep single-process for stability
-      //   '--headless',                // Make sure headless mode is on
-      //   '--disable-software-rasterizer', // Avoid software rendering issues
-      // ],
-    });
-    const page = await browser.newPage();
-  
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
-    console.log('pdf generated: ', pdfPath);
-    await browser.close();
-    return { success: true, pdfPath }; 
-  }catch(error){
-    console.error('Error generating PDF:', error);
-    return { success: false, error: error.message };
-  }
-}; */
 
 export const generatePdf = async (templatePath, invoiceData, fileName, savePdfDir, req) => {
   try {
@@ -434,7 +417,7 @@ export const generatePdf = async (templatePath, invoiceData, fileName, savePdfDi
     // const serverUrl = `https://plusx.shunyaekai.com/web/upload-pdf`;
     const serverUrl = `${req.protocol}://${req.get('host')}/web/upload-pdf`;       
 
-    const response = await axios.post('http://supro.shunyaekai.tech:8801/pdf-api.php', {
+    const response = await axios.post('http://supro.shunyaekai.tech:8801/pdf-api.php', {  //http://supro.shunyaekai.tech:8801/pdf-api.php
       html,
       fileName,
       serverUrl,

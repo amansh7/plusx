@@ -100,7 +100,7 @@ export const requestService = asyncHandler(async (req, resp) => {
                 <li>Address : ${pickup_address}</li>
                 </ul>
                 <p>We look forward to serving you and providing a seamless EV experience.</p>   
-                <p>Best Regards,<br/> PlusX Electric App Team </p>
+                <p>Best Regards,<br/> PlusX Electric Team </p>
             </body>
         </html>`;
         emailQueue.addEmail(rider.rider_email, 'PlusX Electric App: Booking Confirmation for Your EV Pickup and Drop Off Service', htmlUser);
@@ -112,7 +112,7 @@ export const requestService = asyncHandler(async (req, resp) => {
                 Customer Name  : ${name}<br>
                 Pickup & Drop Address : ${pickup_address}<br>
                 Booking Date & Time : ${formattedDateTime}<br>                
-                <p> Best regards,<br/> PlusX Electric App </p>
+                <p> Best regards,<br/> PlusX Electric Team </p>
             </body>
         </html>`;
         emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Charging Service Booking Received - ${requestId}`, htmlAdmin);
@@ -702,7 +702,7 @@ const workComplete = async (req, resp) => {
                     <p>We hope you are doing well!</p>
                     <p>Thank you for choosing our EV pickup and drop-off service for your vehicle. We are pleased to inform you that your booking has been successfully completed, and the details of your invoice are attached.</p>
                     <p>We appreciate your trust in PlusX Electric and look forward to serving you again.</p>
-                    <p>Regards,<br/> PlusX Electric App Team </p>
+                    <p>Best Regards,<br/> PlusX Electric Team </p>
                 </body>
             </html>`;
             const attachment = {
@@ -769,7 +769,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
             Date and Time : ${moment(checkOrder.slot_date_time, 'YYYY-MM-DD HH:mm:ss').format('D MMM, YYYY, h:mm A')}
             <p>If this cancellation was made in error or if you wish to reschedule, please feel free to reach out to us. We're happy to assist you.</p>
             <p>Thank you for using PlusX Electric. We hope to serve you again soon.</p>
-            <p>Best regards,<br/>The PlusX Electric App Team </p>
+            <p>Best regards,<br/>PlusX Electric Team </p>
         </body>
     </html>`;
     emailQueue.addEmail(checkOrder.rider_email, `PlusX Electric App: Booking Cancellation`, html);
@@ -784,7 +784,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
             Booking ID   : ${booking_id}<br>
             Booking Date : ${checkOrder.slot_date_time}<br> 
             Reason       : ${checkOrder.cancel_reason}<br>
-            <p>Thank you,<br/> The PlusX Electric Team </p>
+            <p>Thank you,<br/>PlusX Electric Team </p>
         </body>
     </html>`;
     emailQueue.addEmail('valetbookings@plusxelectric.com', `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
