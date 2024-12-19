@@ -82,7 +82,7 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
     query += ` FROM portable_charger_slot WHERE status = ? AND slot_date = ? ORDER BY id ASC`;
     
     const [slot] = await db.execute(query, [1, fSlotDate]);
-    const {is_booking} = await queryDB(`SELECT EXISTS (SELECT 1 FROM portable_charger_booking WHERE slot_date=? AND status NOT IN ("PU", "C") AND rider_id=? ) AS is_booking`, [fSlotDate, rider_id]);
+    const {is_booking} = await queryDB(`SELECT EXISTS (SELECT 1 FROM portable_charger_booking WHERE slot_date=? AND status NOT IN ("C") AND rider_id=? ) AS is_booking`, [fSlotDate, rider_id]);
 
     if(moment(fSlotDate).day() === 0){
         slot.forEach((val) => {
@@ -134,7 +134,7 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
                 (SELECT booking_limit FROM portable_charger_slot AS pcs WHERE pcs.slot_id = ?) AS booking_limit,
                 (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot=? and pod.slot_date=? and status NOT IN ("PU", "C") ) as slot_booking_count,
-                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot_date=? AND status NOT IN ("PU", "C") AND rider_id=?) as today_count
+                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot_date=? AND status NOT IN ("C") AND rider_id=?) as today_count
             FROM riders AS r
             WHERE r.rider_id = ?
         `, [charger_id, slot_id, slot_id, fSlotDate, fSlotDate, rider_id, rider_id], conn);

@@ -132,13 +132,14 @@ export const getOpenAndCloseTimings = (data) => {
 
           if (keys[i + 1] && (keys[i + 1] - keys[i] !== 1 && i + 1 !== keys.length)) {
             end = openDays[keys[i]];
-            dayTime.push({ days: `${start}-${end}`, time: formattedTiming, position: keys[i] });
+            const days = start === end ? end : `${start}-${end}`;
+            dayTime.push({ days, time: formattedTiming, position: keys[i] });
             start = '';
           }
 
           if (i + 1 === keys.length) {
             end = openDays[keys[i]];
-            const days = (start === end) ? end : `${start}-${end}`;
+            const days = start === end ? end : `${start}-${end}`;
             dayTime.push({ days, time: formattedTiming, position: keys[i] });
           }
         }
@@ -154,14 +155,11 @@ export const getOpenAndCloseTimings = (data) => {
 };
 const formatTime = (timeStr) => {
   const [hour, minute, second] = timeStr.split(':').map(Number);
-  const isPM = hour >= 12 || (hour === 0 && timeStr === '00:00:00');
-
-  const adjustedHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-
+  const isPM = hour >= 12;
+  const adjustedHour = hour % 12 === 0 ? 12 : hour % 12;
   const period = isPM ? 'PM' : 'AM';
-  const formattedTime = `${adjustedHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${period}`;
 
-  return formattedTime;
+  return `${adjustedHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${period}`;
 };
 
 export const formatOpenAndCloseTimings = (alwaysOpen, data) => {
