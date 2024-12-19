@@ -555,10 +555,14 @@ export const notificationList = asyncHandler(async (req, resp) => {
 /* Rider Address */
 export const riderAddressList = asyncHandler(async (req, resp) => {
     try{
-        const { rider_id, address_type, booking_for } = mergeParam(req);
+        const { rider_id, address_type, booking_for, emirate } = mergeParam(req);
 
         let query = `SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM rider_address WHERE rider_id = ?`;
         let queryParams = [rider_id];
+        
+        if(emirate && emirate.trim() && emirate.toLowerCase() == 'dubai'){
+            query += ` AND emirate = '${emirate}'`;
+        }
 
         if (address_type) {
             const types = address_type.split(",").map(type => type.trim());
