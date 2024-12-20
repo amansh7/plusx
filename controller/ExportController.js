@@ -9,31 +9,47 @@ export const donwloadPodBookingList = async (req, resp) => {
         
         let query = `
             SELECT
-                booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, slot_date, slot_time, created_at
+                booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, 
+                slot_date, slot_time, created_at,
+                CASE 
+                    WHEN status = 'CNF' THEN 'Booking Confirmed'
+                    WHEN status = 'A'   THEN 'Assigned'
+                    WHEN status = 'RL'  THEN 'POD Reached at Location'
+                    WHEN status = 'CS'  THEN 'Charging Started'
+                    WHEN status = 'CC'  THEN 'Charging Completed'
+                    WHEN status = 'PU'  THEN 'Picked Up'
+                    WHEN status = 'C'   THEN 'Cancel'
+                    WHEN status = 'ER'  THEN 'Enroute'
+                END AS status
             FROM portable_charger_booking
         `; 
         let params = [];
+        let conditions = [];
 
         if (search_text) {
-            query += ` WHERE booking_id = ? OR user_name = ? OR service_name = ?`;
-            params.push(search_text, search_text, search_text);
+            conditions.push(`(booking_id LIKE ? OR user_name LIKE ? OR service_name LIKE ?)`);
+            const searchPattern = `%${search_text}%`;
+            params.push(searchPattern, searchPattern, searchPattern);
         }
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
             const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
-            if (params.length === 0) query += ` WHERE created_at BETWEEN ? AND ?`;
-            else query += ` AND created_at BETWEEN ? AND ?`; 
+            conditions.push(`created_at BETWEEN ? AND ?`);
             params.push(start, end);
         }
         if (status) {
-            query += ' OR status = ?';
+            conditions.push(`status = ?`);
             params.push(status);
         }
 
-        query += ' ORDER BY id DESC ';
-        console.log(query, params);
-        const [rows] = await db.execute(query, params);
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' OR ')}`;
+        }
 
+        query += ' ORDER BY id DESC ';
+        // console.log(query, params);
+        const [rows] = await db.execute(query, params);
+        // return resp.json(rows);
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Sheet 1');
     
@@ -57,7 +73,7 @@ export const donwloadPodBookingList = async (req, resp) => {
         rows.forEach((item) => {
             worksheet.addRow(item);
         });
-    
+            
         resp.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         resp.setHeader('Content-Disposition', 'attachment; filename=Portable-Charger-Booking-List.xlsx');
       
