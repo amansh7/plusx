@@ -27,7 +27,7 @@ export const login = asyncHandler(async (req, resp) => {
         [mobile, country_code]
     );
 
-    if(!rider) return resp.json({ status: 0, code: 422, message: ["Mobile number is not matching with our records"] });
+    if(!rider) return resp.json({ status: 0, code: 422, message: ["The mobile number is not registered with us. Kindly sign up."] });
     const isMatch = await bcrypt.compare(password, rider.password);
     if (!isMatch) return resp.json({ status:0, code:405, error:true, message: ["Password is incorrect"] });
     if (rider.status == 2) return resp.json({ status:0, code:405, error:true, message: ["You can not login as your status is inactive. Kindly contact to customer care"] });

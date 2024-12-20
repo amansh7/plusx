@@ -12,9 +12,9 @@ import db from "./config/db.js";
 export const insertRecord = async (table, columns, values, connection = null) => {
   if (!columns.includes('created_at')) {
     columns.push('created_at');
-    values.push(moment().format('YYYY-MM-DD HH:mm:ss'));
+    values.push(moment().utc().format('YYYY-MM-DD HH:mm:ss'));
     columns.push('updated_at');
-    values.push(moment().format('YYYY-MM-DD HH:mm:ss'));
+    values.push(moment().utc().format('YYYY-MM-DD HH:mm:ss'));
   }
   const placeholders = columns.map(() => "?").join(", ");
   const sql = `INSERT INTO ${table} (${columns.join( ", " )}) VALUES (${placeholders})`;
@@ -46,7 +46,7 @@ export const insertRecord = async (table, columns, values, connection = null) =>
  */
 export const updateRecord = async (table, updates, whereColumns, whereValues, connection = null) => {
   if (!updates.updated_at) {
-    updates.updated_at = moment().format('YYYY-MM-DD HH:mm:ss');
+    updates.updated_at = moment().utc().format('YYYY-MM-DD HH:mm:ss');
   }
 
   const setClause = Object.keys(updates).map((col) => `${col} = ?`).join(", ");
@@ -111,78 +111,6 @@ export const queryDB = async (query, params, connection = null) => {
  * @returns {Promise<Object>} - An object containing paginated data, total records, and total pages.
  * 
  **/
-
-
-// export const getPaginatedData = async ({
-//   tableName,
-//   columns = '*',
-//   joinTable = '',
-//   joinCondition = '',
-//   liveSearchFields = [],
-//   liveSearchTexts = [],
-//   searchFields = [],
-//   searchTexts = [],
-//   sortColumn = 'id',
-//   sortOrder = 'ASC',
-//   page_no = 1,
-//   limit = 10,
-//   whereField = '',
-//   whereValue = '',
-//   whereOperator = '=',
-// }) => {
-//   const start = parseInt((page_no * limit) - limit, 10);
-
-//   let whereCondition = '';
-//   let searchCondition = '';
-//   const queryParams = [];
-
-//   if (whereField.length > 0 && whereValue.length > 0) {
-//     whereField.forEach((field, index) => {
-//       const operator = whereOperator[index] || '=';
-//       if (operator.toUpperCase() === 'NOT IN') {
-//         const placeholders = whereValue[index].map(() => '?').join(', ');
-//         whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} NOT IN (${placeholders})`;
-//         queryParams.push(...whereValue[index]);
-//       } else {
-//         whereCondition += (index === 0 ? ' WHERE ' : ' AND ') + `${field} ${operator} ?`;
-//         queryParams.push(whereValue[index]);
-//       }
-//     });
-//   }
-
-//   searchFields.forEach((field, index) => {
-//     if (searchTexts[index]) {
-//       searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' AND ') + `${field} LIKE ?`;
-//       queryParams.push(`%${searchTexts[index].trim()}%`);
-//     }
-//   });
-
-//   liveSearchFields.forEach((field, index) => {
-//     if (liveSearchTexts[index]) {
-//       searchCondition += (whereCondition || searchCondition.length === 0 ? ' WHERE ' : ' OR ') + `${field} LIKE ?`;
-//       queryParams.push(`%${liveSearchTexts[index].trim()}%`);
-//     }
-//   });
-
-//   // Apply JOIN 
-//   const joinClause = joinTable && joinCondition ? ` JOIN ${joinTable} ON ${joinCondition}` : '';
-
-//   // Final query
-//   let query = `SELECT SQL_CALC_FOUND_ROWS ${columns} FROM ${tableName}${joinClause}${whereCondition}${searchCondition} ORDER BY ${sortColumn} ${sortOrder} LIMIT ${start}, ${parseInt(limit, 10)}`;
-
-//   const [rows] = await db.execute(query, queryParams);
-
-//   const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
-//   const totalPage = Math.max(Math.ceil(total / limit), 1);
-
-//   return {
-//     data: rows,
-//     total,
-//     totalPage
-//   };
-// };
-
-
 export const getPaginatedData = async ({
   tableName,
   columns = '*',
