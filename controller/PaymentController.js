@@ -217,3 +217,64 @@ export const createPortableChargerSubscription = async (req, resp) => {
     
     return resp.json({status:1, code:200, message: ["Your PlusX subscription is active! Start booking chargers for your EV now."]});
 };
+
+export const autoPay = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { customer_id, payment_method_id, kw_consumed, first_payment } = mergeParam(req);
+
+    const deliveryFee = 39000; // 39 AED
+    const kwPrice = 0.25 * 0.44;
+    const totalAmount = kw_consumed * kwPrice;
+
+    const customer = await stripe.customers.create({
+        name: 'Aman Sharma',
+        address: {
+            line1: "476 Yudyog Vihar Phase - V",
+            postal_code: "122016",
+            city: "Gurugram",
+            state: "Haryana",
+            country: "IND",
+        },
+        email: 'rider_email',
+    });
+
+    try{
+        let amountToCharge;
+        if(first_payment){
+            amountToCharge = deliveryFee;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount              : amountToCharge,
+                currency            : 'aed',
+                customer            : customer_id,
+                payment_method      : payment_method_id,
+                setup_future_usage  : 'off_session',
+                confirm             : true
+            });
+
+            resp.status(200).json({
+                success: true,
+                message: 'First payment successful, card saved for future use.',
+                paymentIntent,
+            });
+        }else{
+            amountToCharge = totalAmount;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amountToCharge,
+                currency: 'aed',
+                customer: customer_id,
+                off_session: true,
+                confirm: true,
+            });
+
+            resp.status(200).json({
+                success: true,
+                message: 'Charge successful for kW consumed.',
+                paymentIntent,
+            });
+        }
+    }catch(err){
+        return resp.json({'message' : 'Something went wrong', err });
+    }
+};

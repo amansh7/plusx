@@ -1,7 +1,7 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import dotenv from 'dotenv';
 import moment from 'moment';
-import { mergeParam, asyncHandler, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification, deleteFile} from '../../utils.js';
+import { mergeParam, asyncHandler, convertTo24HourFormat, formatDateInQuery, createNotification, pushNotification, deleteFile, formatDateTimeInQuery} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
@@ -260,8 +260,8 @@ export const chargerBookingDetails = async (req, resp) => {
 
         const [bookingResult] = await db.execute(`
             SELECT 
-                booking_id, created_at, user_name, country_code, contact_no, status, address, latitude,
-                longitude, service_name, service_price, service_type, service_feature, slot_date, slot_time,
+                booking_id, ${formatDateTimeInQuery(['created_at'])}, user_name, country_code, contact_no, status, address, latitude,
+                longitude, service_name, service_price, service_type, service_feature, ${formatDateInQuery(['slot_date'])}, slot_time,
                 
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, 
                 (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data
@@ -280,7 +280,7 @@ export const chargerBookingDetails = async (req, resp) => {
         } // invoice_url
         const [bookingHistory] = await db.execute(`
             SELECT 
-                order_status, cancel_by, cancel_reason as reason, rsa_id, created_at, image,   
+                order_status, cancel_by, cancel_reason as reason, rsa_id, ${formatDateTimeInQuery(['created_at'])}, image,   
                 (select rsa.rsa_name from rsa where rsa.rsa_id = portable_charger_history.rsa_id) as rsa_name
             FROM 
                 portable_charger_history 
@@ -329,7 +329,7 @@ export const chargerBookingDetailsOld = async (req, resp) => {
             SELECT 
                 booking_id, rider_id, rsa_id, charger_id, vehicle_id, 
                 service_name, service_price, service_type, service_feature, user_name, 
-                contact_no, address,  slot_date, slot_time, status, created_at 
+                contact_no, address,  slot_date, slot_time, status, ${formatDateTimeInQuery(['created_at'])} 
             FROM 
                 portable_charger_booking 
             WHERE 
@@ -504,7 +504,7 @@ export const invoiceDetails = async (req, resp) => {
             pcb.booking_id, 
             cs.start_time, 
             pcb.slot_time,  
-            pcb.created_at,
+            ${formatDateTimeInQuery(['pcb.created_at'])}
             ${formatDateInQuery(['pcb.slot_date'])},
             (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email
         FROM 
@@ -941,12 +941,6 @@ export const subscriptionList = asyncHandler(async (req, resp) => {
 export const subscriptionDetail = asyncHandler(async (req, resp) => {
     const { subscription_id } = req.body;
     if (!subscription_id) return resp.json({ status: 0, code: 422, message: "Subscription Id is required" });
-    
-    // const subscription = await queryDB(`SELECT 
-    //     subscription_id, amount, expiry_date, booking_limit, total_booking, payment_date, created_at,
-    //     (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = portable_charger_subscriptions.rider_id) as riderDetails
-    //     FROM portable_charger_subscriptions WHERE subscription_id = ?
-    // `, [subscription_id]);
 
     const subscription = await queryDB(`
         SELECT 
@@ -955,18 +949,18 @@ export const subscriptionDetail = asyncHandler(async (req, resp) => {
           pcs.expiry_date, 
           pcs.booking_limit, 
           pcs.total_booking, 
-          pcs.payment_date, 
-          pcs.created_at,
+          pcs.payment_date,
           r.rider_name,
           r.country_code,
-          r.rider_mobile
+          r.rider_mobile,
+          ${formatDateTimeInQuery(['pcs.created_at'])}
         FROM 
           portable_charger_subscriptions pcs
         JOIN 
           riders r ON r.rider_id = pcs.rider_id
         WHERE 
           pcs.subscription_id = ?
-      `, [subscription_id]);
+    `, [subscription_id]);
       
 
     return resp.status(200).json({status: 1, code: 200, data: subscription, message: "Subscription Detail fetch successfully!"});

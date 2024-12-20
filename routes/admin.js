@@ -34,11 +34,15 @@ import {
 } from "../controller/admin/EvInsuranceController.js";
 import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleController.js";
 import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
+import { donwloadPodBookingList } from "../controller/ExportController.js";
 
 
 import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea, podAreaDetails, editPodArea, AllpodArea, assignPodDeviceArea, podAreaAssignList, podDeviceStatusChange,podAreaInputList, podAreaBookingList } from "../controller/admin/PodDeviceController.js";
 
 const router = Router();
+
+router.get('/pod-booking-list-download', donwloadPodBookingList);
+
 const adminAuthRoutes = [
     { method: 'post', path: '/login', handler: login },
 ]

@@ -7,7 +7,7 @@ import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddlewa
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
 import { shopList, shopDetail } from '../controller/api/ShopController.js';
 import { offerList, offerDetail } from '../controller/api/OfferController.js';
-import { redeemCoupon, createIntent, createPortableChargerSubscription } from '../controller/PaymentController.js';
+import { redeemCoupon, createIntent, createPortableChargerSubscription, autoPay } from '../controller/PaymentController.js';
 import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
@@ -274,5 +274,6 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
 
 router.post('/validate-coupon', redeemCoupon);
+router.post('/charge', autoPay);
 
 export default router;

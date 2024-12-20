@@ -371,9 +371,9 @@ export const formatDateTimeInQuery = (columns) => {
   return columns.map(column => {
       if (column.includes('.')) {
         const alias = column.split('.').pop();
-        return `DATE_FORMAT(${column}, '%Y-%m-%d %H:%i:%s') AS ${alias}`;
-      }else{
-        return `DATE_FORMAT(${column}, '%Y-%m-%d %H:%i:%s') AS ${column}`;
+        return `DATE_FORMAT(CONVERT_TZ(${column}, 'UTC', 'Asia/Dubai'), '%Y-%m-%d %H:%i:%s') AS ${alias}`;
+      } else {
+        return `DATE_FORMAT(CONVERT_TZ(${column}, 'UTC', 'Asia/Dubai'), '%Y-%m-%d %H:%i:%s') AS ${column}`;
       }
   }).join(', ');
 };
@@ -382,9 +382,9 @@ export const formatDateInQuery = (columns) => {
   return columns.map(column => {
       if (column.includes('.')) {
         const alias = column.split('.').pop();
-        return `DATE_FORMAT(${column}, '%Y-%m-%d') AS ${alias}`;
-      }else{
-        return `DATE_FORMAT(${column}, '%Y-%m-%d') AS ${column}`;
+        return `DATE_FORMAT(CONVERT_TZ(${column}, 'UTC', 'Asia/Dubai'), '%Y-%m-%d') AS ${alias}`;
+      } else {
+        return `DATE_FORMAT(CONVERT_TZ(${column}, 'UTC', 'Asia/Dubai'), '%Y-%m-%d') AS ${column}`;
       }
   }).join(', ');
 };
