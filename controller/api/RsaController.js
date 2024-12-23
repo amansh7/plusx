@@ -346,8 +346,8 @@ export const rsaUpdateLatLong = asyncHandler(async (req, resp) => {
 
     const update = await updateRecord('rsa', {latitude, longitude}, ['rsa_id'], [rsa_id]);
     const insert = await insertRecord('rsa_location_history', ['rsa_id', 'latitude', 'longitude'], [rsa_id, latitude, longitude]);
-    console.log(insert);
-    console.log(update);
+    // console.log(insert);
+    // console.log(update);
     return resp.json({
         status: update.affectedRows > 0 ? 1 : 0,
         message: update.affectedRows > 0 ? "Latitude Longitude updated successfully" : "Failed to update, Please try again.",

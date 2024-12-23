@@ -80,7 +80,7 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
     }
     
     query += ` FROM portable_charger_slot WHERE status = ? AND slot_date = ? ORDER BY id ASC`;
-    
+    // console.log(query)
     const [slot] = await db.execute(query, [1, fSlotDate]);
     const {is_booking} = await queryDB(`SELECT EXISTS (SELECT 1 FROM portable_charger_booking WHERE slot_date=? AND status NOT IN ("C") AND rider_id=? ) AS is_booking`, [fSlotDate, rider_id]);
 

@@ -181,12 +181,12 @@ export const deleteCharger = async (req, resp) => {
 
 export const chargerBookingList = async (req, resp) => {
     try {
-        const { page_no, booking_id, name, contact, status, start_date, end_date, search_text = '' } = req.body;
+        const { page_no, booking_id, name, contact, status, start_date, end_date, search_text = '', scheduleFilters } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
         });
-
+        
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
         const params = {
@@ -197,17 +197,16 @@ export const chargerBookingList = async (req, resp) => {
             sortOrder: 'DESC',
             page_no,
             limit: 10,
-            liveSearchFields: ['booking_id', 'user_name', 'service_name'],
-            liveSearchTexts: [search_text, search_text, search_text],
-            whereField: [],
-            whereValue: [],
-            whereOperator: []
+            liveSearchFields : ['booking_id', 'user_name', 'service_name'],
+            liveSearchTexts  : [search_text, search_text, search_text],
+            whereField       : [],
+            whereValue       : [],
+            whereOperator    : []
             // searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
             // searchTexts: [booking_id, name, contact, status]
             // whereField: ['status'],
             // whereValue: [status],
             // whereOperator: ['==']
-
         };
 
         if (start_date && end_date) {
@@ -221,12 +220,21 @@ export const chargerBookingList = async (req, resp) => {
             params.whereValue.push(start, end);
             params.whereOperator.push('>=', '<=');
         }
+        if (scheduleFilters.start_date && scheduleFilters.end_date) {
+          
+            const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+            const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            
+            params.whereField.push('slot_date', 'slot_date');
+            params.whereValue.push(schStart, schEnd);
+            params.whereOperator.push('>=', '<=');
+        }
         if(status) {
             params.whereField.push('status');
             params.whereValue.push(status);
             params.whereOperator.push('=');
         }
-
+        console.log(params)
         const result = await getPaginatedData(params);
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
@@ -543,6 +551,7 @@ export const slotList = async (req, resp) => {
         const params = {
             tableName  : 'portable_charger_slot',
             columns    : `slot_id, ${formatDateInQuery(['slot_date'])}, start_time, end_time, booking_limit, status, 
+
                 (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C")) AS slot_booking_count
             `,
             sortColumn : 'created_at',
