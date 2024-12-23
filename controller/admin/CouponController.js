@@ -1,7 +1,7 @@
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { asyncHandler } from '../../utils.js';
+import { asyncHandler, formatDateInQuery, formatDateTimeInQuery } from '../../utils.js';
 import moment from 'moment';
 
 const validations = async (coupan_code, resp, coupon_id=null) => {
@@ -38,8 +38,6 @@ export const couponList = asyncHandler(async (req, resp) => {
     const whereOperators = []
 
     if (start_date && end_date) {
-        // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-        // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
         const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
         const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
@@ -50,9 +48,7 @@ export const couponList = asyncHandler(async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'coupon',
-        columns: `id, coupan_name, coupan_code, user_per_user, coupan_percentage, end_date, status, booking_for`,
-        // searchFields: ['coupan_name'],
-        // searchTexts: [search],
+        columns: `id, coupan_name, coupan_code, user_per_user, coupan_percentage, ${formatDateInQuery(['end_date'])}, status, booking_for`,
         liveSearchFields: ['id', 'coupan_name', 'coupan_code',],
         liveSearchTexts: [search_text, search_text, search_text],
         sortColumn: 'id',
@@ -78,7 +74,7 @@ export const couponDetail = asyncHandler(async (req, resp) => {
     const { coupon_id } = req.body;
     if (!coupon_id) return resp.json({ status: 0, code: 422, message: "Coupon Id is required" });
     
-    const coupon = await queryDB(`SELECT * FROM coupon WHERE id = ?`, [coupon_id]);
+    const coupon = await queryDB(`SELECT *, ${formatDateInQuery(['end_date'])}, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM coupon WHERE id = ?`, [coupon_id]);
     
     return resp.status(200).json({status: 1, data: coupon, message: "Coupon Data fetch successfully!"});
 });

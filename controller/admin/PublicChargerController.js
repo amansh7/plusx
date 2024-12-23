@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import moment from 'moment';
 import path from 'path';
 import fs from 'fs';
-import { getOpenAndCloseTimings, formatOpenAndCloseTimings, deleteFile, asyncHandler} from '../../utils.js';
+import { getOpenAndCloseTimings, formatOpenAndCloseTimings, deleteFile, asyncHandler, formatDateTimeInQuery} from '../../utils.js';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
@@ -16,16 +16,6 @@ export const stationList = asyncHandler(async (req, resp) => {
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        // const result = await getPaginatedData({
-        //     tableName: 'public_charging_station_list',
-        //     columns: `station_id, station_name, charging_for, charger_type, station_image, price, address`,
-        //     sortColumn:'id',
-        //     sortOrder: 'DESC',
-        //     page_no,
-        //     limit: 10,
-        //     searchFields: ['station_name'],
-        //     searchTexts: [search],
-        // });
         const params = {
             tableName: 'public_charging_station_list',
             columns: `station_id, station_name, charging_for, charger_type, station_image, price, address`,
@@ -33,8 +23,6 @@ export const stationList = asyncHandler(async (req, resp) => {
             sortOrder: 'DESC',
             page_no,
             limit: 10,
-            // searchFields: ['station_name'],
-            // searchTexts: [search],
             liveSearchFields: ['station_name', 'charger_type'],
             liveSearchTexts: [search_text, search_text],
         };
@@ -94,7 +82,7 @@ export const stationDetail = asyncHandler(async (req, resp) => {
     const { isValid, errors } = validateFields(req.body, { station_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     let gallery = [];
-    const station = await queryDB(`SELECT * FROM public_charging_station_list WHERE station_id = ?`, [station_id]); 
+    const station = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM public_charging_station_list WHERE station_id = ?`, [station_id]); 
     if (!station) return resp.status(404).json({status: 0, code: 404, message: 'Station not found.'});
     
     station.schedule = getOpenAndCloseTimings(station);
@@ -102,7 +90,6 @@ export const stationDetail = asyncHandler(async (req, resp) => {
     [gallery] = await db.execute(`SELECT id, image_name FROM public_charging_station_gallery WHERE station_id = ? ORDER BY id DESC `, [station_id]);
     const imgName = gallery.map(row => row.image_name);
     const imgId   = gallery.map(row => row.id);
-    // const imgName = gallery.map(row => ({ id: row.id, image_name: row.image_name }));
     const chargingFor = ['All EV`s', 'Tesla', 'BYD', 'Polestar', 'GMC', 'Porsche', 'Volvo', 'Audi', 'Chevrolet', 'BMW', 'Mercedes', 'Zeekr', 'Volkswagen', 'HiPhi', 'Kia', 'Hyundai', 'Lotus', 'Ford', 'Rabdan'];
     const chargerType = ['Level 2', 'Fast Charger', 'Super Charger'];
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' ];
@@ -114,7 +101,7 @@ export const stationDetail = asyncHandler(async (req, resp) => {
     };
 
     if(station_id){
-        const stationData = await queryDB(`SELECT * FROM public_charging_station_list WHERE station_id = ?`, [station_id]); 
+        const stationData = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM public_charging_station_list WHERE station_id = ?`, [station_id]); 
         result.stationData = stationData; 
     }
 
@@ -123,7 +110,6 @@ export const stationDetail = asyncHandler(async (req, resp) => {
         code: 200,
         message: ["Charging Station Details fetched successfully!"],
         data: station,
-        // gallery_data: galleryData,
         gallery_data: imgName,
         gallery_id: imgId,
         result,

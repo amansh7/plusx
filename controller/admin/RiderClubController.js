@@ -2,7 +2,7 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { asyncHandler, deleteFile } from '../../utils.js';
+import { asyncHandler, deleteFile, formatDateTimeInQuery } from '../../utils.js';
 
 export const clubList = asyncHandler(async (req, resp) => {
     const { search_text, page_no } = req.body;
@@ -29,7 +29,7 @@ export const clubList = asyncHandler(async (req, resp) => {
 
 export const clubData = asyncHandler(async (req, resp) => {
     const { club_id } = req.body;
-    const club = await queryDB(`SELECT * FROM clubs WHERE club_id = ?`, [club_id]);
+    const club = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM clubs WHERE club_id = ?`, [club_id]);
     const [gallery] = await db.execute(`SELECT id, image_name FROM club_gallery WHERE club_id = ? ORDER BY id DESC`, [club_id]);
     const imgName = gallery.map(image => image.image_name);
     const imgId= gallery.map(image => image.id);

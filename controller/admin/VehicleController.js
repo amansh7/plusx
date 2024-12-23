@@ -1,5 +1,5 @@
 import { getPaginatedData, queryDB } from '../../dbUtils.js';
-import { asyncHandler } from '../../utils.js';
+import { asyncHandler, formatDateTimeInQuery } from '../../utils.js';
 
 
 // export const sellVehicleList = asyncHandler(async (req, resp) => {
@@ -80,21 +80,10 @@ export const sellVehicleDetail = asyncHandler(async (req, resp) => {
     const { sell_id } = req.body;
     if (!sell_id) return resp.json({ status: 0, code: 422, message: "Sell Id is required." });
 
-    // const data = await queryDB(`
-    //     SELECT 
-    //         *, 
-    //         (SELECT CONCAT(vehicle_make, "-", vehicle_model, ",", year_manufacture) FROM riders_vehicles AS rv WHERE rv.vehicle_id = vehicle_sell.vehicle_id) AS vehicle_data,
-    //         (select concat(rider_name, ",", country_code, "-", rider_mobile) from riders as r where r.rider_id = vehicle_sell.rider_id) as rider_data
-    //     FROM 
-    //         vehicle_sell 
-    //     WHERE 
-    //         sell_id = ? 
-    //     LIMIT 1
-    // `,[sell_id]);
-
     const data = await queryDB(`
         SELECT 
-            vehicle_sell.*, 
+            vehicle_sell.*,
+            ${formatDateTimeInQuery(['vehicle_sell.created_at', 'vehicle_sell.updated_at'])},
             (SELECT CONCAT(vehicle_make, "-", vehicle_model, ",", year_manufacture) FROM riders_vehicles AS rv WHERE rv.vehicle_id = vehicle_sell.vehicle_id) AS vehicle_data,
             r.rider_name AS rider_name,
             r.country_code AS country_code,

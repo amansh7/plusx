@@ -2,15 +2,13 @@ import generateUniqueId from 'generate-unique-id';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { deleteFile, asyncHandler } from '../../utils.js';
+import { deleteFile, asyncHandler, formatDateTimeInQuery } from '../../utils.js';
 
 export const bikesList = asyncHandler(async (req, resp) => {
     const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'electric_bike_rental',
         columns: `rental_id, bike_name, available_on, bike_type, price, contract`,
-        // searchFields: ['bike_name'],
-        // searchTexts: [search_text],
         liveSearchFields : ['bike_name', 'rental_id'],
         liveSearchTexts  : [search_text, search_text],
         sortColumn: 'id',
@@ -33,7 +31,7 @@ export const bikeDetail = asyncHandler(async (req, resp) => {
     const { rental_id } = req.body;
     if(!rental_id) return resp.json({status: 0, message: "Rental Id is required"});
 
-    const bike = await queryDB(`SELECT * FROM electric_bike_rental WHERE rental_id = ?`, [rental_id]);
+    const bike = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM electric_bike_rental WHERE rental_id = ?`, [rental_id]);
     const [gallery] = await db.execute(`SELECT id, image_name FROM electric_bike_rental_gallery WHERE rental_id = ? ORDER BY id DESC`, [rental_id]);
     const imgName = gallery.map(image => image.image_name);
     const imgId= gallery.map(image => image.id);

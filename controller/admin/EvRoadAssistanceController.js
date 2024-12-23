@@ -1,7 +1,7 @@
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { createNotification, pushNotification,asyncHandler } from '../../utils.js';
+import { createNotification, pushNotification,asyncHandler, formatDateTimeInQuery, formatDateInQuery } from '../../utils.js';
 import moment from 'moment';
 
 /* RA Booking */
@@ -29,7 +29,7 @@ export const bookingList = asyncHandler(async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'road_assistance',
-        columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, price, order_status, created_at`,
+        columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, price, order_status, ${formatDateTimeInQuery(['created_at'])}`,
         liveSearchFields: ['request_id', 'name'],
         liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
@@ -53,7 +53,7 @@ export const bookingList = asyncHandler(async (req, resp) => {
 
 export const bookingData = asyncHandler(async (req, resp) => {
     const { request_id } = req.body;
-    const booking = await queryDB(`SELECT * FROM road_assistance WHERE request_id = ?`, [request_id]);
+    const booking = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM road_assistance WHERE request_id = ?`, [request_id]);
 
     const result = {
         // status: 1,
@@ -160,8 +160,7 @@ export const invoiceList = asyncHandler(async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'road_assistance_invoice',
-        // columns: `vehicle_id, vehicle_name, vehicle_model, vehicle_type, horse_power, price`,
-        columns: `invoice_id, request_id, rider_id, amount, transaction_id, payment_type,payment_status, invoice_date, receipt_url, created_at, 
+        columns: `invoice_id, request_id, rider_id, amount, transaction_id, payment_type,payment_status, ${formatDateInQuery(['invoice_date'])}, receipt_url, ${formatDateTimeInQuery(['created_at'])}, 
                 (select concat(name, ",", country_code, "-", contact_no) from road_assistance as cs where cs.request_id = road_assistance_invoice.request_id limit 1)
                 AS riderDetails`,
         searchFields: [],
@@ -186,8 +185,6 @@ export const invoiceList = asyncHandler(async (req, resp) => {
         total: result.total,
     });    
 });
-
-
 
 export const invoiceData = asyncHandler(async (req, resp) => {
     const { invoice_id } = req.body;

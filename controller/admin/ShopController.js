@@ -2,7 +2,7 @@ import db from '../../config/db.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-import { formatOpenAndCloseTimings, asyncHandler, deleteFile, getOpenAndCloseTimings } from '../../utils.js';
+import { formatOpenAndCloseTimings, asyncHandler, deleteFile, getOpenAndCloseTimings, formatDateTimeInQuery } from '../../utils.js';
 
 export const storeList = asyncHandler(async (req, resp) => {
     const { search_text, page_no } = req.body;
@@ -246,7 +246,7 @@ export const serviceList = asyncHandler(async (req, resp) => {
     const { search_text, page_no } = req.body;
     const result = await getPaginatedData({
         tableName: 'store_services',
-        columns: `service_id, service_name, created_at`,
+        columns: `service_id, service_name, ${formatDateTimeInQuery(['created_at'])}`,
         liveSearchFields: ['service_name', 'service_id'],
         liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',

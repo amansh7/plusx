@@ -113,15 +113,13 @@ export const riderList = async (req, resp) => {
     try {
         const params = {
             tableName: 'riders',
-            columns: 'rider_id, rider_name, rider_email, country_code, rider_mobile, emirates, profile_img, vehicle_type, status, created_at, updated_at',
+            columns: `rider_id, rider_name, rider_email, country_code, rider_mobile, emirates, profile_img, vehicle_type, status, ${formatDateTimeInQuery(['created_at', 'updated_at'])}`,
             sortColumn: 'id',
             sortOrder : "DESC",
             page_no : page_no,
             limit: 10,
             liveSearchFields: ['rider_name', 'rider_id', 'rider_email', 'rider_mobile',],
             liveSearchTexts: [search_text, search_text, search_text, search_text,],
-            // searchFields: ['added_from', 'emirates'],
-            // searchTexts: [addedFrom, emirates],
             whereField: [],
             whereValue: [],
             whereOperator: []
@@ -201,7 +199,9 @@ export const riderDetails = async (req, resp) => {
         }
 
         const [chargerRows] = await db.execute(
-            `SELECT pcb.booking_id, pcb.rsa_id, rsa.rsa_name, pcb.charger_id, pcb.vehicle_id, pcb.service_name, pcb.service_price, pcb.service_type, pcb.service_feature, pcb.status, pcb.created_at
+            `SELECT 
+                pcb.booking_id, pcb.rsa_id, rsa.rsa_name, pcb.charger_id, pcb.vehicle_id, pcb.service_name, pcb.service_price, pcb.service_type, pcb.service_feature, pcb.status, 
+                ${formatDateTimeInQuery(['pcb.created_at'])}
              FROM portable_charger_booking pcb
              JOIN rsa ON pcb.rsa_id = rsa.rsa_id
              WHERE pcb.rider_id = ?
@@ -219,7 +219,7 @@ export const riderDetails = async (req, resp) => {
                 cs.vehicle_id, 
                 cs.price, 
                 cs.order_status, 
-                cs.created_at
+                ${formatDateTimeInQuery(['cs.created_at'])}
              FROM charging_service cs
              JOIN rsa ON cs.rsa_id = rsa.rsa_id
              WHERE cs.rider_id = ?
@@ -235,7 +235,7 @@ export const riderDetails = async (req, resp) => {
             rider_email: rows[0].rider_email,
             rider_mobile: rows[0].rider_mobile,
             country_code: rows[0].country_code,
-            date_of_birth: rows[0].date_of_birth,
+            date_of_birth: moment(rows[0].date_of_birth).format('YYYY-MM-DD'),
             area: rows[0].area,
             emirates: rows[0].emirates,
             country: rows[0].country,

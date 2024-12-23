@@ -17,7 +17,7 @@ export const bookingList = async (req, resp) => {
 
         const params = {
             tableName: 'charging_service',
-            columns: 'request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, created_at',
+            columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'created_at',
             sortOrder: 'DESC',
             page_no,
@@ -32,9 +32,6 @@ export const bookingList = async (req, resp) => {
         };
 
         if (start_date && end_date) {
-            // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-            // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
             const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
@@ -96,7 +93,9 @@ export const bookingDetails = async (req, resp) => {
                 message : 'Booking not found.',
             });
         }
-        const [history] = await db.execute(`SELECT order_status, cancel_by, cancel_reason as reason, created_at, image, (select rsa.rsa_name from rsa where rsa.rsa_id = charging_service_history.rsa_id) as rsa_name FROM charging_service_history WHERE service_id = ?`, [request_id]);
+        const [history] = await db.execute(`SELECT order_status, cancel_by, cancel_reason as reason, ${formatDateTimeInQuery(['created_at'])}, image, 
+            (select rsa.rsa_name from rsa where rsa.rsa_id = charging_service_history.rsa_id) as rsa_name FROM charging_service_history WHERE service_id = ?
+        `, [request_id]);
 
         return resp.json({
             status  : 1,
@@ -107,7 +106,6 @@ export const bookingDetails = async (req, resp) => {
             imageUrl : `${req.protocol}://${req.get('host')}/uploads/pick-drop-images/`,
         });
     } catch (error) {
-        // console.error('Error fetching booking details:', error);
         return resp.status(500).json({ 
             status  : 0, 
             code    : 500, 
@@ -132,8 +130,6 @@ export const pdInvoiceList = async (req, resp) => {
         const whereOperators = []
 
         if (start_date && end_date) {
-            // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-            // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
             const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
     
@@ -144,7 +140,7 @@ export const pdInvoiceList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName: 'charging_service_invoice',
-            columns: `invoice_id, amount, payment_status, invoice_date, currency, receipt_url,created_at,
+            columns: `invoice_id, amount, payment_status, invoice_date, currency, receipt_url, ${formatDateTimeInQuery(['created_at'])},
                 (select concat(name, ",", country_code, "-", contact_no) from charging_service as cs where cs.request_id = charging_service_invoice.request_id limit 1)
                 AS riderDetails`,
             sortColumn: 'created_at',
@@ -183,20 +179,19 @@ export const pdInvoiceDetails = asyncHandler(async (req, resp) => {
             invoice_id, 
             amount AS price, 
             payment_status, 
-            invoice_date, 
+            ${formatDateInQuery(['invoice_date'])},
             currency, 
             payment_type, 
             cs.name, 
             cs.country_code, 
             cs.contact_no, 
             cs.request_id, 
-            cs.slot_date_time, 
             cs.slot, 
             cs.parking_number, 
             cs.parking_floor, 
             cs.pickup_latitude, 
             cs.pickup_longitude,
-            cs.created_at,
+            ${formatDateTimeInQuery(['cs.slot_date_time', 'cs.created_at'])},
             (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
         FROM 
             charging_service_invoice AS csi
@@ -229,7 +224,7 @@ export const pdSlotList = async (req, resp) => {
         let slot_date = moment().format("YYYY-MM-DD");
         const params = {
             tableName: 'pick_drop_slot',
-            columns: `slot_id, start_time, end_time, booking_limit, status, slot_date, created_at, 
+            columns: `slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}, ${formatDateTimeInQuery(['created_at'])}, 
                 (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
             `,
             sortColumn : 'created_at',
@@ -252,23 +247,13 @@ export const pdSlotList = async (req, resp) => {
         }
         const result = await getPaginatedData(params);
 
-        const formattedData = result.data.map((item) => ({
-            slot_id            : item.slot_id,
-            slot_date          : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
-            booking_limit      : item.booking_limit,
-            status             : item.status,
-            created_at         : moment(item.created_at, "DD-MM-YYYY").format('YYYY-MM-DD HH:mm:ss'),
-            timing             : `${item.start_time} - ${item.end_time}`,
-            slot_booking_count : item.slot_booking_count 
-        }));
         return resp.json({
             status: 1,
             code: 200,
             message: ["Pick & Drop Slot List fetched successfully!"],
-            data : formattedData,
+            data : result.data,
             total_page: result.totalPage,
             total: result.total,
-            // base_url: `${req.protocol}://${req.get('host')}/uploads/offer/`,
         });
     } catch (error) {
         console.error('Error fetching slot list:', error);
@@ -341,52 +326,6 @@ export const pdAddSlot = async (req, resp) => {
         resp.status(500).json({ message: 'Something went wrong' });
     }
 };
-
-// export const pdEditSlot = async (req, resp) => {
-//     try {
-//         const { id, slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
-//         const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
-//         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        
-//         if ( !Array.isArray(slot_id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
-//             return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
-//         }
-//         if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
-//             return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
-//         }
-
-//         let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult, insertResult, errMsg = [];
-//         for (let i = 0; i < start_time.length; i++) {
-//             const updates = {
-//                 slot_date: fSlotDate,
-//                 start_time: convertTo24HourFormat(start_time[i]),
-//                 end_time: convertTo24HourFormat(end_time[i]),
-//                 booking_limit: booking_limit[i],
-//                 status: status[i]
-//             };
-
-//             if(slot_id[i]){
-//                 updateResult = await updateRecord("pick_drop_slot", updates, ["slot_id"], [slot_id[i]]);
-//                 if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_date ${fSlotDate}.`);
-//             }else{
-//                 const slotId = `PDS${generateUniqueId({ length:6 })}`;
-//                 insertResult = await insertRecord("pick_drop_slot", ["slot_id", "slot_date", "start_time", "end_time", "booking_limit", "status"],[
-//                     slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
-//                 ]);
-//                 if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_date ${fSlotDate}.`);
-//             }
-//         }
-
-//         if (errMsg.length > 0) {
-//             return resp.json({ status: 0, code: 400, message: errMsg.join(" | ") });
-//         }
-
-//         return resp.json({ code: 200, message: "Slots updated successfully!", status: 1 });
-//     } catch (error) {
-//         console.error('Something went wrong:', error);
-//         resp.status(500).json({ message: 'Something went wrong' });
-//     }
-// };
 
 export const pdEditSlot = asyncHandler(async (req, resp) => {
     const { slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;
