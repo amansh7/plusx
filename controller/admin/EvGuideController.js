@@ -2,7 +2,7 @@ import moment from 'moment';
 import db from '../../config/db.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
-import { asyncHandler, deleteFile} from '../../utils.js';
+import { asyncHandler, deleteFile, formatDateTimeInQuery} from '../../utils.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 
 export const guideList = asyncHandler(async (req, resp) => {
@@ -112,7 +112,7 @@ export const guideDetail = asyncHandler(async (req, resp) => {
         if (!isValid) {
             return resp.json({ status: 0, code: 422, message: errors });
         }
-        const [vehicleDetails] = await db.execute(` SELECT * FROM vehicle WHERE vehicle_id = ?`, [vehicle_id] );
+        const [vehicleDetails] = await db.execute(` SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM vehicle WHERE vehicle_id = ?`, [vehicle_id] );
 
         if (!vehicleDetails.length) {
             return resp.status(404).json({

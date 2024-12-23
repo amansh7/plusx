@@ -3,7 +3,7 @@ import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import moment from 'moment';
-import { deleteFile, asyncHandler } from '../../utils.js';
+import { deleteFile, asyncHandler, formatDateTimeInQuery, formatDateInQuery } from '../../utils.js';
 
 export const offerList = asyncHandler(async (req, resp) => {
     const { start_date, end_date, search_text = '', page_no } = req.body;
@@ -23,7 +23,7 @@ export const offerList = asyncHandler(async (req, resp) => {
 
     const result = await getPaginatedData({
         tableName: 'offer',
-        columns: `offer_id, offer_name, offer_exp_date, offer_image, status`,
+        columns: `offer_id, offer_name, ${formatDateInQuery(['offer_exp_date'])}, offer_image, status`,
         liveSearchFields: ['offer_id', 'offer_name' ],
         liveSearchTexts: [search_text, search_text],
         sortColumn: 'id',
@@ -49,7 +49,7 @@ export const offerDetail = asyncHandler(async (req, resp) => {
     const { offer_id } = req.body;
     if (!offer_id) return resp.json({ status: 0, code: 422, message: "Offer Id is required" });
     
-    const offer = await queryDB(`SELECT * FROM offer WHERE offer_id = ?`, [offer_id]);
+    const offer = await queryDB(`SELECT *, ${formatDateInQuery(['offer_exp_date'])} ,${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM offer WHERE offer_id = ?`, [offer_id]);
 
     return resp.status(200).json({status: 1, data: offer, message: "Offer Data fetch successfully!"});
 });

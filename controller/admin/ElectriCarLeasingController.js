@@ -3,7 +3,7 @@ import moment from 'moment';
 import db from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { deleteFile,asyncHandler } from '../../utils.js';
+import { deleteFile,asyncHandler, formatDateTimeInQuery } from '../../utils.js';
 
 export const carsList = asyncHandler(async (req, resp) => {
     const { search_text, start_date, end_date, page_no } = req.body;
@@ -22,8 +22,6 @@ export const carsList = asyncHandler(async (req, resp) => {
     const result = await getPaginatedData({
         tableName: 'electric_car_rental',
         columns: `rental_id, car_name, available_on, car_type, price, contract`,
-        // searchFields: ['car_name'],
-        // searchTexts: [search],
         sortColumn: 'id',
         sortOrder: 'DESC',
         page_no,
@@ -49,7 +47,7 @@ export const carDetail = asyncHandler(async (req, resp) => {
     const { rental_id } = req.body;
     if(!rental_id) return resp.json({status: 0, message: "Rental Id is required"});
 
-    const car = await queryDB(`SELECT * FROM electric_car_rental WHERE rental_id = ?`, [rental_id]);
+    const car = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM electric_car_rental WHERE rental_id = ?`, [rental_id]);
     const [gallery] = await db.execute(`SELECT id, image_name FROM electric_car_rental_gallery WHERE rental_id = ? ORDER BY id DESC`, [rental_id]);
     const imgName = gallery.map(image => image.image_name);
     const imgId= gallery.map(image => image.id);

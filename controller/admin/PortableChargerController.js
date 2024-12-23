@@ -191,7 +191,8 @@ export const chargerBookingList = async (req, resp) => {
 
         const params = {
             tableName: 'portable_charger_booking',
-            columns: 'booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, slot_date, slot_time, created_at',
+            columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
+                ${formatDateInQuery(['slot_date'])}, slot_time, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'created_at',
             sortOrder: 'DESC',
             page_no,
@@ -512,8 +513,8 @@ export const invoiceDetails = async (req, resp) => {
             pcb.booking_id, 
             cs.start_time, 
             pcb.slot_time,  
-            ${formatDateTimeInQuery(['pcb.created_at'])}
             ${formatDateInQuery(['pcb.slot_date'])},
+            ${formatDateTimeInQuery(['pcb.created_at'])},
             (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email
         FROM 
             portable_charger_invoice AS pci
@@ -549,7 +550,8 @@ export const slotList = async (req, resp) => {
 
         const params = {
             tableName  : 'portable_charger_slot',
-            columns    : `slot_id, slot_date, start_time, end_time, booking_limit, status, 
+            columns    : `slot_id, ${formatDateInQuery(['slot_date'])}, start_time, end_time, booking_limit, status, 
+
                 (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C")) AS slot_booking_count
             `,
             sortColumn : 'created_at',
@@ -665,53 +667,6 @@ export const addSlot = async (req, resp) => {
         resp.status(500).json({ message: 'Something went wrong' });
     }
 };
-
-// export const editSlot = async (req, resp) => {
-//     try {        
-
-//         const { id, slot_id, slot_date, start_time, end_time, booking_limit, status = 1 } = req.body;
-//         const { isValid, errors } = validateFields(req.body, { slot_id: ["required"], slot_date: ["required"], start_time: ["required"], end_time: ["required"], booking_limit: ["required"], });
-//         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        
-//         if ( !Array.isArray(slot_id) || !Array.isArray(start_time) || !Array.isArray(end_time) || !Array.isArray(booking_limit) || !Array.isArray(status)) {
-//             return resp.json({ status: 0, code: 422, message: 'Input data must be in array format.' });
-//         }
-//         if ( start_time.length !== end_time.length || end_time.length !== booking_limit.length || booking_limit.length !== status.length) {
-//             return resp.json({ status: 0, code: 422, message: 'All input arrays must have the same length.' });
-//         }
-
-//         let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD"), updateResult, insertResult, errMsg = [];
-//         for (let i = 0; i < start_time.length; i++) {
-//             const updates = {
-//                 slot_date: fSlotDate,
-//                 start_time: convertTo24HourFormat(start_time[i]),
-//                 end_time: convertTo24HourFormat(end_time[i]),
-//                 booking_limit: booking_limit[i],
-//                 status: status[i]
-//             };
-
-//             if(slot_id[i]){
-//                 updateResult = await updateRecord("portable_charger_slot", updates, ["slot_id"], [slot_id[i]]);
-//                 if (updateResult.affectedRows === 0) errMsg.push(`Failed to update ${start_time[i]} for slot_date ${fSlotDate}.`);
-//             }else{
-//                 const slotId = `PTS${generateUniqueId({ length:6 })}`;
-//                 insertResult = await insertRecord("portable_charger_slot", ["slot_id", "slot_date", "start_time", "end_time", "booking_limit", "status"],[
-//                     slotId, fSlotDate, convertTo24HourFormat(start_time[i]), convertTo24HourFormat(end_time[i]), booking_limit[i], status[i] 
-//                 ]);
-//                 if (insertResult.affectedRows === 0) errMsg.push(`Failed to add ${start_time[i]} for slot_date ${fSlotDate}.`);
-//             }
-//         }
-
-//         if (errMsg.length > 0) {
-//             return resp.json({ status: 0, code: 400, message: errMsg.join(" | ") });
-//         }
-
-//         return resp.json({ code: 200, message: "Slots updated successfully!", status: 1 });
-//     } catch (error) {
-//         console.error('Something went wrong:', error);
-//         resp.status(500).json({ message: 'Something went wrong' });
-//     }
-// };
 
 export const editSlot = asyncHandler(async (req, resp) => {
     const { slot_id, slot_date, start_time, end_time, booking_limit, status } = req.body;

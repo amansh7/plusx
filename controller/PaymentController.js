@@ -79,6 +79,38 @@ export const createIntent = async (req, resp) => {
     }
 };
 
+export const createCharge = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { payment_intent_id, amount } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), { payment_intent_id: ["required"] });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    try{
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        // return resp.json(paymentIntent);
+        const paymentMethodId = paymentIntent.payment_method;
+    
+        const charge = await stripe.charges.create({
+            amount: '300',
+            currency: 'aed',
+            source: paymentMethodId,
+            confirm: true,
+            description : 'This is test creating charge test case 1'
+        });
+    
+        return resp.json({charge});
+    }catch(err){
+        console.error('Error in creating charge: ', err);
+        return resp.status(500).json({
+            message: ["Error creating charge"],
+            error: err.message,
+            status: 0,
+            code: 500,
+        });
+    }
+
+};
+
 export const redeemCoupon = async (req, resp) => {
     const {rider_id, amount,booking_type, coupon_code } = mergeParam(req);
     

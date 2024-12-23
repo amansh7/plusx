@@ -6,6 +6,7 @@ import moment from 'moment';
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
+import { formatDateInQuery, formatDateTimeInQuery } from '../../utils.js';
 dotenv.config();
 
 // POD Device Start
@@ -17,7 +18,8 @@ export const podDeviceList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'pod_devices',
-            columns          : 'pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status, created_at, (SELECT AVG(percentage) FROM pod_device_battery as pb where pb.pod_id = pod_devices.pod_id) AS avgBattery',
+            columns          : `pod_id, pod_name, device_id, design_model, inverter, charger, ${formatDateInQuery(['date_of_manufacturing'])}, status, ${formatDateTimeInQuery(['created_at'])}, 
+                (SELECT AVG(percentage) FROM pod_device_battery as pb where pb.pod_id = pod_devices.pod_id) AS avgBattery`,
             sortColumn       : 'created_at',
             sortOrder        : 'DESC',
             page_no,
@@ -54,7 +56,7 @@ export const podDeviceDetails = async (req, resp) => {
 
         const [chargerDetails] = await db.execute(`
             SELECT 
-                pod_id, pod_name, device_id, design_model, inverter, charger, date_of_manufacturing, status, created_at 
+                pod_id, pod_name, device_id, design_model, inverter, charger, ${formatDateInQuery(['date_of_manufacturing'])}, status, ${formatDateTimeInQuery(['created_at'])}
             FROM 
                 pod_devices 
             WHERE 
@@ -63,7 +65,7 @@ export const podDeviceDetails = async (req, resp) => {
         );
         const [batteryData] = await db.execute(`
             SELECT 
-                id, battery_id as batteryId, capacity, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, updated_at
+                id, battery_id as batteryId, capacity, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, ${formatDateTimeInQuery(['updated_at'])}
             FROM 
                 pod_device_battery 
             WHERE 
@@ -408,7 +410,7 @@ export const podAreaList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'pod_area_list',
-            columns          : 'area_id, area_name, created_at, status',
+            columns          : `area_id, area_name, ${formatDateTimeInQuery(['created_at'])}, status`,
             sortColumn       : 'created_at',
             sortOrder        : 'DESC',
             page_no,
@@ -605,7 +607,7 @@ export const podAreaAssignList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'pod_assign_area as paa',
-            columns          : 'paa.area_id, paa.created_at, (select area_name from pod_area_list as ar where ar.area_id = paa.area_id) as area_name',
+            columns          : `paa.area_id, ${formatDateTimeInQuery(['paa.created_at'])}, (select area_name from pod_area_list as ar where ar.area_id = paa.area_id) as area_name`,
             sortColumn       : 'paa.created_at',
             sortOrder        : 'DESC',
             page_no,
