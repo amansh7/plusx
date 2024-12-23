@@ -5,7 +5,7 @@ import { mergeParam } from "../utils.js";
 
 export const donwloadPodBookingList = async (req, resp) => {
     try{
-        const { status, start_date, end_date, search_text='' } = mergeParam(req);
+        const { status, start_date, end_date, search_text='', scheduleFilters } = mergeParam(req);
         
         let query = `
             SELECT
@@ -20,16 +20,22 @@ export const donwloadPodBookingList = async (req, resp) => {
         }
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
-            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
             if (params.length === 0) query += ` WHERE created_at BETWEEN ? AND ?`;
             else query += ` AND created_at BETWEEN ? AND ?`; 
             params.push(start, end);
+        }
+        if (scheduleFilters.start_date && scheduleFilters.end_date) {
+                  
+            const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+            const schEnd   = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            query += ` WHERE slot_date BETWEEN ? AND ?`;
+            params.push(schStart, schEnd);
         }
         if (status) {
             query += ' OR status = ?';
             params.push(status);
         }
-
         query += ' ORDER BY id DESC ';
         console.log(query, params);
         const [rows] = await db.execute(query, params);
@@ -39,8 +45,8 @@ export const donwloadPodBookingList = async (req, resp) => {
     
         worksheet.columns = [
             { header: 'Booking Id',     key: 'booking_id'    },
-            { header: 'Rider Id',       key: 'rider_id'      },
-            { header: 'Rsa Id',         key: 'rsa_id'        },
+            { header: 'User Id',       key: 'rider_id'      },
+            { header: 'Driver Id',         key: 'rsa_id'        },
             { header: 'Charger Id',     key: 'charger_id'    },
             { header: 'Vehicle Id',     key: 'vehicle_id'    },
             { header: 'Service Name',   key: 'service_name'  },
@@ -57,7 +63,6 @@ export const donwloadPodBookingList = async (req, resp) => {
         rows.forEach((item) => {
             worksheet.addRow(item);
         });
-    
         resp.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         resp.setHeader('Content-Disposition', 'attachment; filename=Portable-Charger-Booking-List.xlsx');
       

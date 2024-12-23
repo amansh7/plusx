@@ -57,7 +57,7 @@ export const getDashboardData = async (req, resp) => {
             { module: 'No. of Regs. Drivers', count: counts[0].total_rsa },
             { module: 'Total Public Chargers', count: counts[0].total_station }, 
 
-             // { module: 'EV Buy & Sell', count: counts[0].total_vehicle_sell },
+            // { module: 'EV Buy & Sell', count: counts[0].total_vehicle_sell },
             // { module: 'Total Electric Bikes Leasing', count: counts[0].total_bike_rental }, 
             // { module: 'Total Electric Cars Leasing', count: counts[0].total_car_rental },
             // { module: 'Total EV Guide', count: counts[0].total_vehicle }, 
