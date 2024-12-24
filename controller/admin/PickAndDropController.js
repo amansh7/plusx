@@ -174,42 +174,29 @@ export const pdInvoiceDetails = asyncHandler(async (req, resp) => {
     const { isValid, errors } = validateFields(req.body, { invoice_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
+    // payment_status, payment_type, cs.contact_no, cs.name, cs.country_code, 
+    // cs.slot, cs.parking_number,  cs.parking_floor, cs.pickup_latitude, cs.pickup_longitude,  
+    //  ${formatDateTimeInQuery(['cs.slot_date_time', 'cs.created_at'])},
+    // (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
     const invoice = await queryDB(`
         SELECT 
-            invoice_id, 
-            amount AS price, 
-            payment_status, 
-            ${formatDateInQuery(['invoice_date'])},
-            currency, 
-            payment_type, 
-            cs.name, 
-            cs.country_code, 
-            cs.contact_no, 
-            cs.request_id, 
-            cs.slot, 
-            cs.parking_number, 
-            cs.parking_floor, 
-            cs.pickup_latitude, 
-            cs.pickup_longitude,
-            ${formatDateTimeInQuery(['cs.slot_date_time', 'cs.created_at'])},
-            (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
+            invoice_id, amount AS price, ${formatDateInQuery(['invoice_date'])},
+            currency, cs.name, cs.request_id
         FROM 
             charging_service_invoice AS csi
         LEFT JOIN
             charging_service AS cs ON cs.request_id = csi.request_id
-        
         WHERE 
             csi.invoice_id = ?
     `, [invoice_id]);
 
-    // invoice.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
-
+    invoice.price    = 49;
     return resp.json({
-        message: ["Pick & Drop Invoice Details fetched successfully!"],
-        data: invoice,
-        base_url: `${req.protocol}://${req.get('host')}/uploads/pick-drop-invoice/`,
-        status: 1,
-        code: 200,
+        message  : ["Pick & Drop Invoice Details fetched successfully!"],
+        data     : invoice,
+        base_url : `${req.protocol}://${req.get('host')}/uploads/pick-drop-invoice/`,
+        status   : 1,
+        code     : 200,
     });
 });
 /* Invoice */

@@ -498,41 +498,40 @@ export const invoiceDetails = async (req, resp) => {
     const { isValid, errors } = validateFields(req.body, { invoice_id: ["required"] });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const invoice = await queryDB(`
+    // amount AS price, payment_status, payment_type, pcb.country_code, pcb.contact_no, pcb.address, 
+    // ${formatDateInQuery(['pcb.slot_date'])}, ${formatDateTimeInQuery(['pcb.created_at'])},
+    // (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email,
+    const data = await queryDB(`
         SELECT 
-            invoice_id, 
-            amount AS price, 
-            payment_status, 
-            invoice_date, 
-            currency, 
-            payment_type, 
-            pcb.user_name, 
-            pcb.country_code, 
-            pcb.contact_no, 
-            pcb.address, 
-            pcb.booking_id, 
-            cs.start_time, 
-            pcb.slot_time,  
-            ${formatDateInQuery(['pcb.slot_date'])},
-            ${formatDateTimeInQuery(['pcb.created_at'])},
-            (SELECT rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email
+            invoice_id, invoice_date, currency, 
+            pcb.user_name, pcb.booking_id, 
+            pcb.start_charging_level, pcb.end_charging_level
         FROM 
-            portable_charger_invoice AS pci
-        LEFT JOIN
-            portable_charger_booking AS pcb ON pcb.booking_id = pci.request_id
+            portable_charger_invoice AS pci 
         LEFT JOIN 
-            portable_charger_slot AS cs ON cs.slot_id = pcb.slot
-        WHERE 
-            pci.invoice_id = ?
+            portable_charger_booking AS pcb ON pcb.booking_id = pci.request_id
+        WHERE pci.invoice_id = ?
     `, [invoice_id]);
 
-    invoice.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+    // data.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+
+    // const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
+    //     data[key] ? data[key].split(',').map(Number) : []
+    // );
+    // const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
+    
+    data.kw           = 0; // chargingLevelSum * 0.25;
+    data.kw_dewa_amt  = 0; // data.kw * 0.44;
+    data.kw_cpo_amt   = 0; // data.kw * 0.26;
+    data.delv_charge  = 0; // 30 when start accepting payment
+    data.t_vat_amt    = 0; // Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
+    data.price    = 0; // data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
 
     return resp.json({
-        message: ["Portable Charger Invoice Details fetched successfully!"],
-        data: invoice,
-        status: 1,
-        code: 200,
+        message : ["Portable Charger Invoice Details fetched successfully!"],
+        data    : data,
+        status  : 1,
+        code    : 200,
     });
 };
 
