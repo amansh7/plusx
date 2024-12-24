@@ -37,8 +37,9 @@ export const donwloadPodBookingList = async (req, resp) => {
         let params = [];
 
         if (search_text) {
-            query += ` WHERE booking_id = ? OR user_name = ? OR service_name = ?`;
-            params.push(search_text, search_text, search_text);
+            query += ` WHERE booking_id LIKE ? OR user_name LIKE ? OR service_name LIKE ?`;
+            const likeSearchText = `%${search_text}%`; 
+            params.push(likeSearchText, likeSearchText, likeSearchText);
         }
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
