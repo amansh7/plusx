@@ -10,14 +10,37 @@ const pool = mysql.createPool({
   port: 3306
 });
 
-const testConnection = async () => {
-  try {
-    const connection = await pool.getConnection();
-    console.log("Connected to the MySQL database.");
-    connection.release();
-  } catch (err) {
-    console.error("Error connecting to the database:", err);
+const retryConnection = async (retries, delay) => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const connection = await pool.getConnection();
+      console.log("Connected to the MySQL database.");
+      connection.release();
+      return;
+    } catch (err) {
+      // console.error(`Error connecting to the database (attempt ${i + 1}):`, err);
+      logger.error(`Error connecting to the database (attempt ${i + 1}):`, err);
+
+      if (err.code === 'ECONNREFUSED') {
+        // console.log('Connection refused, retrying...');
+        logger.error(`Connection refused, retrying...`);
+      }
+
+      if (i < retries) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        // console.error('All retry attempts failed.');
+        logger.error(`All retry attempts failed.`);
+        throw err;
+      }
+    }
   }
+};
+
+const testConnection = async () => {
+  const maxRetries = 5;
+  const retryDelay = 2000;
+  await retryConnection(maxRetries, retryDelay);
 };
 
 testConnection();
