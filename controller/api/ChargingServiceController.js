@@ -22,7 +22,7 @@ export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
         query += `,(SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count`;
     }
 
-    query += ` FROM pick_drop_slot WHERE status = ? AND slot_date = ? ORDER BY id ASC`;
+    query += ` FROM pick_drop_slot WHERE status = ? AND slot_date = ? ORDER BY start_time ASC`;
 
     const [slot] = await db.execute(query, [1, fSlotDate]);
 

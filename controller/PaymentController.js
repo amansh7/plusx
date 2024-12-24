@@ -87,18 +87,35 @@ export const createCharge = async (req, resp) => {
 
     try{
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
-        // return resp.json(paymentIntent);
+        const customerId = paymentIntent.customer;
         const paymentMethodId = paymentIntent.payment_method;
+        // const paymentMethods = await stripe.customers.retrievePaymentMethod(customerId, paymentMethodId);
+        // return resp.json({paymentIntent});
     
-        const charge = await stripe.charges.create({
-            amount: '300',
+        // paymentIntent = await stripe.charges.create({
+        //     receipt_email : email,
+        //     amount        : 300,
+        //     currency      : 'aed',
+        //     card          : paymentMethodId,
+        //     customer      : customerId
+        // });
+        // return resp.json({charge});
+
+        const newPaymentIntent = await stripe.paymentIntents.create({
+            amount: 300,
             currency: 'aed',
-            source: paymentMethodId,
+            customer: customerId,
+            payment_method: paymentMethodId,
+            off_session: true,
             confirm: true,
-            description : 'This is test creating charge test case 1'
+            // payment_method_options: {
+            //     card: {
+            //         request_three_d_secure: 'any',
+            //     },
+            // },
         });
+        return resp.json({newPaymentIntent});
     
-        return resp.json({charge});
     }catch(err){
         console.error('Error in creating charge: ', err);
         return resp.status(500).json({
