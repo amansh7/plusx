@@ -55,6 +55,7 @@ export const getActivePodList = asyncHandler(async (req, resp) => {
     }
 
     const data = await queryDB(query, [booking_id]);
+    const [[{pod_id}]] = await db.execute(`SELECT pod_id FROM portable_charger_booking where booking_id = ?`, [booking_id]);
     if(!data) return resp.json({status:0, code:422, message:"Invalid id."});
 
     const [result] = await db.execute(`SELECT 
@@ -64,7 +65,7 @@ export const getActivePodList = asyncHandler(async (req, resp) => {
         ORDER BY distance
     `, [data.lat, data.lon, data.lat]);
 
-    return resp.json({status:1, code:200, message:["POD List fetch successfully!"], data: result });
+    return resp.json({status:1, code:200, message:["POD List fetch successfully!"], active_pod_id: pod_id, data: result });
 });
 
 export const getPcSlotList = asyncHandler(async (req, resp) => {
