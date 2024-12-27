@@ -538,7 +538,7 @@ export const invoiceDetails = async (req, resp) => {
 /* Slot */
 export const slotList = async (req, resp) => {
     try {
-        const { page_no,  search_text= '', start_date, end_date,} = req.body;
+        const { page_no,  search_text = '', start_date, end_date} = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
