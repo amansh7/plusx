@@ -12,9 +12,22 @@ dotenv.config();
 // POD Device Start
 export const podDeviceList = async (req, resp) => {
     try {
-        const {page_no, search_text = '' } = req.body;
+        const {page_no, search_text = '', start_date, end_date } = req.body;
+        const whereFields = ['status']
+        const whereValues = [1]
+        const whereOperators = ['=']
+
         const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+    
+            whereFields.push('created_at', 'created_at');
+            whereValues.push(start, end);
+            whereOperators.push('>=', '<=');
+        }
 
         const result = await getPaginatedData({
             tableName        : 'pod_devices',
@@ -26,8 +39,11 @@ export const podDeviceList = async (req, resp) => {
             limit            : 10,
             liveSearchFields : ['pod_id', 'pod_name'],
             liveSearchTexts  : [search_text, search_text],
-            whereField       : 'status',
-            whereValue       : 1
+            // whereField       : 'status',
+            // whereValue       : 1
+            whereField       : whereFields,
+            whereValue       : whereValues,
+            whereOperator    : whereOperators
         });
 
         return resp.json({
@@ -404,9 +420,22 @@ export const deviceBrandList = async (req, resp) => {
 // POD Area Start
 export const podAreaList = async (req, resp) => {
     try {
-        const {page_no, search_text = '' } = req.body;
+        const {page_no, search_text = '', start_date, end_date } = req.body;
+        const whereFields = ['status']
+        const whereValues = [1]
+        const whereOperators = ['=']
+
         const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+    
+            whereFields.push('created_at', 'created_at');
+            whereValues.push(start, end);
+            whereOperators.push('>=', '<=');
+        }
 
         const result = await getPaginatedData({
             tableName        : 'pod_area_list',
@@ -417,8 +446,11 @@ export const podAreaList = async (req, resp) => {
             limit            : 10,
             liveSearchFields : ['area_id', 'area_name'],
             liveSearchTexts  : [search_text, search_text],
-            whereField       : 'status',
-            whereValue       : 1
+            // whereField       : 'status',
+            // whereValue       : 1
+            whereField       : whereFields,
+            whereValue       : whereValues,
+            whereOperator    : whereOperators
         });
 
         return resp.json({
