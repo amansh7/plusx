@@ -220,21 +220,21 @@ export const chargerBookingList = async (req, resp) => {
             params.whereValue.push(start, end);
             params.whereOperator.push('>=', '<=');
         }
-        // if (scheduleFilters.start_date && scheduleFilters.end_date) {
+        if (scheduleFilters.start_date && scheduleFilters.end_date) {
           
-        //     const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
-        //     const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+            const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             
-        //     params.whereField.push('slot_date', 'slot_date');
-        //     params.whereValue.push(schStart, schEnd);
-        //     params.whereOperator.push('>=', '<=');
-        // }
+            params.whereField.push('slot_date', 'slot_date');
+            params.whereValue.push(schStart, schEnd);
+            params.whereOperator.push('>=', '<=');
+        }
         if(status) {
             params.whereField.push('status');
             params.whereValue.push(status);
             params.whereOperator.push('=');
         }
-        // console.log(params)
+        console.log(params)
         const result = await getPaginatedData(params);
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
@@ -449,8 +449,11 @@ export const invoiceList = async (req, resp) => {
         const whereOperators = []
 
         if (start_date && end_date) {
+            // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
             const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+    
             whereFields.push('created_at', 'created_at');
             whereValues.push(start, end);
             whereOperators.push('>=', '<=');
@@ -472,6 +475,8 @@ export const invoiceList = async (req, resp) => {
             whereValue: whereValues,
             whereOperator: whereOperators
         });
+
+        // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
 
         return resp.json({
             status: 1,
@@ -544,12 +549,12 @@ export const slotList = async (req, resp) => {
 
         const params = {
             tableName  : 'portable_charger_slot',
-            columns    : `slot_id, ${formatDateInQuery(['slot_date'])}, start_time, end_time, booking_limit, status, 
+            columns    : `slot_id, slot_date, start_time, end_time, booking_limit, status, 
 
                 (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C")) AS slot_booking_count
             `,
-            sortColumn : 'created_at',
-            sortOrder  : 'DESC',
+            sortColumn : 'slot_date DESC, start_time ASC',
+            sortOrder  : '',
             page_no,
             limit      : 10,
             liveSearchFields: ['slot_id',],
@@ -560,7 +565,6 @@ export const slotList = async (req, resp) => {
             whereValue: [],
             whereOperator: []
         };
-        
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
@@ -571,9 +575,10 @@ export const slotList = async (req, resp) => {
         }
         const result = await getPaginatedData(params);
 
+        // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
             slot_id            : item.slot_id,
-            slot_date          : item.slot_date,
+            slot_date          : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
             booking_limit      : item.booking_limit,
             status             : item.status,
             slot_booking_count : item.slot_booking_count,
@@ -583,6 +588,7 @@ export const slotList = async (req, resp) => {
             status: 1,
             code: 200,
             message: ["Portable Charger Slot List fetched successfully!"],
+            // data: result.data,
             data: formattedData,
             total_page: result.totalPage,
             total: result.total,
@@ -786,25 +792,26 @@ export const assignBooking = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     const conn = await startTransaction();
     
-    try{
-        const booking_data = await queryDB( `SELECT rider_id, rsa_id, (select fcm_token from riders as r where r.rider_id = portable_charger_booking.rider_id ) as fcm_token FROM portable_charger_booking WHERE booking_id = ?
+    try{ 
+        const booking_data = await queryDB( `SELECT rider_id, rsa_id, slot_date, slot_time, (select fcm_token from riders as r where r.rider_id = portable_charger_booking.rider_id ) as fcm_token FROM portable_charger_booking WHERE booking_id = ?
         `, [booking_id ] );
     
         if (!booking_data) {
             return resp.json({ message: `Sorry no booking found with this booking id ${booking_id}`, status: 0, code: 404 });
         }
-        if(rsa_id == booking_data.rsa_id) {
-            return resp.json({ message: `This driver already assigned on this booking!, please select another driver`, status: 0, code: 404 });
-        }
+        // if(rsa_id == booking_data.rsa_id) {
+        //     return resp.json({ message: `This driver already assigned on this booking!, please select another driver`, status: 0, code: 404 });
+        // }
         if( booking_data.rsa_id) {
             await updateRecord('portable_charger_booking_assign', {rsa_id: rsa_id, status: 0}, ['order_id'], [booking_id], conn);
 
-        } else {
-            await insertRecord('portable_charger_booking_assign', 
-                [ 'order_id', 'rsa_id', 'rider_id', 'status' ], 
-                [ booking_id, booking_data.rider_id, rsa_id, 1 ], 
-            conn);
-        }
+        } 
+        // else {
+        //     await insertRecord('portable_charger_booking_assign', 
+        //         [ 'order_id', 'rsa_id', 'rider_id', 'status' ], 
+        //         [ booking_id, booking_data.rider_id, rsa_id, 1 ], 
+        //     conn);
+        // }
         await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, ['booking_id'], [booking_id], conn);
         // await insertRecord('portable_charger_history', ['booking_id', 'rider_id', 'rsa_id', 'order_status'], [booking_id, booking_data.rider_id, rsa_id, 'A'], conn);
         
@@ -815,11 +822,25 @@ export const assignBooking = async (req, resp) => {
         pushNotification(booking_data.fcm_token, heading, desc, 'RDRFCM', href);
     
         const rsa = await queryDB(`SELECT fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
-        if(rsa){
+        // if(rsa){
             
+        //     const heading1 = 'Portable Charger Booking';
+        //     const desc1    = `A Booking of the portable charging booking has been assigned to you with booking id :  ${booking_id}`;
+        //     createNotification(heading1, desc1, 'Portable Charger', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
+        //     pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+        // }
+        if(rsa){
+            const slotDateTime = moment(booking_data.slot_date).format('YYYY-MM-DD') +' '+ booking_data.slot_time ;
+            //  moment(`${booking_data.slot_date} ${booking_data.slot_time}`, 'DD-MM-YYYY HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
+            // console.log(booking_id, rsa_id, booking_data.rider_id, slotDateTime)
+            await insertRecord('portable_charger_booking_assign', 
+                ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [booking_id, rsa_id, booking_data.rider_id, slotDateTime, 0], conn
+            );
+            await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, ['booking_id'], [booking_id], conn);
+    
             const heading1 = 'Portable Charger Booking';
             const desc1    = `A Booking of the portable charging booking has been assigned to you with booking id :  ${booking_id}`;
-            createNotification(heading1, desc1, 'Portable Charger', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
+            createNotification(heading, desc1, 'Portable Charger', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
             pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
         }
         await commitTransaction(conn);
@@ -997,7 +1018,8 @@ export const adminCancelPCBooking = asyncHandler(async (req, resp) => {
             <p>Best regards,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
+    emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });
+

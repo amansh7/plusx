@@ -1,5 +1,6 @@
 import path from 'path';
 import moment from "moment";
+import dotenv from 'dotenv';
 import 'moment-duration-format';
 import { fileURLToPath } from 'url';
 import emailQueue from "../../emailQueue.js";
@@ -7,6 +8,7 @@ import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, formatNumber, generatePdf, mergeParam, numberToWords, pushNotification } from "../../utils.js";
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,7 +101,8 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
         is_booking, 
         status: 1, 
         code: 200, 
-        alert: "To ensure a smooth experience and efficient service, users can make only one booking per day. This helps maintain availability for all. Thank you for your understanding." 
+        alert: "To ensure a smooth experience and efficient service, users can make only one booking per day. This helps maintain availability for all. Thank you for your understanding.",
+        alert2: "The slots for the selected date are fully booked. Please select another date to book the POD for your EV."
     });
 });
 
@@ -209,23 +212,22 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 Customer Name  : ${rider.rider_name}<br>
                 Address : ${address}<br>
                 Booking Time : ${formattedDateTime}<br>                    
+                Schedule Time : ${moment(slot_date, 'YYYY MM DD').format('D MMM, YYYY,')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>                    
                 Vechile Details : ${vechile.vehicle_data}<br>                      
                 <p> Best regards,<br/>PlusX Electric Team </p>
             </body>
         </html>`;
-        emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
+        emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `Portable Charger Booking - ${bookingId}`, htmlAdmin);
        
-        // const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
-        // let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will arrive at the scheduled time."; 
+        let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will arrive at the scheduled time."; 
         
+        // const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
         // if(rsa){
         //     const slotDateTime = moment(`${slot_date} ${slot_time}`, 'DD-MM-YYYY HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
-
         //     await insertRecord('portable_charger_booking_assign', 
         //         ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider_id, slotDateTime, 0], conn
         //     );
         //     await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, ['booking_id'], [bookingId], conn);
-    
         //     const heading1 = 'Portable Charger!';
         //     const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
         //     createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider_id, rsa.rsa_id, href);
@@ -485,7 +487,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
     const message = `Driver has rejected the portable charger booking with booking id: ${booking_id}`;
     await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
 
-    const html = `<html>
+    /* const html = `<html>
         <body>
             <h4>Dear Admin,</h4>
             <p>Driver has rejected the portable charger booking. please assign one Driver on this booking</p> <br />
@@ -493,7 +495,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
             <p>Best Regards,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail('podbookings@plusxelectric.com', `POD Service Booking rejected - ${booking_id}`, html);
+    emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `POD Service Booking rejected - ${booking_id}`, html); */
 
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
 });
@@ -852,6 +854,18 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
+
+    const fSlotDateTime = moment(`${checkOrder.slot_date} ${checkOrder.slot_time}`);
+    const twoHoursBefore = moment(fSlotDateTime).subtract(2, 'hours');
+    
+    if (moment().isAfter(twoHoursBefore)) {
+        return resp.json({
+            status: 0,
+            code: 404,
+            message: 'Too late to proceed. You need to make the request at least 2 hours before the slot time.'
+        });
+    }
+    
     const insert = await db.execute(
         'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, cancel_by, cancel_reason) VALUES (?, ?, "C", ?, "User", ?)',
         [booking_id, rider_id, checkOrder.rsa_id, reason]
@@ -870,7 +884,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
     }
 
-    const html = `<html>
+    /* const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
             <p>We would like to inform you that your booking for the portable charger has been successfully cancelled. Below are the details of your cancelled booking:</p>
@@ -897,7 +911,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
             <p>Best regards,<br/>PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
+    emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml); */
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });

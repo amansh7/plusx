@@ -1,5 +1,6 @@
 import path from 'path';
 import moment from "moment";
+import dotenv from 'dotenv';
 import 'moment-duration-format';
 import { fileURLToPath } from 'url';
 import emailQueue from "../../emailQueue.js";
@@ -7,6 +8,7 @@ import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { createNotification, mergeParam, pushNotification, formatDateTimeInQuery, asyncHandler, formatDateInQuery, numberToWords, formatNumber, generatePdf } from "../../utils.js";
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,7 +117,7 @@ export const requestService = asyncHandler(async (req, resp) => {
                 <p> Best regards,<br/> PlusX Electric Team </p>
             </body>
         </html>`;
-        emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Charging Service Booking Received - ${requestId}`, htmlAdmin);
+        emailQueue.addEmail(process.env.MAIL_CS_ADMIN, `Valet Charging Service Booking Received - ${requestId}`, htmlAdmin);
         
         const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
         let responseMsg = 'Booking request submitted! Our team will be in touch with you shortly.';
@@ -377,7 +379,7 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
             <p> Regards,<br/> PlusX Electric App </p>
         </body>
     </html>`;
-    emailQueue.addEmail('valetbookings@plusxelectric.com', `Valet Charging Service Booking rejected - ${booking_id}`, html);
+    emailQueue.addEmail(process.env.MAIL_CS_ADMIN, `Valet Charging Service Booking rejected - ${booking_id}`, html);
 
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
 });
@@ -787,7 +789,7 @@ export const cancelValetBooking = asyncHandler(async (req, resp) => {
             <p>Thank you,<br/>PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail('valetbookings@plusxelectric.com', `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
+    emailQueue.addEmail(process.env.MAIL_CS_ADMIN, `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });

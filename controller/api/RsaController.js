@@ -202,10 +202,12 @@ export const rsaHome = asyncHandler(async (req, resp) => {
             (SELECT COUNT(*) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
             (SELECT COUNT(*) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
             (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
-            (SELECT COUNT(*) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed
+            (SELECT COUNT(*) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed,
+            (SELECT COUNT(*) FROM portable_charger_booking WHERE rsa_id = ? AND status = "C") AS pod_cancelled,
+            (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status = "C") AS valet_cancelled
         FROM rsa 
         WHERE rsa_id = ? LIMIT 1
-    `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
+    `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
 
     if (rsaData.length === 0) return resp.json({ message: "RSA data not found", status: 0 });
 
@@ -219,7 +221,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
         FROM charging_service_assign
         LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
         WHERE charging_service_assign.rsa_id = ? AND cs.request_id IS NOT NULL
-        ORDER BY charging_service_assign.id DESC
+        ORDER BY charging_service_assign.slot_date_time ASC
     `,[rsa_id]);
 
     const [podAssign] = await db.execute(`
@@ -233,10 +235,10 @@ export const rsaHome = asyncHandler(async (req, resp) => {
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
         WHERE portable_charger_booking_assign.rsa_id = ?
-        ORDER BY portable_charger_booking_assign.id DESC
+        ORDER BY portable_charger_booking_assign.slot_date_time ASC
     `,[rsa_id]);
    
-    const { status, running_order, booking_type, valet_count, pod_count, valet_rej, pod_rejected, valet_completed, pod_completed } = rsaData;
+    const { status, running_order, booking_type, valet_count, pod_count, valet_rej, pod_rejected, valet_completed, pod_completed, pod_cancelled, valet_cancelled } = rsaData;
     const rsaStatus = (status === 1) ? 'Login' : (status === 2 || running_order > 0) ? 'Available' : 'Logout';
 
     const result = {
@@ -248,6 +250,8 @@ export const rsaHome = asyncHandler(async (req, resp) => {
         pod_rejected_count: pod_rejected,
         valet_completed_count: valet_completed,
         pod_completed_count: pod_completed,
+        valet_cancelled_count: valet_cancelled,
+        pod_cancelled_count: pod_cancelled,
         assign_orders: assignValet,
         pod_assign: podAssign
     };
@@ -288,8 +292,8 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
             ORDER BY slot_date_time DESC
         `, [rsa_id]);
 
-        result.valet_completed = valetCompleted
-        result.pod_completed = podCompleted
+        result.valet_completed = valetCompleted;
+        result.pod_completed = podCompleted;
     }else{
         const [valetRejected] = await db.execute(`
             SELECT 
@@ -324,11 +328,34 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
             WHERE 
                 pbr.rsa_id = ? 
             ORDER BY 
-                pbr.created_at DESC
+                created_at DESC
+        `, [rsa_id]);
+
+        const [valetCancelled] = await db.execute(`
+            SELECT
+                request_id, pickup_address, pickup_latitude, pickup_longitude, order_status, parking_number, parking_floor, 
+                CONCAT(name, ",", country_code, "-", contact_no) as riderDetails, ${formatDateInQuery(['slot_date_time'])}, ${formatDateTimeInQuery(['created_at', 'updated_at',])} 
+            FROM charging_service
+            WHERE rsa_id = ? AND order_status = 'C'
+            ORDER BY slot_date_time DESC
+        `, [rsa_id]);
+
+        const [podCancelled] = await db.execute(`
+            SELECT 
+                booking_id, address, latitude, longitude, status, ${formatDateTimeInQuery(['created_at', 'updated_at'])},
+                CONCAT(user_name, ",", country_code, "-", contact_no) AS riderDetails,
+                (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles AS rv WHERE rv.vehicle_id = pcb.vehicle_id) AS vehicle_data,
+                CONCAT(slot_date, " ", slot_time) AS slot_date_time
+            FROM portable_charger_booking AS pcb
+            WHERE rsa_id = ? 
+            AND status = 'C'
+            ORDER BY slot_date_time DESC
         `, [rsa_id]);
 
         result.valet_rejected = valetRejected;
         result.pod_rejected = podRejected;
+        result.valet_cancelled = valetCancelled;
+        result.pod_cancelled = podCancelled;
     }
 
     return resp.json({
@@ -346,8 +373,7 @@ export const rsaUpdateLatLong = asyncHandler(async (req, resp) => {
 
     const update = await updateRecord('rsa', {latitude, longitude}, ['rsa_id'], [rsa_id]);
     const insert = await insertRecord('rsa_location_history', ['rsa_id', 'latitude', 'longitude'], [rsa_id, latitude, longitude]);
-    // console.log(insert);
-    // console.log(update);
+
     return resp.json({
         status: update.affectedRows > 0 ? 1 : 0,
         message: update.affectedRows > 0 ? "Latitude Longitude updated successfully" : "Failed to update, Please try again.",

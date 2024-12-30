@@ -57,7 +57,7 @@ export const donwloadPodBookingList = async (req, resp) => {
         }
         if (status) {
             if (params.length === 0) query += ` WHERE status = ?`;
-            else query += ` OR status = ?`; 
+            else query += ` AND status = ?`; 
             params.push(status);
         }
         

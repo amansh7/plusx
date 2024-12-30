@@ -207,7 +207,7 @@ export const createOTP = asyncHandler(async (req, resp) => {
     storeOTP(fullMobile, otp);
     
     // storeOTP(fullMobile, '0587');
-    // return resp.json({ status: 1, code: 200, data: '', message: ['OTP sent successfully!'] });
+    // return resp.json({ status: 1, code: 200, data: otp, message: ['OTP sent successfully!'] });
     
     sendOtp(
         fullMobile,
