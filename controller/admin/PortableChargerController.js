@@ -220,21 +220,21 @@ export const chargerBookingList = async (req, resp) => {
             params.whereValue.push(start, end);
             params.whereOperator.push('>=', '<=');
         }
-        if (scheduleFilters.start_date && scheduleFilters.end_date) {
+        // if (scheduleFilters.start_date && scheduleFilters.end_date) {
           
-            const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
-            const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        //     const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+        //     const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             
-            params.whereField.push('slot_date', 'slot_date');
-            params.whereValue.push(schStart, schEnd);
-            params.whereOperator.push('>=', '<=');
-        }
+        //     params.whereField.push('slot_date', 'slot_date');
+        //     params.whereValue.push(schStart, schEnd);
+        //     params.whereOperator.push('>=', '<=');
+        // }
         if(status) {
             params.whereField.push('status');
             params.whereValue.push(status);
             params.whereOperator.push('=');
         }
-        console.log(params)
+        // console.log(params)
         const result = await getPaginatedData(params);
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
@@ -449,11 +449,8 @@ export const invoiceList = async (req, resp) => {
         const whereOperators = []
 
         if (start_date && end_date) {
-            // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-            // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
             const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
-    
             whereFields.push('created_at', 'created_at');
             whereValues.push(start, end);
             whereOperators.push('>=', '<=');
@@ -475,8 +472,6 @@ export const invoiceList = async (req, resp) => {
             whereValue: whereValues,
             whereOperator: whereOperators
         });
-
-        // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
 
         return resp.json({
             status: 1,
@@ -565,6 +560,7 @@ export const slotList = async (req, resp) => {
             whereValue: [],
             whereOperator: []
         };
+        
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
@@ -575,10 +571,9 @@ export const slotList = async (req, resp) => {
         }
         const result = await getPaginatedData(params);
 
-        // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
             slot_id            : item.slot_id,
-            slot_date          : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+            slot_date          : item.slot_date,
             booking_limit      : item.booking_limit,
             status             : item.status,
             slot_booking_count : item.slot_booking_count,
@@ -588,7 +583,6 @@ export const slotList = async (req, resp) => {
             status: 1,
             code: 200,
             message: ["Portable Charger Slot List fetched successfully!"],
-            // data: result.data,
             data: formattedData,
             total_page: result.totalPage,
             total: result.total,
@@ -1007,8 +1001,3 @@ export const adminCancelPCBooking = asyncHandler(async (req, resp) => {
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });
-
-
-
-
-
