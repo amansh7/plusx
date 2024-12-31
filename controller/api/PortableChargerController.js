@@ -519,9 +519,9 @@ const acceptBooking = async (req, resp) => {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
 
-    if (checkOrder.pod_count > 0) {
-        return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
-    }
+    // if (checkOrder.pod_count > 0) {
+    //     return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
+    // }
 
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "A" AND booking_id = ?',[rsa_id, booking_id]
@@ -726,12 +726,10 @@ const chargingComplete = async (req, resp) => {
     }
 };
 const chargerPickedUp = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
-    let imgName = '';
+    const { booking_id, rsa_id, latitude, longitude, remark='' } = mergeParam(req);
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-    if(req.files && req.files['image']) imgName = req.files['image'] ? req.files['image'][0].filename : ''; 
+    
     const invoiceId = booking_id.replace('PCB', 'INVPC');
-
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
@@ -742,6 +740,8 @@ const chargerPickedUp = async (req, resp) => {
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
     `,[booking_id, rsa_id]);
+
+    const images = req.files['image'] ? req.files['image'].map(file => file.filename).join('*') : '';
 
     const [slot, pod_id] = checkOrder.slot_pod.split('/');
 
@@ -754,8 +754,8 @@ const chargerPickedUp = async (req, resp) => {
     const conn = await startTransaction();
     if (ordHistoryCount.count === 0) {
         const insert = await conn.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "PU", ?, ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image, remarks) VALUES (?, ?, "PU", ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, images, remark]
         );
         
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });

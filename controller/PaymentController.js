@@ -47,6 +47,7 @@ export const createIntent = async (req, resp) => {
             },
             payment_method_types: ["card"],
             use_stripe_sdk: true,
+            setup_future_usage: 'off_session',
             payment_method_options: {
                 card: {
                     request_three_d_secure: 'any',
@@ -81,14 +82,14 @@ export const createIntent = async (req, resp) => {
 
 export const createCharge = async (req, resp) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const { payment_intent_id, amount } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), { payment_intent_id: ["required"] });
-    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    const { payment_intent_id, amount, customer_id } = mergeParam(req);
 
     try{
-        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
-        const customerId = paymentIntent.customer;
-        const paymentMethodId = paymentIntent.payment_method;
+        // const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        // const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
+        // const formattedTimestamp = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
+        // const customerId = paymentIntent.customer;
+        // const paymentMethodId = paymentIntent.payment_method;
         // const paymentMethods = await stripe.customers.retrievePaymentMethod(customerId, paymentMethodId);
         // return resp.json({paymentIntent});
     
@@ -100,20 +101,23 @@ export const createCharge = async (req, resp) => {
         //     customer      : customerId
         // });
         // return resp.json({charge});
+        
+        const paymentMethods = await stripe.paymentMethods.list({
+            customer: customer_id,
+            type: 'card',
+        });
+        const paymentMethodId = paymentMethods.data[0].id;
+        // return resp.json({paymentMethods, paymentMethodId});
 
         const newPaymentIntent = await stripe.paymentIntents.create({
-            amount: 300,
+            amount: 100,
             currency: 'aed',
-            customer: customerId,
+            customer: customer_id,
             payment_method: paymentMethodId,
             off_session: true,
             confirm: true,
-            // payment_method_options: {
-            //     card: {
-            //         request_three_d_secure: 'any',
-            //     },
-            // },
         });
+        console.log(newPaymentIntent);
         return resp.json({newPaymentIntent});
     
     }catch(err){
