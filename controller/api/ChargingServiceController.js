@@ -402,9 +402,9 @@ const acceptBooking = async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-    if (checkOrder.count > 0) {
-        return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
-    }
+    // if (checkOrder.count > 0) {
+    //     return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
+    // }
     const ordHistoryCount = await queryDB(
         `SELECT COUNT(*) as count FROM charging_service_history WHERE rsa_id = ? AND order_status = "A" AND service_id = ?`,[rsa_id, booking_id]
     );
