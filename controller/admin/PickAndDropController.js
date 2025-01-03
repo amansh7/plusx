@@ -208,7 +208,7 @@ export const pdSlotList = async (req, resp) => {
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        let slot_date = moment().format("YYYY-MM-DD");
+        let slot_date = moment().format("YYYY-MM-DD");  // timing
         const params = {
             tableName: 'pick_drop_slot',
             columns: `slot_id, start_time, end_time, booking_limit, status, ${formatDateTimeInQuery(['created_at'])},${formatDateInQuery(['slot_date'])}, 
@@ -235,12 +235,12 @@ export const pdSlotList = async (req, resp) => {
         const result = await getPaginatedData(params);
 
         return resp.json({
-            status: 1,
-            code: 200,
-            message: ["Pick & Drop Slot List fetched successfully!"],
-            data : result.data,
-            total_page: result.totalPage,
-            total: result.total,
+            status     : 1,
+            code       : 200,
+            message    : ["Pick & Drop Slot List fetched successfully!"],
+            data       : result.data,
+            total_page : result.totalPage,
+            total      : result.total,
         });
     } catch (error) {
         console.error('Error fetching slot list:', error);

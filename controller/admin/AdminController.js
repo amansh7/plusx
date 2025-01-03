@@ -77,27 +77,42 @@ export const getDashboardData = async (req, resp) => {
 };
 
 export const notificationList = asyncHandler(async (req, resp) => {
-    const { page_no } = mergeParam(req);
-
-    const { isValid, errors } = validateFields(mergeParam(req), { page_no: ["required"],});
+    const { page_no, getCount } = mergeParam(req);
+    const { isValid, errors }   = validateFields(mergeParam(req), { page_no: ["required"],});
 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const limit = 10;
     const start = parseInt((page_no * limit) - limit, 10);
 
-    const totalRows  = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = ?`, ['Admin']);
+    const totalRows  = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = ? and status = 0 `, ['Admin']);
+
+    if(getCount){
+        return resp.json({ 
+            status : 1, 
+            code       : 200, 
+            message    : "Notification Count Only", 
+            data       : [], 
+            total_page : 0, 
+            totalRows  : totalRows.total
+        });
+    }
     const total_page = Math.ceil(totalRows.total / limit) || 1; 
-    
     const [rows] = await db.execute(`SELECT id, heading, description, module_name, panel_to, panel_from, receive_id, status, ${formatDateTimeInQuery(['created_at'])}, href_url
         FROM notifications WHERE panel_to = 'Admin' ORDER BY id DESC LIMIT ${start}, ${parseInt(limit)} 
     `, []);
     
-    const notifications = rows;
-    
+    const notifications = rows;  // and status = 0 
     await db.execute(`UPDATE notifications SET status=? WHERE status=? AND panel_to=?`, ['1', '0', 'Admin']);
     
-    return resp.json({status:1, code: 200, message: "Notification list fetch successfully", data: notifications, total_page: total_page, totalRows: totalRows.total});
+    return resp.json({ 
+        status     : 1, 
+        code       : 200, 
+        message    : "Notification list fetch successfully", 
+        data       : notifications, 
+        total_page : total_page, 
+        totalRows  : totalRows.total
+    });
 });
 
 export const riderList = async (req, resp) => {
@@ -378,7 +393,6 @@ export const deleteRider = async (req, resp) => {
         connection.release();
     }
 };
-
 
 //admin profile
 export const profileDetails = async (req, resp) => {

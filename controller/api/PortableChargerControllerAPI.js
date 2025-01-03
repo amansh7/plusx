@@ -1,6 +1,5 @@
 import path from 'path';
 import moment from "moment";
-import dotenv from 'dotenv';
 import 'moment-duration-format';
 import { fileURLToPath } from 'url';
 import emailQueue from "../../emailQueue.js";
@@ -8,7 +7,6 @@ import validateFields from "../../validation.js";
 import { queryDB, getPaginatedData, insertRecord, updateRecord } from '../../dbUtils.js';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from "../../config/db.js";
 import { asyncHandler, createNotification, formatDateInQuery, formatDateTimeInQuery, formatNumber, generatePdf, mergeParam, numberToWords, pushNotification } from "../../utils.js";
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,11 +62,10 @@ export const getActivePodList = asyncHandler(async (req, resp) => {
         pod_id, pod_name, design_model,
         (6367 * ACOS(COS(RADIANS(?)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(latitude)))) AS distance 
         FROM pod_devices
-        ORDER BY CAST(SUBSTRING(pod_name, LOCATE(' ', pod_name) + 1) AS UNSIGNED)
+        ORDER BY distance
     `, [data.lat, data.lon, data.lat]);
 
     return resp.json({status:1, code:200, message:["POD List fetch successfully!"], active_pod_id: pod_id, data: result });
-    // return resp.json({status:1, code:200, message:["POD List fetch successfully!"], data: result });
 });
 
 export const getPcSlotList = asyncHandler(async (req, resp) => {
@@ -101,8 +98,7 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
         is_booking, 
         status: 1, 
         code: 200, 
-        alert: "To ensure a smooth experience and efficient service, users can make only one booking per day. This helps maintain availability for all. Thank you for your understanding.",
-        alert2: "The slots for the selected date are fully booked. Please select another date to book the POD for your EV."
+        alert: "To ensure a smooth experience and efficient service, users can make only one booking per day. This helps maintain availability for all. Thank you for your understanding." 
     });
 });
 
@@ -212,27 +208,28 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
                 Customer Name  : ${rider.rider_name}<br>
                 Address : ${address}<br>
                 Booking Time : ${formattedDateTime}<br>                    
-                Schedule Time : ${moment(slot_date, 'YYYY MM DD').format('D MMM, YYYY,')} ${moment(slot_time, 'HH:mm').format('h:mm A')}<br>                    
                 Vechile Details : ${vechile.vehicle_data}<br>                      
                 <p> Best regards,<br/>PlusX Electric Team </p>
             </body>
         </html>`;
-        emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `Portable Charger Booking - ${bookingId}`, htmlAdmin);
+        emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
        
+        const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
         let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will arrive at the scheduled time."; 
         
-        // const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
-        // if(rsa){
-        //     const slotDateTime = moment(`${slot_date} ${slot_time}`, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
-        //     await insertRecord('portable_charger_booking_assign', 
-        //         ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider_id, slotDateTime, 0], conn
-        //     );
-        //     await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, ['booking_id'], [bookingId], conn);
-        //     const heading1 = 'Portable Charger!';
-        //     const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
-        //     createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider_id, rsa.rsa_id, href);
-        //     pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
-        // }
+        if(rsa){
+            const slotDateTime = moment(`${slot_date} ${slot_time}`, 'DD-MM-YYYY HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
+
+            await insertRecord('portable_charger_booking_assign', 
+                ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider_id, slotDateTime, 0], conn
+            );
+            await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, ['booking_id'], [bookingId], conn);
+    
+            const heading1 = 'Portable Charger!';
+            const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
+            createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider_id, rsa.rsa_id, href);
+            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+        }
 
         await commitTransaction(conn);
         
@@ -487,7 +484,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
     const message = `Driver has rejected the portable charger booking with booking id: ${booking_id}`;
     await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
 
-    /* const html = `<html>
+    const html = `<html>
         <body>
             <h4>Dear Admin,</h4>
             <p>Driver has rejected the portable charger booking. please assign one Driver on this booking</p> <br />
@@ -495,7 +492,7 @@ export const rejectBooking = asyncHandler(async (req, resp) => {
             <p>Best Regards,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `POD Service Booking rejected - ${booking_id}`, html); */
+    emailQueue.addEmail('podbookings@plusxelectric.com', `POD Service Booking rejected - ${booking_id}`, html);
 
     return resp.json({ message: ['Booking has been rejected successfully!'], status: 1, code: 200 });
 });
@@ -519,9 +516,9 @@ const acceptBooking = async (req, resp) => {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
 
-    // if (checkOrder.pod_count > 0) {
-    //     return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
-    // }
+    if (checkOrder.pod_count > 0) {
+        return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
+    }
 
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "A" AND booking_id = ?',[rsa_id, booking_id]
@@ -726,10 +723,12 @@ const chargingComplete = async (req, resp) => {
     }
 };
 const chargerPickedUp = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude, remark='' } = mergeParam(req);
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
+    let imgName = '';
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-    
+    if(req.files && req.files['image']) imgName = req.files['image'] ? req.files['image'][0].filename : ''; 
     const invoiceId = booking_id.replace('PCB', 'INVPC');
+
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
@@ -740,8 +739,6 @@ const chargerPickedUp = async (req, resp) => {
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
     `,[booking_id, rsa_id]);
-
-    const images = req.files['image'] ? req.files['image'].map(file => file.filename).join('*') : '';
 
     const [slot, pod_id] = checkOrder.slot_pod.split('/');
 
@@ -754,8 +751,8 @@ const chargerPickedUp = async (req, resp) => {
     const conn = await startTransaction();
     if (ordHistoryCount.count === 0) {
         const insert = await conn.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image, remarks) VALUES (?, ?, "PU", ?, ?, ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, images, remark]
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "PU", ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, imgName]
         );
         
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
@@ -854,18 +851,6 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-
-    const fSlotDateTime = moment(`${checkOrder.slot_date} ${checkOrder.slot_time}`);
-    const twoHoursBefore = moment(fSlotDateTime).subtract(2, 'hours');
-    
-    if (moment().isAfter(twoHoursBefore)) {
-        return resp.json({
-            status: 0,
-            code: 404,
-            message: 'Too late to proceed. You need to make the request at least 2 hours before the slot time.'
-        });
-    }
-    
     const insert = await db.execute(
         'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, cancel_by, cancel_reason) VALUES (?, ?, "C", ?, "User", ?)',
         [booking_id, rider_id, checkOrder.rsa_id, reason]
@@ -876,7 +861,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
 
     const href    = `portable_charger_booking/${booking_id}`;
     const title   = 'Portable Charger Cancel!';
-    const message = `Portable Charger: Booking ID ${booking_id} - ${checkOrder.rider_name} cancelled the booking.`;
+    const message = `YPortable Charger: Booking ID ${booking_id} - ${checkOrder.rider_name} cancelled the booking.`;
     await createNotification(title, message, 'Portable Charging', 'Admin', 'Rider',  rider_id, '', href);
 
     if(checkOrder.rsa_id) {
@@ -884,7 +869,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
         await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
     }
 
-    /* const html = `<html>
+    const html = `<html>
         <body>
             <h4>Dear ${checkOrder.user_name},</h4>
             <p>We would like to inform you that your booking for the portable charger has been successfully cancelled. Below are the details of your cancelled booking:</p>
@@ -911,7 +896,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
             <p>Best regards,<br/>PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml); */
+    emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });

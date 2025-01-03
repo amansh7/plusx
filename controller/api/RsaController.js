@@ -276,7 +276,7 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
                 request_id, pickup_address, pickup_latitude, pickup_longitude, order_status, parking_number, parking_floor, 
                 CONCAT(name, ",", country_code, "-", contact_no) as riderDetails, ${formatDateInQuery(['slot_date_time'])}, ${formatDateTimeInQuery(['created_at', 'updated_at',])} 
             FROM charging_service
-            WHERE rsa_id = ? AND order_status IN ('WC', 'C')
+            WHERE rsa_id = ? AND order_status = 'PU'
             ORDER BY slot_date_time DESC
         `, [rsa_id]);
 
@@ -288,7 +288,7 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
                 CONCAT(slot_date, " ", slot_time) AS slot_date_time
             FROM portable_charger_booking AS pcb
             WHERE rsa_id = ? 
-            AND status IN ('PU', 'C')
+            AND status = 'PU'
             ORDER BY slot_date_time DESC
         `, [rsa_id]);
 
