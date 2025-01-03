@@ -88,7 +88,7 @@ export const rsaData = asyncHandler(async (req, resp) => {
 });
 export const driverBookingList = async (req, resp) => {
     try {
-        const { rsa_id, driverType, page_no, order_status, start_date, end_date, search_text = '', scheduleFilters } = req.body;
+        const { rsa_id, driverType, page_no, status, start_date, end_date, search_text = '', scheduleFilters } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             rsa_id           : ["required"],
@@ -118,28 +118,28 @@ export const driverBookingList = async (req, resp) => {
             whereOperator    : []
         };
 
-        // if (start_date && end_date) {
-        //     const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
-        //     const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
-        //     params.whereField    = ['created_at', 'created_at'];
-        //     params.whereValue    = [start, end];
-        //     params.whereOperator = ['>=', '<='];
-        // }
-        // if(order_status) {
-        //     params.whereField.push('status');
-        //     params.whereValue.push(order_status);
-        //     params.whereOperator.push('=');
-        // }
-        // if (scheduleFilters.start_date && scheduleFilters.end_date) {
+            params.whereField    = ['created_at', 'created_at'];
+            params.whereValue    = [start, end];
+            params.whereOperator = ['>=', '<='];
+        }
+        if(status) {
+            params.whereField.push('status');
+            params.whereValue.push(status);
+            params.whereOperator.push('=');
+        }
+        if (scheduleFilters.start_date && scheduleFilters.end_date) {
           
-        //     const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
-        //     const schEnd   = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+            const schEnd   = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             
-        //     params.whereField.push('slot_date', 'slot_date');
-        //     params.whereValue.push(schStart, schEnd);
-        //     params.whereOperator.push('>=', '<=');
-        // }
+            params.whereField.push('slot_date', 'slot_date');
+            params.whereValue.push(schStart, schEnd);
+            params.whereOperator.push('>=', '<=');
+        }
         const result = await getPaginatedData(params);
 
         return resp.json({
