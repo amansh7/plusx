@@ -117,22 +117,22 @@ export const evPreSaleDetail = asyncHandler(async (req, resp) => {
 export const evPreSaleTimeSlot = asyncHandler(async (req, resp) => {
     const { page_no, search_text= '', start_date, end_date, } = req.body;
 
-    let slot_date = moment().format("YYYY-MM-DD");
+    let slot_date = moment().format("YYYY-MM-DD"); // {formatDateInQuery(['slot_date'])},
 
     const params = {
-        tableName: 'ev_pre_sale_testing_slot',
-        columns: `slot_id, start_time, end_time, booking_limit, status, ${formatDateTimeInQuery(['created_at'])}, ${formatDateInQuery(['slot_date'])},
+        tableName : 'ev_pre_sale_testing_slot',
+        columns   : `slot_id, start_time, end_time, booking_limit, status, ${formatDateTimeInQuery(['created_at'])}, slot_date,
             (SELECT COUNT(id) FROM ev_pre_sale_testing AS evpst WHERE evpst.slot_time_id=ev_pre_sale_testing_slot.slot_id AND evpst.slot_date='${slot_date}') AS slot_booking_count
         `,
-        sortColumn: 'id',
-        sortOrder: 'DESC',
+        sortColumn       : 'slot_date DESC, start_time ASC',
+        sortOrder        : '',
         page_no,
-        limit: 10,
-        liveSearchFields: ['slot_id',],
-        liveSearchTexts: [search_text,],
-        whereField: [],
-        whereValue: [],
-        whereOperator: []
+        limit            : 10,
+        liveSearchFields : ['slot_id',],
+        liveSearchTexts  : [search_text,],
+        whereField       : [],
+        whereValue       : [],
+        whereOperator    : []
     };
 
     if (start_date && end_date) {

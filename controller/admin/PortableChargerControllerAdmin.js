@@ -9,7 +9,6 @@ import emailQueue from '../../emailQueue.js';
 dotenv.config();
 
 
-
 export const chargerList = async (req, resp) => {
     try {
         const {rider_id, page_no, search_text = '' } = req.body;
@@ -221,20 +220,21 @@ export const chargerBookingList = async (req, resp) => {
             params.whereValue.push(start, end);
             params.whereOperator.push('>=', '<=');
         }
-        if (scheduleFilters.start_date && scheduleFilters.end_date) {
+        // if (scheduleFilters.start_date && scheduleFilters.end_date) {
           
-            const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
-            const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+        //     const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+        //     const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             
-            params.whereField.push('slot_date', 'slot_date');
-            params.whereValue.push(schStart, schEnd);
-            params.whereOperator.push('>=', '<=');
-        }
+        //     params.whereField.push('slot_date', 'slot_date');
+        //     params.whereValue.push(schStart, schEnd);
+        //     params.whereOperator.push('>=', '<=');
+        // }
         if(status) {
             params.whereField.push('status');
             params.whereValue.push(status);
             params.whereOperator.push('=');
         }
+        // console.log(params)
         const result = await getPaginatedData(params);
 
         // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
@@ -449,23 +449,21 @@ export const invoiceList = async (req, resp) => {
         const whereOperators = []
 
         if (start_date && end_date) {
-            // const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
-            // const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
             const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
-    
             whereFields.push('created_at', 'created_at');
             whereValues.push(start, end);
             whereOperators.push('>=', '<=');
         }
+    
 
         const result = await getPaginatedData({
             tableName: 'portable_charger_invoice',
             columns: `invoice_id, amount, payment_status, invoice_date, currency, 
                 (select concat(user_name, ",", country_code, "-", contact_no) from portable_charger_booking as pcb where pcb.booking_id = portable_charger_invoice.request_id limit 1)
                 AS riderDetails`,
-            sortColumn: 'invoice_date',
-            sortOrder: 'DESC',
+            sortColumn: 'id',
+            sortOrder: 'ASC',
             page_no,
             limit: 10,
             liveSearchFields: ['invoice_id'],
@@ -474,8 +472,6 @@ export const invoiceList = async (req, resp) => {
             whereValue: whereValues,
             whereOperator: whereOperators
         });
-
-        // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
 
         return resp.json({
             status: 1,
@@ -537,23 +533,23 @@ export const invoiceDetails = async (req, resp) => {
 /* Slot */
 export const slotList = async (req, resp) => {
     try {
-        const { page_no,  search_text = '', start_date, end_date} = req.body;
+        const { page_no,  search_text= '', start_date, end_date} = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
             page_no: ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
-        let slot_date = moment().format("YYYY-MM-DD"); // ${formatDateInQuery([('slot_date')])} timing
+        let slot_date = moment().format("YYYY-MM-DD");
 
         const params = {
             tableName  : 'portable_charger_slot',
-            columns    : `slot_id, slot_date, start_time, end_time, booking_limit, status, 
+            columns    : `slot_id, ${formatDateInQuery(['slot_date'])}, start_time, end_time, booking_limit, status, 
 
                 (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C")) AS slot_booking_count
             `,
-            sortColumn : 'slot_date DESC, start_time ASC',
-            sortOrder  : '',
+            sortColumn : 'created_at',
+            sortOrder  : 'DESC',
             page_no,
             limit      : 10,
             liveSearchFields: ['slot_id',],
@@ -564,6 +560,7 @@ export const slotList = async (req, resp) => {
             whereValue: [],
             whereOperator: []
         };
+        
         if (start_date && end_date) {
             const start = moment(start_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             const end = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
@@ -574,10 +571,9 @@ export const slotList = async (req, resp) => {
         }
         const result = await getPaginatedData(params);
 
-        // const [slotData] = await db.execute(`SELECT slot_id, start_time, end_time, booking_limit FROM portable_charger_slot WHERE status = ?`, [1]);
         const formattedData = result.data.map((item) => ({
             slot_id            : item.slot_id,
-            slot_date          : moment(item.slot_date, "DD-MM-YYYY").format('YYYY-MM-DD'),
+            slot_date          : item.slot_date,
             booking_limit      : item.booking_limit,
             status             : item.status,
             slot_booking_count : item.slot_booking_count,
@@ -587,7 +583,6 @@ export const slotList = async (req, resp) => {
             status: 1,
             code: 200,
             message: ["Portable Charger Slot List fetched successfully!"],
-            // data: result.data,
             data: formattedData,
             total_page: result.totalPage,
             total: result.total,
@@ -791,35 +786,44 @@ export const assignBooking = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     const conn = await startTransaction();
     
-    try{ 
-        const booking_data = await queryDB( `SELECT rider_id, rsa_id, slot_date, slot_time, (select fcm_token from riders as r where r.rider_id = portable_charger_booking.rider_id ) as fcm_token FROM portable_charger_booking WHERE booking_id = ?
+    try{
+        const booking_data = await queryDB( `SELECT rider_id, rsa_id, (select fcm_token from riders as r where r.rider_id = portable_charger_booking.rider_id ) as fcm_token FROM portable_charger_booking WHERE booking_id = ?
         `, [booking_id ] );
     
         if (!booking_data) {
             return resp.json({ message: `Sorry no booking found with this booking id ${booking_id}`, status: 0, code: 404 });
         }
-        const rsa = await queryDB(`SELECT rsa_name, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
         if(rsa_id == booking_data.rsa_id) {
-            return resp.json({ message: `The booking is already assigned to Driver Name ${rsa.rsa_name}. Would you like to assign it to another driver?`, status: 0, code: 404 });
+            return resp.json({ message: `This driver already assigned on this booking!, please select another driver`, status: 0, code: 404 });
         }
-        const slotDateTime = moment(booking_data.slot_date).format('YYYY-MM-DD') +' '+ booking_data.slot_time;
-        await insertRecord('portable_charger_booking_assign', 
-            ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [booking_id, rsa_id, booking_data.rider_id, slotDateTime, 0], conn
-        );
+        if( booking_data.rsa_id) {
+            await updateRecord('portable_charger_booking_assign', {rsa_id: rsa_id, status: 0}, ['order_id'], [booking_id], conn);
+
+        } else {
+            await insertRecord('portable_charger_booking_assign', 
+                [ 'order_id', 'rsa_id', 'rider_id', 'status' ], 
+                [ booking_id, booking_data.rider_id, rsa_id, 1 ], 
+            conn);
+        }
         await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, ['booking_id'], [booking_id], conn);
-       
+        // await insertRecord('portable_charger_history', ['booking_id', 'rider_id', 'rsa_id', 'order_status'], [booking_id, booking_data.rider_id, rsa_id, 'A'], conn);
+        
         const href    = 'portable_charger_booking/' + booking_id;
         const heading = 'Booking Assigned!';
         const desc    = `Your POD Booking has been assigned to Driver by PlusX admin with booking id : ${booking_id}`;
-        createNotification(heading, desc, 'Portable Charging Booking', 'Rider', 'Admin', '', booking_data.rider_id, href);
+        createNotification(heading, desc, 'Portable Charging Booking', 'Rider', 'Admin','', booking_data.rider_id, href);
         pushNotification(booking_data.fcm_token, heading, desc, 'RDRFCM', href);
-
-        const heading1 = 'Portable Charger Booking';
-        const desc1    = `A Booking of the portable charging booking has been assigned to you with booking id :  ${booking_id}`;
-        createNotification(heading, desc1, 'Portable Charger', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
-        pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
-        
+    
+        const rsa = await queryDB(`SELECT fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
+        if(rsa){
+            
+            const heading1 = 'Portable Charger Booking';
+            const desc1    = `A Booking of the portable charging booking has been assigned to you with booking id :  ${booking_id}`;
+            createNotification(heading1, desc1, 'Portable Charger', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
+            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+        }
         await commitTransaction(conn);
+        
         return resp.json({
             status  : 1, 
             code    : 200,
@@ -997,8 +1001,3 @@ export const adminCancelPCBooking = asyncHandler(async (req, resp) => {
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });
-
-
-
-
-

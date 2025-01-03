@@ -219,7 +219,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
         FROM charging_service_assign
         LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
         WHERE charging_service_assign.rsa_id = ? AND cs.request_id IS NOT NULL
-        ORDER BY charging_service_assign.id DESC
+        ORDER BY charging_service_assign.id ASC
     `,[rsa_id]);
 
     const [podAssign] = await db.execute(`
@@ -233,7 +233,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
         WHERE portable_charger_booking_assign.rsa_id = ?
-        ORDER BY portable_charger_booking_assign.id DESC
+        ORDER BY portable_charger_booking_assign.id ASC
     `,[rsa_id]);
    
     const { status, running_order, booking_type, valet_count, pod_count, valet_rej, pod_rejected, valet_completed, pod_completed } = rsaData;

@@ -66,7 +66,6 @@ export const getActivePodList = asyncHandler(async (req, resp) => {
     `, [data.lat, data.lon, data.lat]);
 
     return resp.json({status:1, code:200, message:["POD List fetch successfully!"], active_pod_id: pod_id, data: result });
-    // return resp.json({status:1, code:200, message:["POD List fetch successfully!"], data: result });
 });
 
 export const getPcSlotList = asyncHandler(async (req, resp) => {
@@ -215,22 +214,22 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         </html>`;
         emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Booking - ${bookingId}`, htmlAdmin);
        
-        // const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
+        const rsa = await queryDB(`SELECT fcm_token, rsa_id FROM rsa WHERE status = ? AND booking_type = ?`, [2, 'Portable Charger']);
         let respMsg = "Booking Request Received! Thank you for booking our portable charger service for your EV. Our team will arrive at the scheduled time."; 
         
-        // if(rsa){
-        //     const slotDateTime = moment(`${slot_date} ${slot_time}`, 'DD-MM-YYYY HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
+        if(rsa){
+            const slotDateTime = moment(`${slot_date} ${slot_time}`, 'DD-MM-YYYY HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
 
-        //     await insertRecord('portable_charger_booking_assign', 
-        //         ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider_id, slotDateTime, 0], conn
-        //     );
-        //     await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, ['booking_id'], [bookingId], conn);
+            await insertRecord('portable_charger_booking_assign', 
+                ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [bookingId, rsa.rsa_id, rider_id, slotDateTime, 0], conn
+            );
+            await updateRecord('portable_charger_booking', {rsa_id: rsa.rsa_id}, ['booking_id'], [bookingId], conn);
     
-        //     const heading1 = 'Portable Charger!';
-        //     const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
-        //     createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider_id, rsa.rsa_id, href);
-        //     pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
-        // }
+            const heading1 = 'Portable Charger!';
+            const desc1 = `A Booking of the Portable Charger service has been assigned to you with booking id : ${bookingId}`;
+            createNotification(heading, desc, 'Portable Charger', 'RSA', 'Rider', rider_id, rsa.rsa_id, href);
+            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+        }
 
         await commitTransaction(conn);
         
@@ -517,9 +516,9 @@ const acceptBooking = async (req, resp) => {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
 
-    // if (checkOrder.pod_count > 0) {
-    //     return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
-    // }
+    if (checkOrder.pod_count > 0) {
+        return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
+    }
 
     const ordHistoryCount = await queryDB(
         'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "A" AND booking_id = ?',[rsa_id, booking_id]
@@ -862,7 +861,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
 
     const href    = `portable_charger_booking/${booking_id}`;
     const title   = 'Portable Charger Cancel!';
-    const message = `Portable Charger: Booking ID ${booking_id} - ${checkOrder.rider_name} cancelled the booking.`;
+    const message = `YPortable Charger: Booking ID ${booking_id} - ${checkOrder.rider_name} cancelled the booking.`;
     await createNotification(title, message, 'Portable Charging', 'Admin', 'Rider',  rider_id, '', href);
 
     if(checkOrder.rsa_id) {

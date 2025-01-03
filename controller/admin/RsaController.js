@@ -2,7 +2,7 @@ import generateUniqueId from 'generate-unique-id';
 import db, { startTransaction, commitTransaction, rollbackTransaction } from '../../config/db.js';
 import { getPaginatedData, insertRecord, queryDB, updateRecord, } from '../../dbUtils.js';
 import validateFields from "../../validation.js";
-import { asyncHandler, deleteFile } from '../../utils.js';
+import { asyncHandler, deleteFile,formatDateInQuery } from '../../utils.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -59,17 +59,17 @@ export const rsaList = asyncHandler(async (req, resp) => {
 
 
 export const rsaData = asyncHandler(async (req, resp) => {
-    const { rsa_id } = req.body; 
-    const rsaData = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
+    const { rsa_id }  = req.body; 
+    const rsaData     = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging'];
     if (rsaData) {
         const bookingTypeValue = rsaData.booking_type;
 
         if (bookingTypeValue === 'Valet Charging') {
-            var [bookingData] = await db.execute(`SELECT request_id, order_status, name as user_name, slot_date_time as created_at  FROM charging_service WHERE rsa_id = ? and order_status In ('WC', 'C') order by id desc`, [rsa_id]);
+            var [bookingData] = await db.execute(`SELECT request_id, order_status, name as user_name, slot_date_time , created_at FROM charging_service WHERE rsa_id = ? and order_status In ('WC', 'C') order by slot_date_time desc limit 10`, [rsa_id]);
           
         } else if (bookingTypeValue === 'Portable Charger') {
-            var [bookingData] = await db.execute(` SELECT booking_id as request_id, status as order_status, user_name, concat(slot_date, " ", slot_time) as created_at FROM portable_charger_booking  WHERE rsa_id = ? and status In ('PU', 'C')  order by id desc`, [rsa_id]);
+            var [bookingData] = await db.execute(` SELECT booking_id as request_id, status as order_status, user_name, concat(slot_date, " ", slot_time) as slot_date_time, created_at FROM portable_charger_booking  WHERE rsa_id = ? and status In ('PU', 'C')  order by slot_date_time desc limit 10`, [rsa_id]);
         }
     }
     const bookingHistory    = bookingData;
@@ -86,27 +86,116 @@ export const rsaData = asyncHandler(async (req, resp) => {
         base_url: `${req.protocol}://${req.get('host')}/uploads/rsa_images/`
     });
 });
+export const driverBookingList = async (req, resp) => {
+    try {
+        const { rsa_id, driverType, page_no, order_status, start_date, end_date, search_text = '', scheduleFilters } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            rsa_id           : ["required"],
+            page_no          : ["required"],
+            driverType : ["required"]
+        });
+        if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
+
+        const tableName   = (driverType === 'Valet Charging') ? 'charging_service' : 'portable_charger_booking';
+        const liveSearchFields = ['booking_id', 'user_name' ];
+        var selectColumns = `booking_id, user_name, country_code, contact_no, status,  ${formatDateInQuery(['slot_date'])}, ${formatDateInQuery(['created_at'])}`;
+
+        if (driverType === 'Valet Charging') {
+            selectColumns = `request_id as booking_id, name as user_name, order_status as status, ${formatDateInQuery(['slot_date_time'])} as slot_date, ${formatDateInQuery(['created_at'])}`
+        }
+        const params = {
+            tableName        : tableName,
+            columns          : selectColumns,
+            sortColumn       : 'created_at',
+            sortOrder        : 'DESC',
+            page_no,
+            limit            : 10,
+            liveSearchFields : liveSearchFields,
+            liveSearchTexts  : [search_text, search_text ],
+            whereField       : ['rsa_id'],
+            whereValue       : [rsa_id],
+            whereOperator    : []
+        };
+
+        // if (start_date && end_date) {
+        //     const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+        //     const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+
+        //     params.whereField    = ['created_at', 'created_at'];
+        //     params.whereValue    = [start, end];
+        //     params.whereOperator = ['>=', '<='];
+        // }
+        // if(order_status) {
+        //     params.whereField.push('status');
+        //     params.whereValue.push(order_status);
+        //     params.whereOperator.push('=');
+        // }
+        // if (scheduleFilters.start_date && scheduleFilters.end_date) {
+          
+        //     const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+        //     const schEnd   = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            
+        //     params.whereField.push('slot_date', 'slot_date');
+        //     params.whereValue.push(schStart, schEnd);
+        //     params.whereOperator.push('>=', '<=');
+        // }
+        const result = await getPaginatedData(params);
+
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Driver Booking List!"],
+            data       : result.data,
+            total_page : result.totalPage,
+            total      : result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching charger booking list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger booking lists' });
+    }
+};
+export const allRsaList = async (req, resp) => {
+    try {
+        const { service_type } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, { service_type : ["required"] });
+        if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
+
+        const [result] = await db.execute(`SELECT rsa_id, rsa_name, status, booking_type FROM rsa WHERE booking_type = ? `, [service_type]);
+
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Driver Booking List!"],
+            data       : result,
+        });
+    } catch (error) {
+        console.error('Error fetching charger booking list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger booking lists' });
+    }
+};
 
 export const rsaAdd = asyncHandler(async (req, resp) => {
     const{ rsa_name, rsa_email, mobile, service_type, password, confirm_password } = req.body;
     const { isValid, errors } = validateFields(req.body, { 
-        rsa_name: ["required"],
-        rsa_email: ["required"],
-        mobile: ["required"],
-        service_type: ["required"],
-        password: ["required"],
-        confirm_password: ["required"],
+        rsa_name         : ["required"],
+        rsa_email        : ["required"],
+        mobile           : ["required"],
+        service_type     : ["required"],
+        password         : ["required"],
+        confirm_password : ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     if(password.length < 6) return resp.json({status:1, code: 422, message:["Password must be 6 digit"]});
     if(password != confirm_password) return resp.json({ status: 0, code: 422, message: ['Password and confirm password not matched!'] });
 
     let profile_image = req.files['profile_image'] ? req.files['profile_image'][0].filename  : '';
-
+    const hashedPswd = await bcrypt.hash(password, 10);
     const insert = await insertRecord('rsa', [
         'rsa_id', 'rsa_name', 'email', 'country_code', 'mobile', 'booking_type', 'password', 'status', 'running_order', 'profile_img'
     ], [
-        `RSA-${generateUniqueId({length:8})}`, rsa_name, rsa_email, '+971', mobile, service_type, password, 0, 0, profile_image
+        `RSA-${generateUniqueId({length:8})}`, rsa_name, rsa_email, '+971', mobile, service_type, hashedPswd, 0, 0, profile_image
     ]);
     
     return resp.json({
