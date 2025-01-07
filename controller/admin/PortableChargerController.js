@@ -193,6 +193,7 @@ export const chargerBookingList = async (req, resp) => {
         const params = {
             tableName: 'portable_charger_booking',
             columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
+                (select rsa_name from rsa where portable_charger_booking.rsa_id = rsa.rsa_id) AS rsa_name,
                 ${formatDateInQuery(['slot_date'])}, slot_time, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'created_at',
             sortOrder: 'DESC',
@@ -269,11 +270,11 @@ export const chargerBookingDetails = async (req, resp) => {
 
         const [bookingResult] = await db.execute(`
             SELECT 
-                booking_id, ${formatDateTimeInQuery(['created_at'])}, user_name, country_code, contact_no, status, address, latitude,
+                booking_id, ${formatDateTimeInQuery(['created_at'])}, user_name, country_code, contact_no, status, address, latitude, pod_id,
                 longitude, service_name, service_price, service_type, service_feature, ${formatDateInQuery(['slot_date'])}, slot_time,
-                
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, 
-                (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data
+                (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data,
+                (select pod_name from pod_devices where pod_id = portable_charger_booking.pod_id) as pod_name
             FROM 
                 portable_charger_booking 
             WHERE 

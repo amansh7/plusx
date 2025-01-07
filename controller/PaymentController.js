@@ -1,6 +1,6 @@
 import db from "../config/db.js";
 import validateFields from "../validation.js";
-import {  queryDB } from '../dbUtils.js';
+import { queryDB } from '../dbUtils.js';
 import { mergeParam, formatNumber } from '../utils.js';
 import moment from "moment";
 import Stripe from "stripe";
@@ -54,7 +54,6 @@ export const createIntent = async (req, resp) => {
                 },
             },
         });
-
         const returnData = {
             paymentIntentId: paymentIntent.id,
             paymentIntentSecret: paymentIntent.client_secret,
@@ -80,56 +79,139 @@ export const createIntent = async (req, resp) => {
     }
 };
 
-export const createCharge = async (req, resp) => {
+export const createAutoDebit = async (customerId, paymentMethodId, totalAmount) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const { payment_intent_id, amount, customer_id } = mergeParam(req);
-
-    try{
-        // const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
-        // const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
-        // const formattedTimestamp = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
-        // const customerId = paymentIntent.customer;
-        // const paymentMethodId = paymentIntent.payment_method;
-        // const paymentMethods = await stripe.customers.retrievePaymentMethod(customerId, paymentMethodId);
-        // return resp.json({paymentIntent});
-    
-        // paymentIntent = await stripe.charges.create({
-        //     receipt_email : email,
-        //     amount        : 300,
-        //     currency      : 'aed',
-        //     card          : paymentMethodId,
-        //     customer      : customerId
-        // });
-        // return resp.json({charge});
-        
-        const paymentMethods = await stripe.paymentMethods.list({
-            customer: customer_id,
-            type: 'card',
-        });
-        const paymentMethodId = paymentMethods.data[0].id;
-        // return resp.json({paymentMethods, paymentMethodId});
-
-        const newPaymentIntent = await stripe.paymentIntents.create({
-            amount: 100,
+  
+    try {
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: totalAmount < 200 ? 200 : Math.floor(totalAmount),
             currency: 'aed',
-            customer: customer_id,
+            customer: customerId,
             payment_method: paymentMethodId,
             off_session: true,
             confirm: true,
         });
-        console.log(newPaymentIntent);
-        return resp.json({newPaymentIntent});
-    
+  
+        return {
+            message: "Payment completed successfully!",
+            status: 1,
+            code: 200,
+            paymentIntent,
+        };
+    } catch (err) {
+        console.error('Error processing off-session payment:', err);
+        return {
+            message: "Error processing payment",
+            error: err.message,
+            status: 0,
+            code: 500,
+        };
+    }
+};
+
+export const autoPay = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const {customer_id, payment_method_id,amount } = mergeParam(req);
+
+    try{
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount * 100,
+            currency: 'aed',
+            customer: customer_id,
+            payment_method: payment_method_id,
+            off_session: true,
+            confirm: true,
+        });
+  
+        return resp.json({
+            message: "Payment from saved card completed successfully!",
+            status: 1,
+            code: 200,
+            paymentIntent,
+        });
     }catch(err){
-        console.error('Error in creating charge: ', err);
+        console.error('Error processing off-session payment:', err);
         return resp.status(500).json({
-            message: ["Error creating charge"],
+            message: "Error processing payment",
             error: err.message,
             status: 0,
             code: 500,
         });
     }
+};
 
+export const addCardToCustomer = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { payment_method_id, customer_id } = mergeParam(req);
+
+    try {
+        await stripe.paymentMethods.attach(payment_method_id, {
+          customer: customer_id,
+        });
+    
+        await stripe.customers.update(customer_id, {
+          invoice_settings: {
+            default_payment_method: payment_method_id,
+          },
+        });
+    
+        resp.json({ success: true, message: 'Card added successfully!' });
+    } catch (error) {
+        console.error('Error adding card to customer:', error);
+        resp.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const customerCardsList = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { customer_id } = mergeParam(req);
+
+    const cardDetailsList = [];
+    const customerCards = await stripe.paymentMethods.list({
+        customer: customer_id,
+        type: 'card',
+    });
+
+    customerCards.data.forEach(method => {
+        const cardDetails = {
+          paymentMethodId   : method.id,
+          last4             : method.card.last4,
+          exp_month         : method.card.exp_month,
+          exp_year          : method.card.exp_year,
+          brand             : method.card.brand
+        };
+      
+        cardDetailsList.push(cardDetails);
+    });
+
+    return resp.json({
+        total: customerCards.data.length, 
+        card_details: cardDetailsList,
+    });
+};
+
+export const removeCard = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { payment_method_id } = req.body;
+    if (!payment_method_id) return resp.status(400).json({ status: 0, message: 'Payment Method ID is required.'});
+    
+    try {
+        const detachedPaymentMethod = await stripe.paymentMethods.detach(payment_method_id);
+
+        return resp.json({
+            status: 1,
+            message: 'Payment Method removed successfully.',
+            paymentMethodId: detachedPaymentMethod.id,
+        });
+    } catch (error) {
+        console.error('Error detaching card:', error);
+
+        return resp.status(500).json({
+            status: 0,
+            message: 'Error removing payment method.',
+            error: error.message,
+        });
+    }
 };
 
 export const redeemCoupon = async (req, resp) => {
@@ -271,63 +353,63 @@ export const createPortableChargerSubscription = async (req, resp) => {
     return resp.json({status:1, code:200, message: ["Your PlusX subscription is active! Start booking chargers for your EV now."]});
 };
 
-export const autoPay = async (req, resp) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const { customer_id, payment_method_id, kw_consumed, first_payment } = mergeParam(req);
+/* Helper to retrive total amount from PCB or CS */
+export const getTotalAmountFromService = async (booking_id, booking_type) => {
+    let invoiceId, total_amount;
 
-    const deliveryFee = 39000; // 39 AED
-    const kwPrice = 0.25 * 0.44;
-    const totalAmount = kw_consumed * kwPrice;
+    if(booking_type === 'PCB'){
+        const data = await queryDB(`
+            SELECT 
+                start_charging_level, end_charging_level, user_name AS rider_name,
+                (select r.rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id) AS rider_email
+            FROM
+                portable_charger_booking
+            WHERE 
+                booking_id = ? LIMIT 1
+        `, [booking_id]);
 
-    const customer = await stripe.customers.create({
-        name: 'Aman Sharma',
-        address: {
-            line1: "476 Yudyog Vihar Phase - V",
-            postal_code: "122016",
-            city: "Gurugram",
-            state: "Haryana",
-            country: "IND",
-        },
-        email: 'rider_email',
-    });
+        if (!data) return { success: false, message: 'No data found for the invoice.' };
+        
+        const startChargingLevels = data.start_charging_level ? data.start_charging_level.split(',').map(Number) : [];
+        const endChargingLevels = data.end_charging_level ? data.end_charging_level.split(',').map(Number) : [];
+        
+        if (startChargingLevels.length !== endChargingLevels.length) return resp.json({ error: 'Mismatch in charging level data.' });
 
-    try{
-        let amountToCharge;
-        if(first_payment){
-            amountToCharge = deliveryFee;
+        const chargingLevelSum = startChargingLevels.reduce((sum, startLevel, index) => {
+            const endLevel = endChargingLevels[index];
+            return sum + Math.max(startLevel - endLevel, 0);
+        }, 0);
+        console.log('chargingLevelSum', chargingLevelSum);
+        data.kw           = chargingLevelSum * 0.25;
+        data.kw_dewa_amt  = data.kw * 0.44;
+        data.kw_cpo_amt   = data.kw * 0.26;
+        data.delv_charge  = 30;
+        data.t_vat_amt    = Math.floor((data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge) * 5) / 100;
+        data.total_amt    = data.kw_dewa_amt + data.kw_cpo_amt + data.t_vat_amt;
 
-            const paymentIntent = await stripe.paymentIntents.create({
-                amount              : amountToCharge,
-                currency            : 'aed',
-                customer            : customer_id,
-                payment_method      : payment_method_id,
-                setup_future_usage  : 'off_session',
-                confirm             : true
-            });
+        total_amount = (data.total_amt) ? Math.round(data.total_amt) : 0.00;
 
-            resp.status(200).json({
-                success: true,
-                message: 'First payment successful, card saved for future use.',
-                paymentIntent,
-            });
-        }else{
-            amountToCharge = totalAmount;
+        return {success: true, total_amount, data, message: 'Pod Amount fetched successfully'};
+    }else if(booking_type === 'CS'){
+        invoiceId = booking_id.replace('CS', 'INVCS');
 
-            const paymentIntent = await stripe.paymentIntents.create({
-                amount: amountToCharge,
-                currency: 'aed',
-                customer: customer_id,
-                off_session: true,
-                confirm: true,
-            });
+        const data = await queryDB(`
+            SELECT 
+                csi.invoice_id, csi.amount, cs.request_id
+            FROM 
+                charging_service_invoice AS csi
+            LEFT JOIN
+                charging_service AS cs ON cs.request_id = csi.request_id
+            WHERE 
+                csi.invoice_id = ?
+            LIMIT 1
+        `, [invoiceId]);
 
-            resp.status(200).json({
-                success: true,
-                message: 'Charge successful for kW consumed.',
-                paymentIntent,
-            });
-        }
-    }catch(err){
-        return resp.json({'message' : 'Something went wrong', err });
+        if (!data) return { success: false, message: 'No data found for the invoice.' };
+
+        total_amount = (data.amount) ? data.amount : 0.00;
+        return {success: true, total_amount, message: 'PickDrop Amount fetched successfully'};
+    }else{
+        return {success: false, total_amount,  message: 'Invalid Booking Id'}; 
     }
-};
+}
