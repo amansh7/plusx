@@ -103,7 +103,7 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
         createObj.receipt_url = charge.receipt_url;
         createObj.card_data = cardData;
     }
-    return resp.json(createObj);
+    
     const columns = Object.keys(createObj);
     const values = Object.values(createObj);
     const insert = await insertRecord('portable_charger_invoice', columns, values);
