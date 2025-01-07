@@ -799,7 +799,7 @@ export const assignBooking = async (req, resp) => {
         if (!booking_data) {
             return resp.json({ message: `Sorry no booking found with this booking id ${booking_id}`, status: 0, code: 404 });
         }
-        const rsa = await queryDB(`SELECT rsa_name, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
+        const rsa = await queryDB(`SELECT email, rsa_name, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
         if(rsa_id == booking_data.rsa_id) {
             return resp.json({ message: `The booking is already assigned to Driver Name ${rsa.rsa_name}. Would you like to assign it to another driver?`, status: 0, code: 404 });
         }
