@@ -1,10 +1,12 @@
 import multer from 'multer';
 import moment from "moment";
+import dotenv from 'dotenv';
 import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import db, { commitTransaction, rollbackTransaction, startTransaction } from "../../config/db.js";
 import { asyncHandler, createNotification, formatDateTimeInQuery, mergeParam, pushNotification } from '../../utils.js';
+dotenv.config();
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -82,7 +84,7 @@ export const addRoadAssistance = asyncHandler(async (req, resp) => {
         </html>`;
         
         emailQueue.addEmail(rider.rider_email, 'Your Roadside Assistance Booking Confirmation - PlusX Electric App', htmlUser);
-        emailQueue.addEmail('admin@plusxelectric.com', `Roadside Assistance Booking Confirmation - PlusX Electric App`, htmlAdmin);
+        emailQueue.addEmail(process.env.MAIL_ADMIN, `Roadside Assistance Booking Confirmation - PlusX Electric App`, htmlAdmin);
 
         await commitTransaction(conn);
         

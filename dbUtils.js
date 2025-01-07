@@ -18,7 +18,7 @@ export const insertRecord = async (table, columns, values, connection = null) =>
   }
   const placeholders = columns.map(() => "?").join(", ");
   const sql = `INSERT INTO ${table} (${columns.join( ", " )}) VALUES (${placeholders})`;
-  console.log(sql, values);
+  // console.log(sql, values);
   
   try {
     const dbConn = connection ? connection : await db.getConnection();

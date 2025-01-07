@@ -211,7 +211,7 @@ export const pdSlotList = async (req, resp) => {
         let slot_date = moment().format("YYYY-MM-DD");  // timing
         const params = {
             tableName: 'pick_drop_slot',
-            columns: `slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])}, ${formatDateTimeInQuery(['created_at'])}, 
+            columns: `slot_id, start_time, end_time, booking_limit, status, ${formatDateTimeInQuery(['created_at'])},${formatDateInQuery(['slot_date'])}, 
                 (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
             `,
             sortColumn : 'slot_date DESC, start_time ASC',
@@ -564,7 +564,7 @@ export const adminCancelCSBooking = asyncHandler(async (req, resp) => {
             <p>Thank you,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail('valetbookings@plusxelectric.com', `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
+    emailQueue.addEmail(process.env.MAIL_CS_ADMIN, `Pickup & Drop-Off Charging Service : Booking Cancellation `, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });

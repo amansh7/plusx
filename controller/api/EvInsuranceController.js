@@ -1,10 +1,12 @@
 import moment from "moment";
+import dotenv from 'dotenv';
 import db from "../../config/db.js";
 import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import { asyncHandler, createNotification, deleteFile, formatDateInQuery, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+dotenv.config();
 
 export const addInsurance = asyncHandler(async (req, resp) => {
     try{
@@ -230,7 +232,7 @@ export const evPreSaleBooking = asyncHandler(async (req, resp) => {
     </html>`;
 
     emailQueue.addEmail(rider.rider_email, 'Your EV-pre Sale Booking Confirmation - PlusX Electric App', htmlUser);
-    emailQueue.addEmail('admin@plusxelectric.com', `EV-pre Sale Booking - ${bookingId}`, htmlAdmin);
+    emailQueue.addEmail(process.env.MAIL_ADMIN, `EV-pre Sale Booking - ${bookingId}`, htmlAdmin);
 
     return resp.json({
         status: 1,

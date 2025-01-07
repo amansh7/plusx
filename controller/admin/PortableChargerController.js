@@ -193,6 +193,7 @@ export const chargerBookingList = async (req, resp) => {
         const params = {
             tableName: 'portable_charger_booking',
             columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
+                (select rsa_name from rsa where portable_charger_booking.rsa_id = rsa.rsa_id) AS rsa_name,
                 ${formatDateInQuery(['slot_date'])}, slot_time, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'created_at',
             sortOrder: 'DESC',
@@ -269,11 +270,11 @@ export const chargerBookingDetails = async (req, resp) => {
 
         const [bookingResult] = await db.execute(`
             SELECT 
-                booking_id, ${formatDateTimeInQuery(['created_at'])}, user_name, country_code, contact_no, status, address, latitude,
+                booking_id, ${formatDateTimeInQuery(['created_at'])}, user_name, country_code, contact_no, status, address, latitude, pod_id,
                 longitude, service_name, service_price, service_type, service_feature, ${formatDateInQuery(['slot_date'])}, slot_time,
-                
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, 
-                (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data
+                (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data,
+                (select pod_name from pod_devices where pod_id = portable_charger_booking.pod_id) as pod_name
             FROM 
                 portable_charger_booking 
             WHERE 
@@ -798,7 +799,7 @@ export const assignBooking = async (req, resp) => {
         if (!booking_data) {
             return resp.json({ message: `Sorry no booking found with this booking id ${booking_id}`, status: 0, code: 404 });
         }
-        const rsa = await queryDB(`SELECT rsa_name, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
+        const rsa = await queryDB(`SELECT email, rsa_name, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
         if(rsa_id == booking_data.rsa_id) {
             return resp.json({ message: `The booking is already assigned to Driver Name ${rsa.rsa_name}. Would you like to assign it to another driver?`, status: 0, code: 404 });
         }
@@ -806,6 +807,7 @@ export const assignBooking = async (req, resp) => {
         await insertRecord('portable_charger_booking_assign', 
             ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [booking_id, rsa_id, booking_data.rider_id, slotDateTime, 0], conn
         );
+        await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE order_id = ? AND rsa_id = ?`, [booking_id, booking_data.rsa_id]);
         await updateRecord('portable_charger_booking', {rsa_id: rsa_id}, ['booking_id'], [booking_id], conn);
        
         const href    = 'portable_charger_booking/' + booking_id;
@@ -818,6 +820,18 @@ export const assignBooking = async (req, resp) => {
         const desc1    = `A Booking of the portable charging booking has been assigned to you with booking id :  ${booking_id}`;
         createNotification(heading, desc1, 'Portable Charger', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
         pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+
+        const htmlDriver = `<html>
+            <body>
+                <h4>Dear ${rsa.rsa_name},</h4>
+                <p>A Booking of the portable charging booking has been assigned to you.</p> 
+                <p>Booking Details:</p>
+                Booking ID: ${booking_id}<br>
+                Date and Time of Service: ${slotDateTime}<br>        
+                <p> Best regards,<br/>PlusX Electric Team </p>
+            </body>
+        </html>`;
+        emailQueue.addEmail(rsa.email, 'PlusX Electric App: Booking Confirmation for Your Portable EV Charger', htmlDriver);
         
         await commitTransaction(conn);
         return resp.json({
@@ -834,7 +848,6 @@ export const assignBooking = async (req, resp) => {
         if (conn) conn.release();
     }
 };
-
 
 /* Subscription */
 export const subscriptionList = asyncHandler(async (req, resp) => {
@@ -993,12 +1006,8 @@ export const adminCancelPCBooking = asyncHandler(async (req, resp) => {
             <p>Best regards,<br/> The PlusX Electric Team </p>
         </body>
     </html>`;
-    emailQueue.addEmail('podbookings@plusxelectric.com', `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
+    emailQueue.addEmail(process.env.MAIL_POD_ADMIN, `Portable Charger Service Booking Cancellation ( :Booking ID : ${booking_id} )`, adminHtml);
 
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });
-
-
-
-
 

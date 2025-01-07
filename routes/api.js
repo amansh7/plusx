@@ -7,7 +7,7 @@ import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddlewa
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
 import { shopList, shopDetail } from '../controller/api/ShopController.js';
 import { offerList, offerDetail } from '../controller/api/OfferController.js';
-import { redeemCoupon, createIntent, createPortableChargerSubscription, autoPay, createCharge } from '../controller/PaymentController.js';
+import { redeemCoupon, createIntent, createPortableChargerSubscription, createAutoDebit, addCardToCustomer, customerCardsList, removeCard, autoPay } from '../controller/PaymentController.js';
 import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
@@ -194,7 +194,6 @@ const authzAndAuthRoutes = [
 
     /* Payment */
     { method: 'post', path: '/payment-intent',                       handler: createIntent },
-    { method: 'post', path: '/create-charge',                        handler: createCharge },
     { method: 'post', path: '/create-portable-charger-subscription', handler: createPortableChargerSubscription },
 
     /* Invoice */
@@ -275,6 +274,9 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
 
 router.post('/validate-coupon', redeemCoupon);
-router.post('/charge', autoPay);
+router.post('/add-card', addCardToCustomer);
+router.post('/remove-card', removeCard);
+router.post('/list-card', customerCardsList);
+router.post('/auto-pay', autoPay);
 
 export default router;

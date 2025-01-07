@@ -1,8 +1,10 @@
+import dotenv from 'dotenv';
 import db from "../../config/db.js";
 import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import { insertRecord, queryDB, getPaginatedData } from '../../dbUtils.js';
 import { asyncHandler, createNotification, formatDateTimeInQuery, mergeParam, pushNotification } from "../../utils.js";
+dotenv.config();
 
 export const serviceRequest = asyncHandler(async (req, resp) => {
     const { rider_id, name, email, country_code, contact_no, service_type, address, latitude, longitude, charger_for, no_of_charger, description,
@@ -66,7 +68,7 @@ export const serviceRequest = asyncHandler(async (req, resp) => {
                 <p> Best regards,<br/>PlusX Electric Team </p>
             </body>
         </html>`;
-        emailQueue.addEmail('admin@plusxelectric.com', `Charging Installation Booking - ${requestId}`, htmlAdmin);
+        emailQueue.addEmail(process.env.MAIL_ADMIN, `Charging Installation Booking - ${requestId}`, htmlAdmin);
 
         return resp.json({
             status: 1, 

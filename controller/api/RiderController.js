@@ -206,21 +206,21 @@ export const createOTP = asyncHandler(async (req, resp) => {
     let otp = generateOTP(4);
     storeOTP(fullMobile, otp);
     
-    // storeOTP(fullMobile, '0587');
-    // return resp.json({ status: 1, code: 200, data: '', message: ['OTP sent successfully!'] });
+    storeOTP(fullMobile, '0587');
+    return resp.json({ status: 1, code: 200, data: otp, message: ['OTP sent successfully!'] });
     
-    sendOtp(
-        fullMobile,
-        `Your One-Time Password (OTP) for sign-up is: ${otp}. Do not share this OTP with anyone. Thank you for choosing PlusX Electric App!. A6NKWsZKgrz`
-    )
-    .then(result => {
-        if (result.status === 0) return resp.json(result);
-        return resp.json({ status: 1, code: 200, data: '', message: ['OTP sent successfully!'] });
-    })
-    .catch(err => {
-        console.error('Error in otpController:', err.message);
-        return resp.json({ status: 'error', msg: 'Failed to send OTP' });
-    }); 
+    // sendOtp(
+    //     fullMobile,
+    //     `Your One-Time Password (OTP) for sign-up is: ${otp}. Do not share this OTP with anyone. Thank you for choosing PlusX Electric App!. A6NKWsZKgrz`
+    // )
+    // .then(result => {
+    //     if (result.status === 0) return resp.json(result);
+    //     return resp.json({ status: 1, code: 200, data: '', message: ['OTP sent successfully!'] });
+    // })
+    // .catch(err => {
+    //     console.error('Error in otpController:', err.message);
+    //     return resp.json({ status: 'error', msg: 'Failed to send OTP' });
+    // }); 
 });
 
 export const verifyOTP = asyncHandler(async (req, resp) => {
@@ -238,8 +238,8 @@ export const verifyOTP = asyncHandler(async (req, resp) => {
         isLogin = result.rider_mob
         loginStatus = result.rider_status
     }
-    if (!cachedOtp || cachedOtp !== otp) return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
-    // if (otp != '0587') return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
+    // if (!cachedOtp || cachedOtp !== otp) return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
+    if (otp != '0587') return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
     
     if(!isLogin) return resp.json({status: 1, code: 200, message: ['OTP verified succeessfully!'], is_login: 0});
     
