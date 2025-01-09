@@ -17,7 +17,7 @@ import {
     storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete,serviceList, serviceCreate, serviceUpdate, serviceDelete, brandList, brandCreate, brandUpdate, brandDelete,
     deleteStoreGallery
 } from "../controller/admin/ShopController.js";
-import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange,  } from "../controller/admin/RsaController.js";
+import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange, driverBookingList, allRsaList } from "../controller/admin/RsaController.js";
 import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg } from "../controller/admin/RiderClubController.js"
 import { carsList, carDetail, carAdd, carEdit, carDelete, carGalleryDelete } from "../controller/admin/ElectriCarLeasingController.js";
 import { bikeDetail, bikesList, bikeAdd, bikeEdit, bikeDelete, bikeGalleryDelete } from "../controller/admin/ElectricBikeRentalController.js";
@@ -34,14 +34,14 @@ import {
 } from "../controller/admin/EvInsuranceController.js";
 import { sellVehicleDetail, sellVehicleList } from "../controller/admin/VehicleController.js";
 import { discussionBoardList, discussionBoardDetail, discussionBoardDelete } from "../controller/admin/DiscussionBoardController.js";
-import { donwloadPodBookingList } from "../controller/ExportController.js";
-
+import { donwloadPodBookingList, donwloadUserList } from "../controller/ExportController.js";
 
 import { podDeviceList, podDeviceDetails, addPodDevice, editPodDevice, deletePodDevice, AllpodDevice, addPodBrand, podBrandList, deviceBrandList, podAreaList, addPodArea, podAreaDetails, editPodArea, AllpodArea, assignPodDeviceArea, podAreaAssignList, podDeviceStatusChange,podAreaInputList, podAreaBookingList } from "../controller/admin/PodDeviceController.js";
 
 const router = Router();
 
 router.get('/pod-booking-list-download', donwloadPodBookingList);
+router.get('/user-signup-list-download', donwloadUserList);
 
 const adminAuthRoutes = [
     { method: 'post', path: '/login', handler: login },
@@ -122,10 +122,13 @@ const adminRoutes = [
     /* RSA Routes */
     { method: 'post',  path: '/rsa-list',          handler: rsaList },
     { method: 'post',  path: '/rsa-data',          handler: rsaData },
+    
     { method: 'post',  path: '/rsa-add',           handler: rsaAdd },
     { method: 'post',  path: '/rsa-update',        handler: rsaUpdate },
     { method: 'post',  path: '/rsa-delete',        handler: rsaDelete },
     { method: 'post',  path: '/rsa-status-change', handler: rsaStatusChange },
+    { method: 'post',  path: '/rsa-booking-list',  handler: driverBookingList },
+    { method: 'post',  path: '/all-rsa-list',      handler: allRsaList },
 
     /* Rider Clubs */
     { method: 'post',   path: '/club-list',       handler: clubList },

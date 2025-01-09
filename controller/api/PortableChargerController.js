@@ -773,6 +773,127 @@ const chargerPickedUp = async (req, resp) => {
         const paymentData = await queryDB(`SELECT amount, invoice_id, payment_intent_id, payment_method_id, payment_cust_id FROM portable_charger_invoice WHERE invoice_id = ?`, [invoiceId]);
         if(!paymentData) return resp.json({status: 0, code: 422, message: 'invalid paymentd details'});
         
+        const customerId      = paymentData.payment_cust_id;
+        const paymentMethodId = paymentData.payment_method_id;
+        const autoDebit       = await createAutoDebit(customerId, paymentMethodId, totalAmount);
+
+        if(autoDebit.status == 1) { 
+            const updates = {
+                payment_intent_id : autoDebit.paymentIntent.id, 
+                payment_method_id : autoDebit.paymentIntent.payment_method,
+                amount            : totalAmount + paymentData.amount
+            };
+            const updateInvoiceData = await updateRecord('portable_charger_invoice', updates, ['invoice_id'], [invoiceId]);
+        
+            const data = await queryDB(`
+                SELECT 
+                    pci.invoice_id, pci.amount, pci.invoice_date, pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level,
+                    CASE WHEN pci.currency IS NOT NULL THEN pci.currency ELSE 'AED' END AS currency,
+                    (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_email,
+                    (SELECT rd.rider_name FROM riders AS rd WHERE rd.rider_id = pci.rider_id) AS rider_name
+                FROM 
+                    portable_charger_invoice AS pci
+                LEFT JOIN
+                    portable_charger_booking AS pcb ON pcb.booking_id = pci.request_id
+                WHERE 
+                    pci.invoice_id = ?
+                LIMIT 1
+            `, [invoiceId]);
+    
+            const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
+                data[key] ? data[key].split(',').map(Number) : []
+            );
+            const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
+            
+            data.kw           = chargingLevelSum * 0.25;
+            data.currency     = data.currency.toUpperCase();
+            data.kw_dewa_amt  = data.kw * 0.44;
+            data.kw_cpo_amt   = data.kw * 0.26;
+            data.delv_charge  = 30;
+            data.t_vat_amt    = Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
+            data.total_amt    = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
+            data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
+            
+            const invoiceData  = { data, numberToWords, formatNumber  };
+            const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
+            const filename     = `${invoiceId}-invoice.pdf`;
+            const savePdfDir   = 'portable-charger-invoice';
+            const pdf          = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
+    
+            if(!pdf || !pdf.success){
+                await rollbackTransaction(conn);
+                return resp.json({ message: ['Failed to generate invoice. Please Try Again!'], status: 0, code: 200 });
+            }
+            if(pdf.success){
+                const html = `<html>
+                    <body>
+                        <h4>Dear ${data.rider_name}</h4>
+                        <p>We hope you are doing well!</p>
+                        <p>Thank you for choosing our Portable EV Charger service for your EV. We are pleased to inform you that your booking has been successfully completed, and the details of your invoice are attached.</p>
+                        <p>We appreciate your trust in PlusX Electric and look forward to serving you again.</p>
+                        <p> Regards,<br/>PlusX Electric Team </p>
+                    </body>
+                </html>`;
+                const attachment = {
+                    filename: `${invoiceId}-invoice.pdf`, path: pdf.pdfPath, contentType: 'application/pdf'
+                };
+            
+                emailQueue.addEmail(data.rider_email, 'PlusX Electric: Invoice for Your Portable EV Charger Service', html, attachment);
+            }
+        }
+        await commitTransaction(conn);
+        return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
+const chargerPickedUpOld = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude, remark='' } = mergeParam(req);
+    if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id) AS fcm_token,
+            (select CONCAT(slot, "/" ,pod_id) from portable_charger_booking as pb where pb.booking_id = portable_charger_booking_assign.order_id ) as slot_pod
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 1
+        LIMIT 1
+    `,[booking_id, rsa_id]);
+
+    const images = req.files['image'] ? req.files['image'].map(file => file.filename).join('*') : '';
+
+    const [slot, pod_id] = checkOrder.slot_pod.split('/');
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "PU" AND booking_id = ?',[rsa_id, booking_id]
+    );
+    const conn = await startTransaction();
+    if (ordHistoryCount.count === 0) {
+        const insert = await conn.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, image, remarks) VALUES (?, ?, "PU", ?, ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, images, remark]
+        );
+        
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id], conn );
+        await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
+        await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        await updateRecord('pod_devices', { latitude, longitude}, ['pod_id'], [pod_id] );
+        // await conn.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [checkOrder.slot]);
+
+        const invoiceId = booking_id.replace('PCB', 'INVPC');
+
+        const amt = await getTotalAmountFromService(booking_id, 'PCB');
+        const totalAmount = (amt.total_amount * 100);
+        const paymentData = await queryDB(`SELECT amount, invoice_id, payment_intent_id, payment_method_id, payment_cust_id FROM portable_charger_invoice WHERE invoice_id = ?`, [invoiceId]);
+        if(!paymentData) return resp.json({status: 0, code: 422, message: 'invalid paymentd details'});
+        
         const customerId = paymentData.payment_cust_id;
         const paymentMethodId = paymentData.payment_method_id;
         const autoDebit = await createAutoDebit(customerId, paymentMethodId, totalAmount);

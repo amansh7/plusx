@@ -67,7 +67,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
 
 export const portableChargerInvoice = asyncHandler(async (req, resp) => {
     const {rider_id, request_id, payment_intent_id } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"], payment_intent_id: ["required"] });
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"], payment_intent_id: ["required"] }); // 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoiceId = request_id.replace('PCB', 'INVPC');
@@ -103,7 +103,7 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
         createObj.receipt_url = charge.receipt_url;
         createObj.card_data = cardData;
     }
-    
+    // return resp.json(createObj);
     const columns = Object.keys(createObj);
     const values = Object.values(createObj);
     const insert = await insertRecord('portable_charger_invoice', columns, values);

@@ -85,8 +85,7 @@ export const notificationList = asyncHandler(async (req, resp) => {
     const limit = 10;
     const start = parseInt((page_no * limit) - limit, 10);
 
-    const totalRows  = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = ? and status = 0 `, ['Admin']);
-
+    const totalRows  = await queryDB(`SELECT COUNT(*) AS total FROM notifications WHERE panel_to = ? and status = '0' `, ['Admin']);
     if(getCount){
         return resp.json({ 
             status : 1, 

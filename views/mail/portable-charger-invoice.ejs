@@ -102,25 +102,35 @@
                                 <thead>
                                     <tr style="background-color: #5e676f; color: #FFFFFF;">
                                         <th style="width: 70%; font-size: 16px; padding: 12px 10px;" class="text-neon">Item Name</th>
+                                        <th style="text-align: center; width: 30%; font-size: 16px; padding: 12px 10px;" class="text-neon"> Unit Price</th>
+                                        <th style="text-align: center; width: 30%; font-size: 16px; padding: 12px 10px;" class="text-neon"> Unit (KW Consumed)</th>
                                         <th style="text-align: center; width: 30%; font-size: 16px; padding: 12px 10px;" class="text-neon"> Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody class="text-white">
                                     <tr style="border-bottom: 1px solid #5e676f;">
                                         <td style="font-size: 14px;">Dewa Charge</td>
-                                        <td style="text-align: center; font-size: 14px;">AED 0</td>
+                                        <td style="text-align: center; font-size: 14px;">0.46</td>
+                                        <td style="text-align: center; font-size: 14px;"><%= data.kw %></td>
+                                        <td style="text-align: center; font-size: 14px;"><%= data.currency %> <%= data.kw_dewa_amt.toFixed(2) %></td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #5e676f;">
                                         <td style="font-size: 14px;">CPO Charge</td>
-                                        <td style="text-align: center; font-size: 14px;">AED 0</td>
+                                        <td style="text-align: center; font-size: 14px;">0.26</td>
+                                        <td style="text-align: center; font-size: 14px;"><%= data.kw %></td>
+                                        <td style="text-align: center; font-size: 14px;"><%= data.currency %> <%= data.kw_cpo_amt.toFixed(2) %></td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #5e676f;">
                                         <td style="font-size: 14px;">Delivery Charge</td>
-                                        <td style="text-align: center; font-size: 14px;">AED 0</td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="text-align: center; font-size: 14px;"><%= data.currency %> <%= data.delv_charge.toFixed(2) %></td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #5e676f;">
-                                        <td style="font-size: 14px;">TAX</td>
-                                        <td style="text-align: center; font-size: 14px;">AED 0</td>
+                                        <td style="font-size: 14px;">VAT 5%</td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="text-align: center; font-size: 14px;"><%= data.currency %> <%= data.t_vat_amt.toFixed(2) %></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -132,7 +142,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 70%; font-size: 16px; padding: 12px 10px;" class="text-neon">Total Amount</th>
-                                        <th style="text-align: center; width: 30%; font-size: 16px; padding: 12px 10px;" class="text-white">AED 0</th>
+                                        <th style="text-align: center; width: 30%; font-size: 16px; padding: 12px 10px;" class="text-white"><%= data.currency %> <%= data.total_amt.toFixed(2) %></th>
                                     </tr>
                                 </thead>
                             </table>
