@@ -1,7 +1,7 @@
 import db from "../config/db.js";
 import ExcelJS from 'exceljs';
 import moment from "moment";
-import { formatDateInQuery, mergeParam } from "../utils.js";
+import { formatDateInQuery, mergeParam, formatDateTimeInQuery } from "../utils.js";
 
 export const donwloadPodBookingList = async (req, resp) => {
     try{
@@ -81,6 +81,76 @@ export const donwloadPodBookingList = async (req, resp) => {
             { header: 'Driver Name',            key: 'rsa_name'           },
             { header: 'Driver Contact No',      key: 'rsa_phone'          },
             { header: 'Status',                 key: 'status'             },
+        ];
+    
+        rows.forEach((item) => {
+            worksheet.addRow(item);
+        });
+        resp.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        resp.setHeader('Content-Disposition', 'attachment; filename=Portable-Charger-Booking-List.xlsx');
+      
+        await workbook.xlsx.write(resp);
+        resp.end();
+
+    }catch(err){
+        console.log('err exporting : ', err);
+        return resp.status(500).json({ status: 0, message: 'Error exporting charger booking lists' });
+    }
+    
+}; 
+export const donwloadUserList = async (req, resp) => {
+    try{
+        const { addedFrom, emirates, start_date, end_date, search_text =''} = mergeParam(req);
+
+        let query = `
+            SELECT
+                rider_id, rider_name, rider_email, country_code, rider_mobile, emirates, ${formatDateTimeInQuery(['created_at'])},
+                ( SELECT concat(vehicle_make , " - ", vehicle_model) FROM riders_vehicles where rider_id = riders.rider_id order by id desc limit 1) as vehicle, added_from 
+            FROM
+                riders
+        `; 
+        let params = [];
+
+        if (search_text) {
+            query += ` WHERE rider_name LIKE ? OR rider_id LIKE ? OR rider_email LIKE ? OR rider_mobile LIKE ?`;
+            const likeSearchText = `%${search_text}%`; 
+            params.push(likeSearchText, likeSearchText, likeSearchText, likeSearchText);
+        }
+        if (start_date && end_date) {
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            if (params.length === 0) query += ` WHERE created_at BETWEEN ? AND ?`;
+            else query += ` AND created_at BETWEEN ? AND ?`; 
+            params.push(start, end);
+        }
+        if(addedFrom) {
+            if (params.length === 0) query += ` WHERE added_from = ?`;
+            else query += ` AND added_from = ?`; 
+            params.push(addedFrom);
+
+        }
+        if(emirates) {
+
+            if (params.length === 0) query += ` WHERE emirates = ?`;
+            else query += ` AND emirates = ?`; 
+            params.push(emirates);
+        }
+        query += ' ORDER BY id DESC ';
+        
+        const [rows] = await db.execute(query, params);
+        // return resp.json(rows);
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Sheet 1');
+    
+        worksheet.columns = [
+            
+            { header: 'Customer ID',   key: 'rider_id'  },
+            { header: 'Customer Name', key: 'rider_name' },
+            { header: 'Email',         key: 'rider_email' },
+            { header: 'Mobile No',     key: 'rider_mobile' },
+            { header: 'Emirate	',     key: 'emirates' },
+            { header: 'Date',          key: 'created_at' },
+            { header: 'Added From',    key: 'added_from' },
         ];
     
         rows.forEach((item) => {

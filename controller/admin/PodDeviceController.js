@@ -49,7 +49,7 @@ export const podDeviceDetails = async (req, resp) => {
         const { pod_id, } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
-            pod_id: ["required"]
+            pod_id : ["required"]
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -678,7 +678,7 @@ export const podAreaInputList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'portable_charger_booking as pcb',
-            columns          : 'pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as date_time',
+            columns          : `pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as date_time`,
             sortColumn       : 'pcb.updated_at',
             sortOrder        : 'DESC',
             page_no,
@@ -710,12 +710,13 @@ export const podAreaBookingList = async (req, resp) => {
 
         const result = await getPaginatedData({
             tableName        : 'portable_charger_booking as pcb',
-            columns          : 'pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CS") as start_time, (select created_at from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as end_time, (select pod_data from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as pod_data',
+            columns          : `pcb.booking_id, pcb.start_charging_level, pcb.end_charging_level, 
+            (select ${formatDateTimeInQuery(['created_at'])} from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CS") as start_time, (select ${formatDateTimeInQuery(['created_at'])} from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as end_time, (select pod_data from portable_charger_history as pch where pch.booking_id = pcb.booking_id and pch.order_status="CC") as pod_data`,
             sortColumn       : 'pcb.updated_at',
             sortOrder        : 'DESC',
             page_no,
-            limit            : 10,
-            liveSearchFields : [],
+            limit            : 10,   // ${formatDateTimeInQuery(['created_at'])}
+            liveSearchFields : [], 
             liveSearchTexts  : [],
             whereField       : ['pcb.pod_id', 'pcb.status'],  
             whereValue       : [podId, 'PU']

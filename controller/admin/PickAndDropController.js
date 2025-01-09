@@ -439,24 +439,24 @@ export const PodAssignBooking = async (req, resp) => {
     const conn = await startTransaction();
     
     try{
-        const booking_data = await queryDB( `SELECT rider_id, rsa_id, (select fcm_token from riders as r where r.rider_id = charging_service.rider_id ) as fcm_token FROM charging_service WHERE request_id = ?
+        const booking_data = await queryDB( `SELECT rider_id, rsa_id, slot_date_time, (select fcm_token from riders as r where r.rider_id = charging_service.rider_id ) as fcm_token FROM charging_service WHERE request_id = ?
         `, [booking_id ] );
     
         if (!booking_data) {
             return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
         }
+        const rsa = await queryDB(`SELECT rsa_name, email, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
+        
         if(rsa_id == booking_data.rsa_id) {
-            return resp.json({ message: `This driver already assigned on this booking!, please select another driver`, status: 0, code: 404 });
+            return resp.json({ message: `The booking is already assigned to Driver Name ${rsa.rsa_name}. Would you like to assign it to another driver?`, status: 0, code: 404 });
         }
         if( booking_data.rsa_id) {
-            await updateRecord('charging_service_assign', {rsa_id: rsa_id, status: 0}, ['order_id'], [booking_id], conn);
-
-        } else {
-            await insertRecord('charging_service_assign', 
-                [ 'order_id', 'rsa_id', 'rider_id', 'status' ], 
-                [ order_id, booking_data.rider_id, rsa_id ], 
-            conn);
-        }
+            await conn.execute(`DELETE FROM charging_service_assign WHERE order_id = ? AND rsa_id = ?`, [booking_id, booking_data.rsa_id]);
+        } 
+        await insertRecord('charging_service_assign', 
+            [ 'order_id', 'rider_id', 'rsa_id', 'slot_date_time', 'status' ], 
+            [ booking_id, booking_data.rider_id, rsa_id, booking_data.slot_date_time, 0 ], 
+        conn);
         await updateRecord('charging_service', {rsa_id: rsa_id}, ['request_id'], [booking_id], conn);
         
         const href    = 'charging_service/' + booking_id;
@@ -465,16 +465,25 @@ export const PodAssignBooking = async (req, resp) => {
         createNotification(heading, desc, 'Valet Charging Service', 'Rider', 'Admin','', booking_data.rider_id, href);
         pushNotification(booking_data.fcm_token, heading, desc, 'RDRFCM', href);
     
-        const rsa = await queryDB(`SELECT fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
-        if(rsa) { 
-            
-            const heading1 = 'Valet Charging service';
-            const desc1    = `A Booking of the Valet Charging service has been assigned to you with booking id : ${booking_id}`;
-            createNotification(heading1, desc1, 'Valet Charging Service', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
-            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
-        }
-        await commitTransaction(conn);
+        const heading1 = 'Valet Charging service';
+        const desc1    = `A Booking of the Valet Charging service has been assigned to you with booking id : ${booking_id}`;
+
+        createNotification(heading1, desc1, 'Valet Charging Service', 'RSA', 'Rider', booking_data.rider_id, rsa_id, href);
+        pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+
+        const htmlDriver = `<html>
+            <body>
+                <h4>Dear ${rsa.rsa_name},</h4>
+                <p>A Booking of the Valet Charging Service booking has been assigned to you.</p> 
+                <p>Booking Details:</p>
+                Booking ID: ${booking_id}<br>
+                Date and Time of Service: ${booking_data.slot_date_time}<br>        
+                <p> Best regards,<br/>PlusX Electric Team </p>
+            </body>
+        </html>`;
+        emailQueue.addEmail(rsa.email, 'PlusX Electric App: Booking Confirmation for Your Valet Charging Service', htmlDriver);
         
+        await commitTransaction(conn);
         return resp.json({
             status  : 1, 
             code    : 200,

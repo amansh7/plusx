@@ -185,7 +185,7 @@ export const chargerBookingList = async (req, resp) => {
         const { page_no, booking_id, name, contact, status, start_date, end_date, search_text = '', scheduleFilters } = req.body;
 
         const { isValid, errors } = validateFields(req.body, {
-            page_no: ["required"]
+            page_no : ["required"]
         });
         
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -193,7 +193,7 @@ export const chargerBookingList = async (req, resp) => {
         const params = {
             tableName: 'portable_charger_booking',
             columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
-                (select rsa_name from rsa where portable_charger_booking.rsa_id = rsa.rsa_id) AS rsa_name,
+            (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_name, 
                 ${formatDateInQuery(['slot_date'])}, slot_time, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'created_at',
             sortOrder: 'DESC',
@@ -267,20 +267,20 @@ export const chargerBookingDetails = async (req, resp) => {
                 message: 'Booking ID is required.',
             });
         }
-
         const [bookingResult] = await db.execute(`
             SELECT 
-                booking_id, ${formatDateTimeInQuery(['created_at'])}, user_name, country_code, contact_no, status, address, latitude, pod_id,
+                booking_id, ${formatDateTimeInQuery(['created_at'])}, user_name, country_code, contact_no, status, address, latitude,
                 longitude, service_name, service_price, service_type, service_feature, ${formatDateInQuery(['slot_date'])}, slot_time,
+                
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_data, 
                 (select concat(vehicle_model, "-", vehicle_make) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id) as vehicle_data,
-                (select pod_name from pod_devices where pod_id = portable_charger_booking.pod_id) as pod_name
+                (select pod_name from pod_devices as pd where pd.pod_id = portable_charger_booking.pod_id) as pod_name
             FROM 
                 portable_charger_booking 
             WHERE 
                 booking_id = ?`, 
             [booking_id]
-        );
+        ); //
         if (bookingResult.length === 0) {
             return resp.status(404).json({
                 status: 0,
@@ -513,19 +513,19 @@ export const invoiceDetails = async (req, resp) => {
         WHERE pci.invoice_id = ?
     `, [invoice_id]);
 
-    // data.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
+    data.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
 
-    // const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
-    //     data[key] ? data[key].split(',').map(Number) : []
-    // );
-    // const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
+    const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
+        data[key] ? data[key].split(',').map(Number) : []
+    );
+    const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
     
-    data.kw           = 0; // chargingLevelSum * 0.25;
-    data.kw_dewa_amt  = 0; // data.kw * 0.44;
-    data.kw_cpo_amt   = 0; // data.kw * 0.26;
-    data.delv_charge  = 0; // 30 when start accepting payment
-    data.t_vat_amt    = 0; // Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
-    data.price    = 0; // data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
+    data.kw           = chargingLevelSum * 0.25;
+    data.kw_dewa_amt  = data.kw * 0.44;
+    data.kw_cpo_amt   = data.kw * 0.26;
+    data.delv_charge  = 30 //when start accepting payment
+    data.t_vat_amt    = Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
+    data.price    = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
 
     return resp.json({
         message : ["Portable Charger Invoice Details fetched successfully!"],
@@ -799,7 +799,7 @@ export const assignBooking = async (req, resp) => {
         if (!booking_data) {
             return resp.json({ message: `Sorry no booking found with this booking id ${booking_id}`, status: 0, code: 404 });
         }
-        const rsa = await queryDB(`SELECT email, rsa_name, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
+        const rsa = await queryDB(`SELECT rsa_name, email, fcm_token FROM rsa WHERE rsa_id = ?`, [rsa_id]);
         if(rsa_id == booking_data.rsa_id) {
             return resp.json({ message: `The booking is already assigned to Driver Name ${rsa.rsa_name}. Would you like to assign it to another driver?`, status: 0, code: 404 });
         }
