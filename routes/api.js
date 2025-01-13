@@ -194,8 +194,11 @@ const authzAndAuthRoutes = [
 
     /* Payment */
     { method: 'post', path: '/payment-intent',                       handler: createIntent },
+    { method: 'post', path: '/add-card',                             handler: addCardToCustomer },
+    { method: 'post', path: '/remove-card',                          handler: removeCard },
+    { method: 'post', path: '/list-card',                            handler: customerCardsList },
     { method: 'post', path: '/create-portable-charger-subscription', handler: createPortableChargerSubscription },
-
+    
     /* Invoice */
     // { method: 'post', path: '/create-rsa-invoice',                  handler: rsaInvoice },
     { method: 'post', path: '/create-pick-drop-invoice',            handler: pickAndDropInvoice },
@@ -274,9 +277,6 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
 
 
 router.post('/validate-coupon', redeemCoupon);
-router.post('/add-card', addCardToCustomer);
-router.post('/remove-card', removeCard);
-router.post('/list-card', customerCardsList);
 router.post('/auto-pay', autoPay);
 
 export default router;
