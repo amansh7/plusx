@@ -24,7 +24,7 @@ const __dirname = path.dirname(__filename);
 const corsOptions = {
     origin : [
         'http://192.168.1.87:3000',
-        'http://192.168.1.23:3000',
+        'http://192.168.1.13:3000',
         'http://192.168.1.30:8000',
         'http://192.168.1.7:3333',
         'http://192.168.1.52:3000',

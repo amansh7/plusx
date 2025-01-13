@@ -19,18 +19,15 @@ const retryConnection = async (retries, delay) => {
       connection.release();
       return;
     } catch (err) {
-      // console.error(`Error connecting to the database (attempt ${i + 1}):`, err);
       logger.error(`Error connecting to the database (attempt ${i + 1}):`, err);
 
       if (err.code === 'ECONNREFUSED') {
-        // console.log('Connection refused, retrying...');
         logger.error(`Connection refused, retrying...`);
       }
 
       if (i < retries) {
         await new Promise((resolve) => setTimeout(resolve, delay));
       } else {
-        // console.error('All retry attempts failed.');
         logger.error(`All retry attempts failed.`);
         throw err;
       }

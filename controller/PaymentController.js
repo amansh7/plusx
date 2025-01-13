@@ -21,27 +21,35 @@ export const createIntent = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
-        const customer = await stripe.customers.create({
-            name: rider_name,
-            address: {
-                line1: "476 Yudyog Vihar Phase - V",
-                postal_code: "122016",
-                city: "Gurugram",
-                state: "Haryana",
-                country: "IND",
-            },
-            email: rider_email,
-        });
+        const user = await findCustomerByEmail(rider_email);
+        let customerId;
+        
+        if(user.success){
+            customerId = user.customer_id;
+        }else{
+            const customer = await stripe.customers.create({
+                name: rider_name,
+                address: {
+                    line1: "476 Yudyog Vihar Phase - V",
+                    postal_code: "122016",
+                    city: "Gurugram",
+                    state: "Haryana",
+                    country: "IND",
+                },
+                email: rider_email,
+            });
+            customerId = customer.id;
+        }
         
         const ephemeralKey = await stripe.ephemeralKeys.create(
-            { customer: customer.id },
+            { customer: customerId },
             {apiVersion: '2024-04-10'}
         );
 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: amount < 200 ? 200 : Math.floor(amount),
             currency: currency,
-            customer: customer.id,
+            customer: customerId,
             automatic_payment_methods: {
                 enabled: false,
             },
@@ -58,7 +66,7 @@ export const createIntent = async (req, resp) => {
             paymentIntentId: paymentIntent.id,
             paymentIntentSecret: paymentIntent.client_secret,
             ephemeralKey: ephemeralKey.secret,
-            customer: customer.id,
+            customer: customerId,
             publishableKey: process.env.STRIPE_PUBLISER_KEY,
         };
     
@@ -109,6 +117,118 @@ export const createAutoDebit = async (customerId, paymentMethodId, totalAmount) 
     }
 };
 
+export const addCardToCustomer = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { rider_email, rider_name } = mergeParam(req);
+
+    try {
+        const user = await findCustomerByEmail(rider_email);
+        let customerId;
+        
+        if(user.success){
+            customerId = user.customer_id;
+        }else{
+            const customer = await stripe.customers.create({
+                name: rider_name,
+                email: rider_email,
+            });
+            customerId = customer.id;
+        }
+        
+        const setupIntent = await stripe.setupIntents.create({
+            customer: customerId,
+            payment_method_types: ['card'],
+        });
+
+        const ephemeralKey = await stripe.ephemeralKeys.create(
+            { customer: customerId },
+            {apiVersion: '2024-04-10'}
+        );
+    
+        resp.json({ 
+            status:1, 
+            code:200, 
+            message:['Setup intent created successfully!'],
+            setup_payment_intent_id: setupIntent.id,
+            client_secret: setupIntent.client_secret,
+            ephemeralKey: ephemeralKey.secret,
+            customer: customerId,
+            publishableKey: process.env.STRIPE_PUBLISER_KEY,
+        });
+    } catch (error) {
+        console.error('Error adding card to customer:', error);
+        resp.json({ status:0, code:500, message: error.message });
+    }
+};
+
+export const customerCardsList = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { rider_email } = mergeParam(req);
+    try{
+        const user = await findCustomerByEmail(rider_email);
+        if(!user.success) return resp.json({status: 1, code:422, message: 'No card found, Please add a card.'});
+        
+        const customerId = user.customer_id;
+        const cardDetailsList = [];
+        
+        const customerCards = await stripe.paymentMethods.list({
+            customer: customerId,
+            type: 'card',
+        });
+
+        customerCards.data.forEach(method => {
+            const cardDetails = {
+              paymentMethodId   : method.id,
+              name              : method.billing_details.name || user.name,
+              last4             : method.card.last4,
+              exp_month         : method.card.exp_month,
+              exp_year          : method.card.exp_year,
+              brand             : method.card.brand
+            };
+          
+            cardDetailsList.push(cardDetails);
+        });
+    
+        return resp.json({
+            status:1,
+            code:200,
+            message: ["Card list fetch successfully"],
+            total: customerCards.data.length, 
+            card_details: cardDetailsList,
+        });
+    }catch(error){
+        console.error('Error adding card to customer:', error);
+        resp.json({ status:0, code:500, message: error.message });
+    }
+
+};
+
+export const removeCard = async (req, resp) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { payment_method_id } = req.body;
+    if (!payment_method_id) return resp.status(400).json({ status: 0, code: 422, message: 'Payment Method ID is required.'});
+    
+    try {
+        const detachedPaymentMethod = await stripe.paymentMethods.detach(payment_method_id);
+
+        return resp.json({
+            status: 1,
+            code: 200,
+            message: 'Payment Method removed successfully.',
+            paymentMethodId: detachedPaymentMethod.id,
+        });
+    } catch (error) {
+        console.error('Error detaching card:', error);
+
+        return resp.status(500).json({
+            status: 0,
+            code: 422,
+            message: 'Error removing payment method.',
+            error: error.message,
+        });
+    }
+};
+
 export const autoPay = async (req, resp) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const {customer_id, payment_method_id,amount } = mergeParam(req);
@@ -136,80 +256,6 @@ export const autoPay = async (req, resp) => {
             error: err.message,
             status: 0,
             code: 500,
-        });
-    }
-};
-
-export const addCardToCustomer = async (req, resp) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const { payment_method_id, customer_id } = mergeParam(req);
-
-    try {
-        await stripe.paymentMethods.attach(payment_method_id, {
-          customer: customer_id,
-        });
-    
-        await stripe.customers.update(customer_id, {
-          invoice_settings: {
-            default_payment_method: payment_method_id,
-          },
-        });
-    
-        resp.json({ success: true, message: 'Card added successfully!' });
-    } catch (error) {
-        console.error('Error adding card to customer:', error);
-        resp.status(500).json({ success: false, message: error.message });
-    }
-};
-
-export const customerCardsList = async (req, resp) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const { customer_id } = mergeParam(req);
-
-    const cardDetailsList = [];
-    const customerCards = await stripe.paymentMethods.list({
-        customer: customer_id,
-        type: 'card',
-    });
-
-    customerCards.data.forEach(method => {
-        const cardDetails = {
-          paymentMethodId   : method.id,
-          last4             : method.card.last4,
-          exp_month         : method.card.exp_month,
-          exp_year          : method.card.exp_year,
-          brand             : method.card.brand
-        };
-      
-        cardDetailsList.push(cardDetails);
-    });
-
-    return resp.json({
-        total: customerCards.data.length, 
-        card_details: cardDetailsList,
-    });
-};
-
-export const removeCard = async (req, resp) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const { payment_method_id } = req.body;
-    if (!payment_method_id) return resp.status(400).json({ status: 0, message: 'Payment Method ID is required.'});
-    
-    try {
-        const detachedPaymentMethod = await stripe.paymentMethods.detach(payment_method_id);
-
-        return resp.json({
-            status: 1,
-            message: 'Payment Method removed successfully.',
-            paymentMethodId: detachedPaymentMethod.id,
-        });
-    } catch (error) {
-        console.error('Error detaching card:', error);
-
-        return resp.status(500).json({
-            status: 0,
-            message: 'Error removing payment method.',
-            error: error.message,
         });
     }
 };
@@ -353,6 +399,27 @@ export const createPortableChargerSubscription = async (req, resp) => {
     return resp.json({status:1, code:200, message: ["Your PlusX subscription is active! Start booking chargers for your EV now."]});
 };
 
+/* Helper function to retrieve Stripe customer ID using the provided email */
+export const findCustomerByEmail = async (email) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    if (!email) return resp.status(400).json({ status: 0, message: 'Email is required.'});
+    
+    try {
+        const customers = await stripe.customers.list({ email });
+        if (customers.data.length > 0) {
+            return {
+                success      : true,
+                customer_id  : customers.data[0].id, 
+                name         : customers.data[0].name
+            };
+        } else {
+            return {success: false, message: 'No customer found with this email'};
+        }
+    } catch (error) {
+        return {success: false, message: error.message};
+    }
+};
+
 /* Helper to retrive total amount from PCB or CS */
 export const getTotalAmountFromService = async (booking_id, booking_type) => {
     let invoiceId, total_amount;
@@ -361,7 +428,7 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
         const data = await queryDB(`
             SELECT 
                 start_charging_level, end_charging_level, user_name AS rider_name,
-                (select r.rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id) AS rider_email
+                (select r.rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id limit 1) AS rider_email
             FROM
                 portable_charger_booking
             WHERE 
@@ -370,8 +437,8 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
 
         if (!data) return { success: false, message: 'No data found for the invoice.' };
         
-        const startChargingLevels = data.start_charging_level ? data.start_charging_level.split(',').map(Number) : [];
-        const endChargingLevels = data.end_charging_level ? data.end_charging_level.split(',').map(Number) : [];
+        const startChargingLevels = data.start_charging_level ? data.start_charging_level.split(',').map(Number) : [0];
+        const endChargingLevels = data.end_charging_level ? data.end_charging_level.split(',').map(Number) : [0];
         
         if (startChargingLevels.length !== endChargingLevels.length) return resp.json({ error: 'Mismatch in charging level data.' });
 

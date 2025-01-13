@@ -300,7 +300,7 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
             GROUP BY 
                 pcb.booking_id
             ORDER BY 
-                slot_date_time DESC
+                pcb.updated_at DESC
         `, [rsa_id]);
         
         const baseUrl = `${req.protocol}://${req.get('host')}/uploads/portable-charger/`;

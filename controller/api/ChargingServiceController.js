@@ -186,7 +186,7 @@ export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], service_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const formatCols = ['slot_date_time', 'created_at', 'updated_at'];
+    const formatCols = ['created_at', 'updated_at']; // 'slot_date_time', 
     
     const order = await queryDB(`
         SELECT 
@@ -198,7 +198,7 @@ export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
         WHERE request_id = ? 
         LIMIT 1
     `, [service_id]);
-    formatCols.shift();
+    // formatCols.shift();
     const [history] = await db.execute(`SELECT *, ${formatDateTimeInQuery(formatCols)} FROM charging_service_history WHERE service_id = ?`, [service_id]);
 
     if(order){
@@ -209,7 +209,7 @@ export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
             order.invoice_url = `${req.protocol}://${req.get('host')}/public/pick-drop-invoice/${invoiceId}-invoice.pdf`;
         }
     }
-
+    order.slot_date_time = moment(order.slot_date_time ).format('YYYY-MM-DD HH:mm:ss');
     return resp.json({
         message: ["Service Order Details fetched successfully!"],
         order_data: order,
