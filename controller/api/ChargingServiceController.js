@@ -119,9 +119,9 @@ export const requestService = asyncHandler(async (req, resp) => {
         </html>`;
         emailQueue.addEmail(process.env.MAIL_CS_ADMIN, `Valet Charging Service Booking Received - ${requestId}`, htmlAdmin);
         
-        const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
         let responseMsg = 'Booking request submitted! Our team will be in touch with you shortly.';
-    
+        
+        const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
         if(rsa){
             await insertRecord('charging_service_assign', ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [requestId, rsa.rsa_id, rider_id, slotDateTime, '0']);
             await conn.execute(`UPDATE charging_service SET rsa_id = ? WHERE request_id = ?`, [rsa.rsa_id, requestId]);
@@ -221,8 +221,8 @@ export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
 
 /* Invoice */
 export const getInvoiceList = asyncHandler(async (req, resp) => {
-    const {rider_id, page_no, orderStatus } = mergeparam(req);
-    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], page_no: ["required"]});
+    const {rider_id, page_no, orderStatus } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], page_no: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     let whereField = ['rider_id'];
@@ -257,8 +257,8 @@ export const getInvoiceList = asyncHandler(async (req, resp) => {
     });
 });
 export const getInvoiceDetail = asyncHandler(async (req, resp) => {
-    const {rider_id, invoice_id } = mergeparam(req);
-    const { isValid, errors } = validateFields(mergeparam(req), {rider_id: ["required"], invoice_id: ["required"]});
+    const {rider_id, invoice_id } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], invoice_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoice = await queryDB(`SELECT 
