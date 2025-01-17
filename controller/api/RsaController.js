@@ -217,7 +217,8 @@ export const rsaHome = asyncHandler(async (req, resp) => {
            cs.request_id, cs.pickup_address, cs.pickup_latitude, cs.pickup_longitude,
            cs.order_status, cs.parking_number, cs.parking_floor,
            CONCAT(cs.name, ",", cs.country_code, "-", cs.contact_no) AS riderDetails,
-           ${formatDateTimeInQuery(['cs.created_at', 'charging_service_assign.slot_date_time'])}
+           DATE_FORMAT(charging_service_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time,
+           ${formatDateTimeInQuery(['cs.created_at'])}
         FROM charging_service_assign
         LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
         WHERE charging_service_assign.rsa_id = ? AND cs.request_id IS NOT NULL

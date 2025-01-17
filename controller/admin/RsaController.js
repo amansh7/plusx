@@ -271,3 +271,55 @@ export const rsaStatusChange = asyncHandler(async (req, resp) => {
         message: update.affectedRows > 0 ? "RSA status changed successfully." : "Failed to update, Please Try Again!", 
     });
 });
+export const driverLocationList = async (req, resp) => {
+    try {
+        const { rsa_id, page_no, start_date, end_date  } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            rsa_id  : ["required"],
+            page_no : ["required"]
+        });
+        if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
+
+        const limit = 10;
+        const start = parseInt((page_no * limit) - limit, 10);
+        
+        let whereQry      = '';
+        if (start_date && end_date) {
+
+            // const today = new Date(start_date);
+            // const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString()
+            //     .padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+            
+            // const givenDateTime    = formattedDate+' 00:00:01'; // Replace with your datetime string
+            // const modifiedDateTime = moment(givenDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            // const currentDate      = modifiedDateTime.format('YYYY-MM-DD HH:mm:ss')
+
+            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD");
+            const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD");
+            
+            whereQry = ` and DATE(created_at) >= "${start}" AND DATE(created_at) <= "${end}" `;
+        } else {
+            whereQry = ` group by DATE(created_at) ` ;
+        }
+        const query = `SELECT SQL_CALC_FOUND_ROWS rsa_id, latitude, longitude, ${formatDateTimeInQuery(['created_at'])} FROM rsa_location_history WHERE rsa_id ="${rsa_id}" ${whereQry}  order by created_at DESC LIMIT ${start}, ${parseInt(limit, 10)}`;
+
+        // console.log(query)
+        const [rows] = await db.execute(query, []);
+        
+        const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
+        const totalPage = Math.max(Math.ceil(total / limit), 1);
+    
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Driver Location List!"],
+            data       : rows,
+            total_page : totalPage,
+            total      : total,
+        });
+    } catch (error) {
+        console.error('Error fetching charger booking list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger booking lists' });
+    }
+};

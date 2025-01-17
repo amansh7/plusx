@@ -21,25 +21,37 @@ export const createIntent = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
-        const user = await findCustomerByEmail(rider_email);
-        let customerId;
+        // const user = await findCustomerByEmail(rider_email);
+        // let customerId;
+        // if(user.success){
+        //     customerId = user.customer_id;
+        // }else{
+        //     const customer = await stripe.customers.create({
+        //         name: rider_name,
+        //         address: {
+        //             line1: "476 Yudyog Vihar Phase - V",
+        //             postal_code: "122016",
+        //             city: "Gurugram",
+        //             state: "Haryana",
+        //             country: "IND",
+        //         },
+        //         email: rider_email,
+        //     });
+        //     customerId = customer.id;
+        // }
         
-        if(user.success){
-            customerId = user.customer_id;
-        }else{
-            const customer = await stripe.customers.create({
-                name: rider_name,
-                address: {
-                    line1: "476 Yudyog Vihar Phase - V",
-                    postal_code: "122016",
-                    city: "Gurugram",
-                    state: "Haryana",
-                    country: "IND",
-                },
-                email: rider_email,
-            });
-            customerId = customer.id;
-        }
+        const customer = await stripe.customers.create({
+            name: rider_name,
+            address: {
+                line1: "476 Yudyog Vihar Phase - V",
+                postal_code: "122016",
+                city: "Gurugram",
+                state: "Haryana",
+                country: "IND",
+            },
+            email: rider_email,
+        });
+        let customerId = customer.id;
         
         const ephemeralKey = await stripe.ephemeralKeys.create(
             { customer: customerId },
@@ -409,7 +421,7 @@ export const findCustomerByEmail = async (email) => {
         if (customers.data.length > 0) {
             return {
                 success      : true,
-                customer_id  : customers.data[0].id, 
+                customer_id  : customers.data[0].id,
                 name         : customers.data[0].name
             };
         } else {

@@ -27,8 +27,9 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
         request_id: request_id,
         rider_id: rider_id,
         invoice_date: moment().format('YYYY-MM-DD HH:mm:ss'),
+        payment_status : 'Approved'
     }
-
+    
     if(payment_intent_id && payment_intent_id.trim() != '' ){
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
         const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
@@ -47,7 +48,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
         createObj.charge_id = charge.id;  
         createObj.transaction_id = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
         createObj.payment_type = charge.payment_method_details.type;  
-        createObj.payment_status = charge.status;  
+        // createObj.payment_status = charge.status;  
         createObj.currency = charge.currency;  
         createObj.invoice_date = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
         createObj.receipt_url = charge.receipt_url;
@@ -67,7 +68,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
 
 export const portableChargerInvoice = asyncHandler(async (req, resp) => {
     const {rider_id, request_id, payment_intent_id } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"], payment_intent_id: ["required"] }); // 
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"]}); //  , payment_intent_id: ["required"] 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoiceId = request_id.replace('PCB', 'INVPC');
@@ -77,6 +78,7 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
         request_id: request_id,
         rider_id: rider_id,
         invoice_date: moment().format('YYYY-MM-DD HH:mm:ss'),
+        payment_status : 'Approved'
     }
     
     if(payment_intent_id && payment_intent_id.trim() != '' ){
@@ -97,7 +99,7 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
         createObj.charge_id = charge.id;  
         createObj.transaction_id = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
         createObj.payment_type = charge.payment_method_details.type;  
-        createObj.payment_status = charge.status;  
+        // createObj.payment_status = charge.status;  
         createObj.currency = charge.currency;  
         createObj.invoice_date = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
         createObj.receipt_url = charge.receipt_url;
