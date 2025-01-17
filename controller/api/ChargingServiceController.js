@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 
 export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const { slot_date } = mergeParam(req);
-    if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
+    if(!slot_date) return resp.json({status:0, code:422, message: ['slot date is required']});
     
     const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
     let query = `SELECT slot_id, ${formatDateInQuery([('slot_date')])}, start_time, end_time, booking_limit`;
@@ -641,7 +641,7 @@ const vehicleDrop = async (req, resp) => {
 };
 const workComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
-    if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    if (!req.files || !req.files['image']) return resp.status(405).json({ message: ["Vehicle Image is required"], status: 0, code: 405, error: true });
     const imgName = req.files.image[0].filename; 
     const invoiceId = booking_id.replace('CS', 'INVCS');
     

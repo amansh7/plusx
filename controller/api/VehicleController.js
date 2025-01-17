@@ -109,8 +109,8 @@ export const sellVehicle = asyncHandler(async (req, resp) => {
         });
         
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });    
-        if (!req.files || !req.files['car_images']) return resp.json({ status: 0, code: 422, message: { car_images: "car_images is required." } });
-        if (!req.files || !req.files['car_tyre_image']) return resp.json({ status: 0, code: 422, message: { car_tyre_image: "car_tyre_image is required." } });
+        if (!req.files || !req.files['car_images']) return resp.json({ status: 0, code: 422, message: ["car_images is required."] });
+        if (!req.files || !req.files['car_tyre_image']) return resp.json({ status: 0, code: 422, message: ["car_tyre_image is required."] });
 
         const car_images = req.files['car_images'] ? req.files['car_images'].map(file => file.filename).join('*') : '';
         const car_tyre_image = req.files['car_tyre_image'] ? req.files['car_tyre_image'].map(file => file.filename).join('*') : '';

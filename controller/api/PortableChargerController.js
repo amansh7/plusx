@@ -74,7 +74,7 @@ export const getActivePodList = asyncHandler(async (req, resp) => {
 
 export const getPcSlotList = asyncHandler(async (req, resp) => {
     const { slot_date, rider_id } = mergeParam(req);
-    if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
+    if(!slot_date) return resp.json({status:0, code:422, message: ['slot date is required']});
     
     const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
 
@@ -721,7 +721,7 @@ const chargingComplete = async (req, resp) => {
 };
 const chargerPickedUp = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, remark='' } = mergeParam(req);
-    if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
+    if (!req.files || !req.files['image']) return resp.status(405).json({ message: ["Vehicle Image is required"], status: 0, code: 405, error: true });
     
     const checkOrder = await queryDB(`
         SELECT rider_id, 

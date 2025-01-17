@@ -218,7 +218,7 @@ export const customerCardsList = async (req, resp) => {
 export const removeCard = async (req, resp) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const { payment_method_id } = req.body;
-    if (!payment_method_id) return resp.status(400).json({ status: 0, code: 422, message: 'Payment Method ID is required.'});
+    if (!payment_method_id) return resp.status(400).json({ status: 0, code: 422, message: ['Payment Method ID is required.']});
     
     try {
         const detachedPaymentMethod = await stripe.paymentMethods.detach(payment_method_id);
@@ -226,7 +226,7 @@ export const removeCard = async (req, resp) => {
         return resp.json({
             status: 1,
             code: 200,
-            message: 'Payment Method removed successfully.',
+            message: ['Payment Method removed successfully.'],
             paymentMethodId: detachedPaymentMethod.id,
         });
     } catch (error) {
@@ -235,7 +235,7 @@ export const removeCard = async (req, resp) => {
         return resp.status(500).json({
             status: 0,
             code: 422,
-            message: 'Error removing payment method.',
+            message: ['Error removing payment method.'],
             error: error.message,
         });
     }
@@ -414,7 +414,7 @@ export const createPortableChargerSubscription = async (req, resp) => {
 /* Helper function to retrieve Stripe customer ID using the provided email */
 export const findCustomerByEmail = async (email) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    if (!email) return resp.status(400).json({ status: 0, message: 'Email is required.'});
+    if (!email) return { status: 0, message: ['Email is required.']};
     
     try {
         const customers = await stripe.customers.list({ email });

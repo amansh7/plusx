@@ -103,7 +103,7 @@ export const rsaForgotPassword = asyncHandler(async (req, resp) => {
 
 export const rsaLogout = asyncHandler(async (req, resp) => {
     const {rsa_id} = mergeParam(req);
-    if (!rsa_id) return resp.json({ status: 0, code: 422, message: "Rsa Id is required" });
+    if (!rsa_id) return resp.json({ status: 0, code: 422, message: ["Rsa Id is required"] });
     
     const rsa = queryDB(`SELECT EXISTS (SELECT 1 FROM rsa WHERE rsa_id = ?) AS rsa_exists`, [rsa_id]);
     if(!rsa) return resp.json({status:0, code:400, message: 'Rider ID Invalid!'});
