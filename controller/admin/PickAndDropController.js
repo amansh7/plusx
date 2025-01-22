@@ -32,8 +32,20 @@ export const bookingList = async (req, resp) => {
         };
 
         if (start_date && end_date) {
-            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
-            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                       
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
 
             params.whereField = ['created_at', 'created_at'];
             params.whereValue = [start, end];
@@ -79,13 +91,14 @@ export const bookingDetails = async (req, resp) => {
                 cs.parking_number, cs.parking_floor, cs.pickup_latitude, cs.pickup_longitude, 
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = cs.rsa_id) as rsa_data,
                 (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = cs.vehicle_id) as vehicle_data,
-                ${formatDateTimeInQuery(['cs.slot_date_time', 'cs.created_at'])}
+                DATE_FORMAT(cs.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time,
+                ${formatDateTimeInQuery(['cs.created_at'])}
             FROM 
                 charging_service cs
             WHERE 
                 cs.request_id = ?`, 
             [request_id]
-        );
+        );  // 'cs.slot_date_time', 
         if (result.length === 0) {
             return resp.status(404).json({
                 status  : 0,
@@ -130,8 +143,20 @@ export const pdInvoiceList = async (req, resp) => {
         const whereOperators = []
 
         if (start_date && end_date) {
-            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
-            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                       
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
     
             whereFields.push('created_at', 'created_at');
             whereValues.push(start, end);
@@ -190,7 +215,7 @@ export const pdInvoiceDetails = asyncHandler(async (req, resp) => {
             csi.invoice_id = ?
     `, [invoice_id]);
 
-    invoice.price    = 49;
+    invoice.price = invoice.price/100;
     return resp.json({
         message  : ["Pick & Drop Invoice Details fetched successfully!"],
         data     : invoice,

@@ -192,7 +192,8 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         createNotification(heading, desc, 'Portable Charging Booking', 'Rider', 'Admin','', rider_id, href);
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
-        const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+        // const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+        const formattedDateTime =  moment().utcOffset('+04:00').format('DD MMM YYYY hh:mm A');
         const htmlUser = `<html>
             <body>
                 <h4>Dear ${user_name},</h4>
@@ -512,7 +513,7 @@ const acceptBooking = async (req, resp) => {
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 0
         LIMIT 1
-    `,[rsa_id, booking_id, rsa_id]);
+    `,[booking_id, rsa_id]);
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -751,44 +752,44 @@ const chargerPickedUp = async (req, resp) => {
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('portable_charger_booking', {status: 'PU', rsa_id}, ['booking_id'], [booking_id], conn );
-        await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
-        await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        // await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
+        // await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
 
         if(checkOrder.pod_id) {
             await updateRecord('pod_devices', { latitude, longitude}, ['pod_id'], [checkOrder.pod_id] );
         }
         const invoiceId   = booking_id.replace('PCB', 'INVPC');
         const bookingData = await getTotalAmountFromService(booking_id, 'PCB');
-        const totalAmount = (bookingData.total_amount * 100);
-        const paymentData = await queryDB(`SELECT amount, invoice_id, payment_intent_id, payment_method_id, payment_cust_id, invoice_date FROM portable_charger_invoice WHERE invoice_id = ?`, [invoiceId]);
-        if(!paymentData) return resp.json({status: 0, code: 422, message: 'invalid paymentd details'});
+        // const totalAmount = (bookingData.total_amount * 100);
+        // const paymentData = await queryDB(`SELECT amount, invoice_id, payment_intent_id, payment_method_id, payment_cust_id, invoice_date FROM portable_charger_invoice WHERE invoice_id = ?`, [invoiceId]);
+        // if(!paymentData) return resp.json({status: 0, code: 422, message: 'invalid paymentd details'});
         
-        const customerId      = paymentData.payment_cust_id;
-        const paymentMethodId = paymentData.payment_method_id;
-        const autoDebit       = await createAutoDebit(customerId, paymentMethodId, totalAmount);
+        // const customerId      = paymentData.payment_cust_id;
+        // const paymentMethodId = paymentData.payment_method_id;
+        // const autoDebit       = await createAutoDebit(customerId, paymentMethodId, totalAmount);
 
-        if(autoDebit.status == 1) { 
-            const updates = {
-                payment_intent_id : autoDebit.paymentIntent.id, 
-                payment_method_id : autoDebit.paymentIntent.payment_method,
-                amount            : totalAmount + paymentData.amount
-            };
-            await updateRecord('portable_charger_invoice', updates, ['invoice_id'], [invoiceId]);
+        // if(autoDebit.status == 1) { 
+        //     const updates = {
+        //         payment_intent_id : autoDebit.paymentIntent.id, 
+        //         payment_method_id : autoDebit.paymentIntent.payment_method,
+        //         amount            : totalAmount + paymentData.amount
+        //     };
+        //     await updateRecord('portable_charger_invoice', updates, ['invoice_id'], [invoiceId]);
         
-            const invoice_date =  paymentData.invoice_date ? moment(paymentData.invoice_date).format('MMM D, YYYY') : moment().tz('Asia/Dubai').format('MMM D, YYYY') ;
+            // const invoice_date =  paymentData.invoice_date ? moment(paymentData.invoice_date).format('MMM D, YYYY') : moment().utcOffset('+04:00').format('MMM D, YYYY') ;
             const data = {
                 invoice_id   : invoiceId,
                 booking_id   : booking_id,
                 rider_name   : bookingData.data.rider_name,
-                invoice_date : invoice_date,
+                invoice_date : moment().utcOffset('+04:00').format('MMM D, YYYY'),
                 
-                kw          : bookingData.data.kw,
+                kw          : 0, //bookingData.data.kw,
                 currency    : 'AED',
-                kw_dewa_amt : bookingData.data.kw_dewa_amt,
-                kw_cpo_amt  : bookingData.data.kw_cpo_amt,
-                delv_charge : bookingData.data.delv_charge,
-                t_vat_amt   : bookingData.data.t_vat_amt,
-                total_amt   : bookingData.data.kw_dewa_amt + bookingData.data.kw_cpo_amt + bookingData.data.delv_charge + bookingData.data.t_vat_amt
+                kw_dewa_amt : 0, //bookingData.data.kw_dewa_amt,
+                kw_cpo_amt  : 0, //bookingData.data.kw_cpo_amt,
+                delv_charge : 0, //bookingData.data.delv_charge,
+                t_vat_amt   : 0, //bookingData.data.t_vat_amt,
+                total_amt   : 0 //bookingData.data.kw_dewa_amt + bookingData.data.kw_cpo_amt + bookingData.data.delv_charge + bookingData.data.t_vat_amt
             };
             const invoiceData  = { data, numberToWords, formatNumber  };
             const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
@@ -816,7 +817,7 @@ const chargerPickedUp = async (req, resp) => {
             
                 emailQueue.addEmail(bookingData.data.rider_email, 'PlusX Electric: Invoice for Your Portable EV Charger Service', html, attachment);
             }
-        }
+        // }
         await commitTransaction(conn);
         return resp.json({ message: ['Portable Charger picked-up successfully!'], status: 1, code: 200 });
     } else {
@@ -977,3 +978,44 @@ const getPodBatteryData = async (pod_id) => {
 
 
 }
+
+const reachedOffice = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude, } = mergeParam(req);
+    
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (select pod_id from portable_charger_booking as pb where pb.booking_id = portable_charger_booking_assign.order_id limit 1) as pod_id
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 1
+        LIMIT 1
+    `,[booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "RO" AND booking_id = ?', [rsa_id, booking_id]
+    );
+    const conn = await startTransaction();
+    if (ordHistoryCount.count === 0) {
+        const insert = await conn.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "RO", ?, ?, ? )',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude ]
+        );
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await updateRecord('portable_charger_booking', {status: 'RO', rsa_id}, ['booking_id'], [booking_id], conn );
+        await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
+        await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+
+        if(checkOrder.pod_id) {
+            await updateRecord('pod_devices', { latitude, longitude}, ['pod_id'], [checkOrder.pod_id] );
+        }
+        await commitTransaction(conn);
+        return resp.json({ message: ['POD reached the office successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};

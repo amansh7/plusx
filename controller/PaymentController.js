@@ -1,11 +1,12 @@
 import db from "../config/db.js";
 import validateFields from "../validation.js";
-import { queryDB } from '../dbUtils.js';
+// import { queryDB } from '../dbUtils.js';
 import { mergeParam, formatNumber } from '../utils.js';
 import moment from "moment";
 import Stripe from "stripe";
 import dotenv from 'dotenv';
 import generateUniqueId from "generate-unique-id";
+import { queryDB,  insertRecord, updateRecord } from '../dbUtils.js';
 dotenv.config();
 
 
@@ -76,7 +77,7 @@ export const createIntent = async (req, resp) => {
             status: 1,
             code: 200,
         });
-    }catch (err) {
+    } catch (err) {
         console.error('Error creating payment intent:', err);
         return resp.status(500).json({
             message: ["Error creating payment intent"],
@@ -94,8 +95,8 @@ export const createAutoDebit = async (customerId, paymentMethodId, totalAmount) 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: totalAmount < 200 ? 200 : Math.floor(totalAmount),
             currency: 'aed',
-            customer: customerId,
-            payment_method: paymentMethodId,
+            customer: customer_id,
+            payment_method: payment_method_id,
             off_session: true,
             confirm: true,
         });
@@ -400,24 +401,50 @@ export const createPortableChargerSubscription = async (req, resp) => {
 };
 
 /* Helper function to retrieve Stripe customer ID using the provided email */
-export const findCustomerByEmail = async (email) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    if (!email) return resp.status(400).json({ status: 0, message: 'Email is required.'});
+export const findCustomerByEmail = async (req, resp) => {
+
+    const pod_id = 'EVP-1124001' ;
+    const [chargerDetails] = await db.execute(`
+        SELECT 
+            battery_id, capacity, rssi, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, latitude, longitude, cells 
+        FROM 
+            pod_device_battery 
+        WHERE 
+            pod_id = ?`, 
+        [pod_id]
+    );
+    const sum = chargerDetails.map( obj  => (obj.percentage || 0).toFixed(2) ) ;
+    // 70
+
+    const updt = await updateRecord('portable_charger_history', {pod_data: JSON.stringify(chargerDetails)  }, ['id'], [70] );
+
+    // const insert = await db.execute(
+    //     'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data) VALUES (?, ?, "CC", ?, ?, ?, ?)',
+    //     [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData]
+    // );
+    return resp.send({
+        sum  : sum.join(','),
+        updt,
+        data : JSON.stringify(chargerDetails),
+    });
     
-    try {
-        const customers = await stripe.customers.list({ email });
-        if (customers.data.length > 0) {
-            return {
-                success      : true,
-                customer_id  : customers.data[0].id, 
-                name         : customers.data[0].name
-            };
-        } else {
-            return {success: false, message: 'No customer found with this email'};
-        }
-    } catch (error) {
-        return {success: false, message: error.message};
-    }
+    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // if (!email) return resp.status(400).json({ status: 0, message: 'Email is required.'});
+    
+    // try {
+    //     const customers = await stripe.customers.list({ email });
+    //     if (customers.data.length > 0) {
+    //         return {
+    //             success      : true,
+    //             customer_id  : customers.data[0].id, 
+    //             name         : customers.data[0].name
+    //         };
+    //     } else {
+    //         return {success: false, message: 'No customer found with this email'};
+    //     }
+    // } catch (error) {
+    //     return {success: false, message: error.message};
+    // }
 };
 
 /* Helper to retrive total amount from PCB or CS */
@@ -457,7 +484,7 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
         total_amount = (data.total_amt) ? Math.round(data.total_amt) : 0.00;
 
         return {success: true, total_amount, data, message: 'Pod Amount fetched successfully'};
-    }else if(booking_type === 'CS'){
+    } else if(booking_type === 'CS') {
         invoiceId = booking_id.replace('CS', 'INVCS');
 
         const data = await queryDB(`

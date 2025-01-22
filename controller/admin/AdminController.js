@@ -12,15 +12,23 @@ dotenv.config();
 
 export const getDashboardData = async (req, resp) => {
     try {
+        const today = new Date();
+        const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString()
+            .padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+        
+        const givenDateTime    = formattedDate+' 00:00:01'; // Replace with your datetime string
+        const modifiedDateTime = moment(givenDateTime).subtract(4, 'hours'); // Subtract 4 hours
+        const currentDate      = modifiedDateTime.format('YYYY-MM-DD HH:mm:ss')
+
         const [counts] = await db.execute(`
             SELECT 
-                (SELECT COUNT(*) FROM riders WHERE DATE(created_at) = CURDATE()) AS total_rider,
+                (SELECT COUNT(*) FROM riders WHERE created_at >= "${currentDate}") AS total_rider,
                 (SELECT COUNT(*) FROM rsa) AS total_rsa,
-                (SELECT COUNT(*) FROM portable_charger_booking WHERE DATE(created_at) = CURDATE()) AS total_charger_booking,
-                (SELECT COUNT(*) FROM charging_service WHERE DATE(created_at) = CURDATE()) AS total_charging_service,
-                (SELECT COUNT(*) FROM road_assistance WHERE DATE(created_at) = CURDATE()) AS total_road_assistance,
-                (SELECT COUNT(*) FROM charging_installation_service WHERE DATE(created_at) = CURDATE()) AS total_installation,
-                (SELECT COUNT(*) FROM ev_pre_sale_testing WHERE DATE(created_at) = CURDATE()) AS total_pre_sale_testing,
+                (SELECT COUNT(*) FROM portable_charger_booking WHERE created_at >= "${currentDate}") AS total_charger_booking,
+                (SELECT COUNT(*) FROM charging_service WHERE created_at >= "${currentDate}") AS total_charging_service,
+                (SELECT COUNT(*) FROM road_assistance WHERE created_at >= "${currentDate}") AS total_road_assistance,
+                (SELECT COUNT(*) FROM charging_installation_service WHERE created_at >= "${currentDate}") AS total_installation,
+                (SELECT COUNT(*) FROM ev_pre_sale_testing WHERE created_at >= "${currentDate}") AS total_pre_sale_testing,
                 (SELECT COUNT(*) FROM public_charging_station_list) AS total_station
         `);
 
@@ -139,8 +147,20 @@ export const riderList = async (req, resp) => {
             whereOperator: []
         };
         if (start_date && end_date) {
-            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
-            const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                        
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
 
             params.whereField.push('created_at', 'created_at');
             params.whereValue.push(start, end);

@@ -10,9 +10,9 @@ import moment from 'moment/moment.js';
 import emailQueue from '../emailQueue.js';
 dotenv.config();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe     = new Stripe(process.env.STRIPE_SECRET_KEY);
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
 
 export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
@@ -21,46 +21,43 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoiceId = request_id.replace('CS', 'INVCS');
-
     const createObj = {
-        invoice_id: invoiceId,
-        request_id: request_id,
-        rider_id: rider_id,
-        invoice_date: moment().format('YYYY-MM-DD HH:mm:ss'),
+        invoice_id   : invoiceId,
+        request_id   : request_id,
+        rider_id     : rider_id,
+        invoice_date : moment().format('YYYY-MM-DD HH:mm:ss'),
+        payment_status : 'Approved'
     }
-
     if(payment_intent_id && payment_intent_id.trim() != '' ){
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
         const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
         const cardData = {
-            brand:     charge.payment_method_details.card.brand,
-            country:   charge.payment_method_details.card.country,
-            exp_month: charge.payment_method_details.card.exp_month,
-            exp_year:  charge.payment_method_details.card.exp_year,
-            last_four: charge.payment_method_details.card.last4,
+            brand     : charge.payment_method_details.card.brand,
+            country   : charge.payment_method_details.card.country,
+            exp_month : charge.payment_method_details.card.exp_month,
+            exp_year  : charge.payment_method_details.card.exp_year,
+            last_four : charge.payment_method_details.card.last4,
         };
-
-        createObj.amount = charge.amount;  
+        createObj.amount            = charge.amount;  
         createObj.payment_intent_id = charge.payment_intent;  
         createObj.payment_method_id = charge.payment_method;  
-        createObj.payment_cust_id = charge.customer;  
-        createObj.charge_id = charge.id;  
-        createObj.transaction_id = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
-        createObj.payment_type = charge.payment_method_details.type;  
-        createObj.payment_status = charge.status;  
-        createObj.currency = charge.currency;  
-        createObj.invoice_date = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
-        createObj.receipt_url = charge.receipt_url;
-        createObj.card_data = cardData;
+        createObj.payment_cust_id   = charge.customer;  
+        createObj.charge_id         = charge.id;  
+        createObj.transaction_id    = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
+        createObj.payment_type      = charge.payment_method_details.type;  
+        // createObj.payment_status    = charge.status;  
+        createObj.currency          = charge.currency;  
+        createObj.invoice_date      = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
+        createObj.receipt_url       = charge.receipt_url;
+        createObj.card_data         = cardData;
     }
-
     const columns = Object.keys(createObj);
-    const values = Object.values(createObj);
-    const insert = await insertRecord('charging_service_invoice', columns, values);
+    const values  = Object.values(createObj);
+    const insert  = await insertRecord('charging_service_invoice', columns, values);
     
     if(insert.affectedRows > 0){
         return resp.json({ message: ["Pick & Drop Invoice created successfully!"], status:1, code:200 });
-    }else{
+    } else {
         return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
     }
 });
@@ -71,47 +68,46 @@ export const portableChargerInvoice = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoiceId = request_id.replace('PCB', 'INVPC');
-
     const createObj = {
-        invoice_id: invoiceId,
-        request_id: request_id,
-        rider_id: rider_id,
-        invoice_date: moment().format('YYYY-MM-DD HH:mm:ss'),
+        invoice_id   : invoiceId,
+        request_id   : request_id,
+        rider_id     : rider_id,
+        invoice_date : moment().format('YYYY-MM-DD HH:mm:ss'),
+        payment_status : 'Approved'
     }
-    
     if(payment_intent_id && payment_intent_id.trim() != '' ){
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        // console.log(paymentIntent)
         const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
         const cardData = {
-            brand:     charge.payment_method_details.card.brand,
-            country:   charge.payment_method_details.card.country,
-            exp_month: charge.payment_method_details.card.exp_month,
-            exp_year:  charge.payment_method_details.card.exp_year,
-            last_four: charge.payment_method_details.card.last4,
+            brand     : charge.payment_method_details.card.brand,
+            country   : charge.payment_method_details.card.country,
+            exp_month : charge.payment_method_details.card.exp_month,
+            exp_year  : charge.payment_method_details.card.exp_year,
+            last_four : charge.payment_method_details.card.last4,
         };
-
-        createObj.amount = charge.amount;  
+        createObj.amount            = charge.amount;  
         createObj.payment_intent_id = charge.payment_intent;  
         createObj.payment_method_id = charge.payment_method;  
-        createObj.payment_cust_id = charge.customer;  
-        createObj.charge_id = charge.id;  
-        createObj.transaction_id = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
-        createObj.payment_type = charge.payment_method_details.type;  
-        createObj.payment_status = charge.status;  
-        createObj.currency = charge.currency;  
-        createObj.invoice_date = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
-        createObj.receipt_url = charge.receipt_url;
-        createObj.card_data = cardData;
+        createObj.payment_cust_id   = charge.customer;  
+        createObj.charge_id         = charge.id;  
+        createObj.transaction_id    = charge.payment_method_details.card.three_d_secure?.transaction_id || null;  
+        createObj.payment_type      = charge.payment_method_details.type;  
+        // createObj.payment_status    = charge.status;  
+        createObj.currency          = charge.currency;  
+        createObj.invoice_date      = moment.unix(charge.created).format('YYYY-MM-DD HH:mm:ss');
+        createObj.receipt_url       = charge.receipt_url;
+        createObj.card_data         = cardData;
     }
     // return resp.json(createObj);
     const columns = Object.keys(createObj);
-    const values = Object.values(createObj);
-    const insert = await insertRecord('portable_charger_invoice', columns, values);
+    const values  = Object.values(createObj);
+    const insert  = await insertRecord('portable_charger_invoice', columns, values);
     
     if(insert.affectedRows > 0){
-        return resp.json({ message: ["Portable Charger Invoice created successfully!"], status:1, code:200 });
-    }else{
-        return resp.json({ message: ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
+        return resp.json({ message : ["Portable Charger Invoice created successfully!"], status:1, code:200 });
+    } else {
+        return resp.json({ message : ["Oops! Something went wrong! Please Try Again."], status:0, code:200 });
     }
 });
 
@@ -296,12 +292,11 @@ export const chargerInstallationInvoice = asyncHandler(async (req, resp) => {
     const invoiceId = request_id.replace('CIS', 'INVCIS');
 
     const createObj = {
-        invoice_id: invoiceId,
-        request_id: request_id,
-        rider_id: rider_id,
-        invoice_date: moment().format('YYYY-MM-DD HH:mm:ss'),
+        invoice_id   : invoiceId,
+        request_id   : request_id,
+        rider_id     : rider_id,
+        invoice_date : moment().format('YYYY-MM-DD HH:mm:ss'),
     }
-
     if(payment_intent_id && payment_intent_id.trim() != '' ){
         const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
         const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);

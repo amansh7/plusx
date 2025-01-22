@@ -23,9 +23,22 @@ export const rsaList = asyncHandler(async (req, resp) => {
     const whereOperators = []
 
     if (start_date && end_date) {
-        const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
-        const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+        // const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+        // const end = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
 
+        const startToday = new Date(start_date);
+        const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+            .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                    
+        const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+        const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+        const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+        
+        const endToday = new Date(end_date);
+        const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+            .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+        const end = formattedEndDate+' 19:59:59';
+        
         whereFields.push('created_at', 'created_at');
         whereValues.push(start, end);
         whereOperators.push('>=', '<=');
@@ -64,7 +77,7 @@ export const rsaData = asyncHandler(async (req, resp) => {
     const rsaData     = await queryDB(`SELECT * FROM rsa WHERE rsa_id = ? LIMIT 1`, [rsa_id]);
     const bookingType = ['Charger Installation', 'EV Pre-Sale', 'Portable Charger', 'Roadside Assistance', 'Valet Charging'];
     
-    const [locationHistory] = await db.execute(` SELECT rsa_id, latitude, longitude, ${formatDateTimeInQuery(['created_at'])} FROM rsa_location_history  WHERE rsa_id = ? order by id desc limit 10`, [rsa_id]);
+    const [locationHistory] = await db.execute(` SELECT rsa_id, latitude, longitude, ${formatDateTimeInQuery(['created_at'])} FROM rsa_location_history  WHERE rsa_id = ? group by DATE(created_at) order by id desc limit 10`, [rsa_id]);
            
     return resp.json({
         status: 0,
@@ -110,8 +123,22 @@ export const driverBookingList = async (req, resp) => {
         };
 
         if (start_date && end_date) {
-            const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
-            const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD HH:mm:ss");
+            // const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD HH:mm:ss");
+
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                        
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
+
             params.whereField.push('created_at', 'created_at');
             params.whereValue.push(start, end);
             params.whereOperator.push('>=', '<=');
@@ -271,3 +298,60 @@ export const rsaStatusChange = asyncHandler(async (req, resp) => {
         message: update.affectedRows > 0 ? "RSA status changed successfully." : "Failed to update, Please Try Again!", 
     });
 });
+export const driverLocationList = async (req, resp) => {
+    try {
+        const { rsa_id, page_no, start_date, end_date  } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            rsa_id  : ["required"],
+            page_no : ["required"]
+        });
+        if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
+
+        const limit = 10;
+        const start = parseInt((page_no * limit) - limit, 10);
+        
+        let whereQry      = '';
+        if (start_date && end_date) {  //2025-01-13 20:00:01 2025-01-14 19:59:59
+
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                       
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
+            // console.log(start, end)
+            // const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD");
+            // const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD");
+            
+            whereQry = ` and created_at >= "${start}" AND created_at <= "${end}" `;
+        } else {
+            whereQry = ` group by DATE(created_at) ` ;
+        }
+        const query = `SELECT SQL_CALC_FOUND_ROWS rsa_id, latitude, longitude, ${formatDateTimeInQuery(['created_at'])} FROM rsa_location_history WHERE rsa_id ="${rsa_id}" ${whereQry}  order by created_at DESC LIMIT ${start}, ${parseInt(limit, 10)}`;
+
+        // console.log(query)
+        const [rows] = await db.execute(query, []);
+        
+        const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
+        const totalPage = Math.max(Math.ceil(total / limit), 1);
+    
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Driver Location List!"],
+            data       : rows,
+            total_page : totalPage,
+            total      : total,
+        });
+    } catch (error) {
+        console.error('Error fetching charger booking list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger booking lists' });
+    }
+};

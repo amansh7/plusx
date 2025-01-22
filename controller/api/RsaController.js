@@ -41,9 +41,8 @@ export const rsaLogin = asyncHandler(async (req, resp) => {
             dl_img: `${req.protocol}://${req.get('host')}/uploads/rsa_images/${rsa.dl_img}`,
             access_token: access_token,
         };
-    
         return resp.json({status:1, code:200, message: ["RSA Login successfully"], data: result});
-    }else{
+    } else {
         return resp.json({status:0, code:405, message: ["Oops! There is something went wrong! Please Try Again"], error: true});
     }
 
@@ -231,7 +230,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
            CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
            ${formatDateTimeInQuery(['pb.created_at'])}, 
            (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
-           DATE_FORMAT(portable_charger_booking_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time
+           portable_charger_booking_assign.slot_date_time
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
         WHERE portable_charger_booking_assign.rsa_id = ?
@@ -379,12 +378,11 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
         result.valet_cancelled = valetCancelled;
         result.pod_cancelled = podCancelled;
     }
-
     return resp.json({
-        messag: [ "RSA Booking Completed/ Rejected History" ], 
-        data: result, 
-        status: 1,
-        code: 200
+        messag : [ "RSA Booking Completed/ Rejected History" ], 
+        data   : result, 
+        status : 1,
+        code   : 200
     }); 
 });
 
