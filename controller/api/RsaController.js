@@ -198,6 +198,11 @@ export const rsaHome = asyncHandler(async (req, resp) => {
             status, booking_type, running_order,
             (SELECT COUNT(*) FROM charging_service_assign WHERE rsa_id = ? AND status = 0) AS valet_count,
             (SELECT COUNT(*) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 0) AS pod_count,
+            (
+                (SELECT COUNT(*) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 1) 
+                +
+                (SELECT COUNT(*) FROM charging_service_assign WHERE rsa_id = ? AND status = 1) 
+            ) AS running_order_count,
             (SELECT COUNT(*) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
             (SELECT COUNT(*) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
             (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
@@ -206,7 +211,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
             (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status = "C") AS valet_cancelled
         FROM rsa 
         WHERE rsa_id = ? LIMIT 1
-    `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
+    `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
 
     if (rsaData.length === 0) return resp.json({ message: "RSA data not found", status: 0 });
 
@@ -231,21 +236,22 @@ export const rsaHome = asyncHandler(async (req, resp) => {
            CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
            ${formatDateTimeInQuery(['pb.created_at'])}, 
            (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
-           portable_charger_booking_assign.slot_date_time
+           DATE_FORMAT(portable_charger_booking_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
         WHERE portable_charger_booking_assign.rsa_id = ?
         ORDER BY portable_charger_booking_assign.slot_date_time ASC
     `,[rsa_id]);
    
-    const { status, running_order, booking_type, valet_count, pod_count, valet_rej, pod_rejected, valet_completed, pod_completed, pod_cancelled, valet_cancelled } = rsaData;
+    const { status, running_order, booking_type, valet_count, pod_count, running_order_count, valet_rej, pod_rejected, valet_completed, pod_completed, pod_cancelled, valet_cancelled } = rsaData;
     const rsaStatus = (status === 1) ? 'Login' : (status === 2 || running_order > 0) ? 'Available' : 'Logout';
-
+    
     const result = {
         rsa_status: rsaStatus,
         service_type: booking_type,
         valet_count,
         pod_count,
+        running_order_count,
         valet_rejected_count: valet_rej,
         pod_rejected_count: pod_rejected,
         valet_completed_count: valet_completed,
