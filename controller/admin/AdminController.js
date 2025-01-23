@@ -18,8 +18,7 @@ export const getDashboardData = async (req, resp) => {
         
         const givenDateTime    = formattedDate+' 00:00:01'; // Replace with your datetime string
         const modifiedDateTime = moment(givenDateTime).subtract(4, 'hours'); // Subtract 4 hours
-        const currentDate      = modifiedDateTime.format('YYYY-MM-DD HH:mm:ss')
-
+        const currentDate      = modifiedDateTime.format('YYYY-MM-DD HH:mm:ss');
         const [counts] = await db.execute(`
             SELECT 
                 (SELECT COUNT(*) FROM riders WHERE created_at >= "${currentDate}") AS total_rider,

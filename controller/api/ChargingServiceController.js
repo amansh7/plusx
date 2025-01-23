@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 
 export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     const { slot_date } = mergeParam(req);
-    if(!slot_date) return resp.json({status:0, code:422, message: 'slot date is required'});
+    if(!slot_date) return resp.json({status:0, code:422, message: ['slot date is required']});
     
     const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
     let query = `SELECT slot_id, ${formatDateInQuery([('slot_date')])}, start_time, end_time, booking_limit`;
@@ -123,17 +123,17 @@ export const requestService = asyncHandler(async (req, resp) => {
         emailQueue.addEmail(process.env.MAIL_CS_ADMIN, `Valet Charging Service Booking Received - ${requestId}`, htmlAdmin);
         
         let responseMsg = 'Booking request submitted! Our team will be in touch with you shortly.';
-        
-        const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
-        if(rsa){
-            await insertRecord('charging_service_assign', ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [requestId, rsa.rsa_id, rider_id, slotDateTime, '0']);
-            await conn.execute(`UPDATE charging_service SET rsa_id = ? WHERE request_id = ?`, [rsa.rsa_id, requestId]);
     
-            const heading1 = 'Valet Charging Service';
-            const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
-            createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
-            pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
-        }
+        // const rsa = await queryDB(`SELECT rsa_id, fcm_token FROM rsa WHERE status = ? AND booking_type = ? LIMIT 1`, [2, 'Valet Charging']);
+        // if(rsa){
+        //     await insertRecord('charging_service_assign', ['order_id', 'rsa_id', 'rider_id', 'slot_date_time', 'status'], [requestId, rsa.rsa_id, rider_id, slotDateTime, '0']);
+        //     await conn.execute(`UPDATE charging_service SET rsa_id = ? WHERE request_id = ?`, [rsa.rsa_id, requestId]);
+    
+        //     const heading1 = 'Valet Charging Service';
+        //     const desc1 = `A Booking of the Valet Charging service has been assigned to you with booking id : ${requestId}`;
+        //     createNotification(heading1, desc1, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
+        //     pushNotification(rsa.fcm_token, heading1, desc1, 'RSAFCM', href);
+        // }
 
         await commitTransaction(conn);
     
@@ -641,8 +641,8 @@ const vehicleDrop = async (req, resp) => {
 };
 const workComplete = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude } = req.body;
-    if (!req.files || !req.files['image']) return resp.status(405).json({ message: "Vehicle Image is required", status: 0, code: 405, error: true });
-    const imgName   = req.files.image[0].filename; 
+    if (!req.files || !req.files['image']) return resp.status(405).json({ message: ["Vehicle Image is required"], status: 0, code: 405, error: true });
+    const imgName = req.files.image[0].filename; 
     const invoiceId = booking_id.replace('CS', 'INVCS');
     
     const checkOrder = await queryDB(`
@@ -676,8 +676,8 @@ const workComplete = async (req, resp) => {
 
         const data = await queryDB(`
             SELECT 
-                csi.invoice_id, csi.amount, csi.invoice_date, cs.name, cs.request_id,
-                CASE WHEN csi.currency IS NOT NULL THEN csi.currency ELSE 'AED' END AS currency, 
+                csi.invoice_id, ROUND(csi.amount/100, 2) AS amount, csi.invoice_date, cs.name, cs.request_id,
+                CASE WHEN csi.currency IS NOT NULL THEN UPPER(csi.currency) ELSE 'AED' END AS currency, 
                 (SELECT rd.rider_email FROM riders AS rd WHERE rd.rider_id = csi.rider_id) AS rider_email
             FROM 
                 charging_service_invoice AS csi
@@ -688,6 +688,7 @@ const workComplete = async (req, resp) => {
             LIMIT 1
         `, [invoiceId]);
         data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
+        data.amount =  Number(parseFloat(data.amount));
         
         const invoiceData  = { data, numberToWords, formatNumber  };
         const templatePath = path.join(__dirname, '../../views/mail/pick-and-drop-invoice.ejs'); 
