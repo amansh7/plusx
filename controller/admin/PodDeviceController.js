@@ -721,6 +721,7 @@ export const podAreaBookingList = async (req, resp) => {
             whereField       : ['pcb.pod_id', 'pcb.status'],  
             whereValue       : [podId, 'PU']
         });
+        console.log(result.data)
         return resp.json({
             status     : 1,
             code       : 200,

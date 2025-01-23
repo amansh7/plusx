@@ -1,7 +1,6 @@
 import { getPaginatedData, queryDB } from '../../dbUtils.js';
 import { asyncHandler, formatDateTimeInQuery } from '../../utils.js';
 
-
 // export const sellVehicleList = asyncHandler(async (req, resp) => {
 //     const { search_text, page_no } = req.body;
 
@@ -73,8 +72,6 @@ export const sellVehicleList = asyncHandler(async (req, resp) => {
         image_path: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
     });
 });
-
-
 
 export const sellVehicleDetail = asyncHandler(async (req, resp) => {
     const { sell_id } = req.body;

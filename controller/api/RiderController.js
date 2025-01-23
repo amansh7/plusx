@@ -203,9 +203,8 @@ export const createOTP = asyncHandler(async (req, resp) => {
     if (checkCount > 0) return resp.json({ status: 0, code: 422, message: ['The provided mobile number is already registered. Please log in to continue.'] });
     
     const fullMobile = `${country_code}${mobile}`;
-    let otp = generateOTP(4);
+    let otp          = generateOTP(4);
     storeOTP(fullMobile, otp);
-    
     // storeOTP(fullMobile, '0587');
     return resp.json({ status: 1, code: 200, data: otp, message: ['OTP sent successfully!'] });
     
@@ -233,9 +232,8 @@ export const verifyOTP = asyncHandler(async (req, resp) => {
     let result, isLogin, loginStatus, respResult = {};
 
     if(user_type === 'Rider'){
-        result = await queryDB(`SELECT COUNT(*) AS rider_mob, r.status AS rider_status FROM riders r WHERE r.rider_mobile = ? AND r.country_code = ? LIMIT 1
-        `, [mobile, country_code]);
-        isLogin = result.rider_mob
+        result = await queryDB(`SELECT COUNT(*) AS rider_mob, r.status AS rider_status FROM riders r WHERE r.rider_mobile = ? AND r.country_code = ? LIMIT 1 `, [mobile, country_code]);
+        isLogin     = result.rider_mob
         loginStatus = result.rider_status
     }
     if (!cachedOtp || cachedOtp !== otp) return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });

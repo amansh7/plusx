@@ -1,11 +1,12 @@
 import db from "../config/db.js";
 import validateFields from "../validation.js";
-import { queryDB } from '../dbUtils.js';
+// import { queryDB } from '../dbUtils.js';
 import { mergeParam, formatNumber } from '../utils.js';
 import moment from "moment";
 import Stripe from "stripe";
 import dotenv from 'dotenv';
 import generateUniqueId from "generate-unique-id";
+import { queryDB,  insertRecord, updateRecord } from '../dbUtils.js';
 dotenv.config();
 
 
@@ -88,7 +89,7 @@ export const createIntent = async (req, resp) => {
             status: 1,
             code: 200,
         });
-    }catch (err) {
+    } catch (err) {
         console.error('Error creating payment intent:', err);
         return resp.status(500).json({
             message: ["Error creating payment intent"],
@@ -106,8 +107,8 @@ export const createAutoDebit = async (customerId, paymentMethodId, totalAmount) 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: totalAmount < 200 ? 200 : Math.floor(totalAmount),
             currency: 'aed',
-            customer: customerId,
-            payment_method: paymentMethodId,
+            customer: customer_id,
+            payment_method: payment_method_id,
             off_session: true,
             confirm: true,
         });
@@ -469,7 +470,7 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
         total_amount = (data.total_amt) ? Math.round(data.total_amt) : 0.00;
 
         return {success: true, total_amount, data, message: 'Pod Amount fetched successfully'};
-    }else if(booking_type === 'CS'){
+    } else if(booking_type === 'CS') {
         invoiceId = booking_id.replace('CS', 'INVCS');
 
         const data = await queryDB(`

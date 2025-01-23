@@ -23,12 +23,14 @@ export const getChargingServiceSlotList = asyncHandler(async (req, resp) => {
     if(fSlotDate >=  moment().format('YYYY-MM-DD')){
         query += `,(SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count`;
     }
-
     query += ` FROM pick_drop_slot WHERE status = ? AND slot_date = ? ORDER BY start_time ASC`;
 
     const [slot] = await db.execute(query, [1, fSlotDate]);
 
-    return resp.json({ message: "Slot List fetch successfully!",  data: slot, status: 1, code: 200, alert2: "The slots for your selected date are fully booked. Please choose another date to book our valet service for your EV." });
+    return resp.json({ 
+        message : "Slot List fetch successfully!",  data: slot, status: 1, code: 200,
+        alert2  : "The slots for your selected date are fully booked. Please choose another date to book our valet service for your EV."
+    });
 });
 
 export const requestService = asyncHandler(async (req, resp) => {
@@ -88,7 +90,8 @@ export const requestService = asyncHandler(async (req, resp) => {
         createNotification(heading, desc, 'Charging Service', 'Rider', 'Admin','', rider_id, href);
         pushNotification(rider.fcm_token, heading, desc, 'RDRFCM', href);
     
-        const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+        // const formattedDateTime = moment().format('DD MMM YYYY hh:mm A');
+        const formattedDateTime =  moment().utcOffset('+04:00').format('DD MMM YYYY hh:mm A');
 
         const htmlUser = `<html>
             <body>
@@ -192,7 +195,7 @@ export const getServiceOrderDetail = asyncHandler(async (req, resp) => {
         SELECT 
             charging_service.*, 
             ROUND(charging_service.price / 100, 2) AS price, 
-            (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = charging_service.vehicle_id) as vehicle_data, 
+            (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = charging_service.vehicle_id limit 1) as vehicle_data, 
             ${formatDateTimeInQuery(formatCols)} 
         FROM charging_service 
         WHERE request_id = ? 
@@ -263,7 +266,7 @@ export const getInvoiceDetail = asyncHandler(async (req, resp) => {
 
     const invoice = await queryDB(`SELECT 
         invoice_id, amount as price, payment_status, invoice_date, currency, payment_type, cs.name, cs.country_code, cs.contact_no, cs.pickup_address, cs.vehicle_id, 
-        cs.request_id, cs.slot_date_time, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = cs.vehicle_id) as vehicle_data
+        cs.request_id, cs.slot_date_time, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = cs.vehicle_id limit 1) as vehicle_data
         FROM 
             charging_service_invoice AS csi
         LEFT JOIN
@@ -344,7 +347,7 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token
         FROM 
             charging_service_assign
         WHERE 
@@ -355,7 +358,6 @@ export const handleRejectBooking = asyncHandler(async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-
     const insert = await db.execute(
         'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "C", ?, ?, ?)',
         [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
@@ -390,8 +392,7 @@ const acceptBooking = async (req, resp) => {
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token,
-            (SELECT COUNT(id) FROM charging_service_assign WHERE rsa_id = ? AND status = 1) AS count
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token
         FROM 
             charging_service_assign
         WHERE 
@@ -402,7 +403,7 @@ const acceptBooking = async (req, resp) => {
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
-    // if (checkOrder.count > 0) {
+    // if (checkOrder.count > 0) { ,  (SELECT COUNT(id) FROM charging_service_assign WHERE rsa_id = ? AND status = 1  limit 1) AS count
     //     return resp.json({ message: ['You have already one booking, please complete that first!'], status: 0, code: 404 });
     // }
     const ordHistoryCount = await queryDB(
@@ -411,8 +412,8 @@ const acceptBooking = async (req, resp) => {
     if (ordHistoryCount.count === 0) {
         await updateRecord('charging_service', {order_status: 'A', rsa_id}, ['request_id'], [booking_id]);
 
-        const href = `charging_service/${booking_id}`;
-        const title = 'EV Valet Charging Service Booking Accepted';
+        const href    = `charging_service/${booking_id}`;
+        const title   = 'EV Valet Charging Service Booking Accepted';
         const message = `Booking Accepted! ID: ${booking_id}.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
@@ -437,7 +438,7 @@ const driverEnroute = async (req, resp) => {
     
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token 
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token 
         FROM 
             charging_service_assign
         WHERE 
@@ -476,7 +477,7 @@ const vehiclePickUp = async (req, resp) => {
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token
         FROM 
             charging_service_assign
         WHERE 
@@ -497,13 +498,12 @@ const vehiclePickUp = async (req, resp) => {
             'INSERT INTO charging_service_history (service_id, rider_id, order_status, rsa_id, latitude, longitude, image) VALUES (?, ?, "VP", ?, ?, ?, ?)',
             [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, '']
         );
-
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
         await updateRecord('charging_service', {order_status: 'VP', rsa_id}, ['request_id'], [booking_id]);
 
-        const href = `charging_service/${booking_id}`;
-        const title = 'EV Pick-Up Confirmed';
+        const href    = `charging_service/${booking_id}`;
+        const title   = 'EV Pick-Up Confirmed';
         const message = `PlusX Electric team has picked up your EV.`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
@@ -518,7 +518,7 @@ const reachedLocation = async (req, resp) => {
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token
         FROM 
             charging_service_assign
         WHERE 
@@ -560,7 +560,7 @@ const chargingComplete = async (req, resp) => {
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token
         FROM 
             charging_service_assign
         WHERE 
@@ -586,8 +586,8 @@ const chargingComplete = async (req, resp) => {
 
         await updateRecord('charging_service', {order_status: 'CC', rsa_id}, ['request_id'], [booking_id]);
 
-        const href = `charging_service/${booking_id}`;
-        const title = 'Charging Completed!';
+        const href    = `charging_service/${booking_id}`;
+        const title   = 'Charging Completed!';
         const message = `Your EV charging is completed!`;
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
@@ -602,7 +602,7 @@ const vehicleDrop = async (req, resp) => {
 
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token
         FROM 
             charging_service_assign
         WHERE 
@@ -628,8 +628,8 @@ const vehicleDrop = async (req, resp) => {
 
         await updateRecord('charging_service', {order_status: 'DO', rsa_id}, ['request_id'], [booking_id]);
 
-        const href = `charging_service/${booking_id}`;
-        const title = 'EV Drop Off!';
+        const href    = `charging_service/${booking_id}`;
+        const title   = 'EV Drop Off!';
         const message = 'PlusX Electric Team has dropped off your EV and handed over the key!';
         await createNotification(title, message, 'Charging Service', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
@@ -647,14 +647,13 @@ const workComplete = async (req, resp) => {
     
     const checkOrder = await queryDB(`
         SELECT rider_id, 
-            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id) AS fcm_token,
-            (select slot from charging_service as cs where cs.request_id = charging_service_assign.order_id ) as slot_id
+            (SELECT fcm_token FROM riders WHERE rider_id = charging_service_assign.rider_id limit 1) AS fcm_token
         FROM 
             charging_service_assign
         WHERE 
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
-    `,[booking_id, rsa_id]);
+    `,[booking_id, rsa_id]);  // ,(select slot from charging_service as cs where cs.request_id = charging_service_assign.order_id  limit 1) as slot_id
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
     }
@@ -691,10 +690,10 @@ const workComplete = async (req, resp) => {
         data.invoice_date = data.invoice_date ? moment(data.invoice_date).format('MMM D, YYYY') : '';
         data.amount =  Number(parseFloat(data.amount));
         
-        const invoiceData = { data, numberToWords, formatNumber  };
+        const invoiceData  = { data, numberToWords, formatNumber  };
         const templatePath = path.join(__dirname, '../../views/mail/pick-and-drop-invoice.ejs'); 
-        const filename = `${invoiceId}-invoice.pdf`;
-        const savePdfDir = 'pick-drop-invoice';
+        const filename     = `${invoiceId}-invoice.pdf`;
+        const savePdfDir   = 'pick-drop-invoice';
 
         const pdf = await generatePdf(templatePath, invoiceData, filename, savePdfDir, req);
 
