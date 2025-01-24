@@ -58,11 +58,7 @@ export const offerHistory = async (req, resp) => {
     const offer = await queryDB(`SELECT EXISTS (SELECT 1 FROM offer_history WHERE offer_id = ? AND rider_id = ?) AS exist`, [offer_id, rider_id]);
     
     if(offer.exist){
-        return resp.json({
-            status: 0,
-            code: 422,
-            message: ["The offer is already in use."],
-        });
+        return resp.json({ status: 0, code: 422 });
     }else{
         const insert = await insertRecord('offer_history', ['offer_id', 'rider_id'], [offer_id, rider_id]);
     

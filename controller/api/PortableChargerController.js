@@ -133,6 +133,10 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
 
     const conn = await startTransaction();
     try{
+        const fSlotDateTime = moment(slot_date + ' ' + slot_time, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')
+        const currDateTime = moment().utcOffset(4).format('YYYY-MM-DD HH:mm:ss');
+        if (fSlotDateTime < currDateTime) return resp.json({status: 0, code: 422, message: ["Invalid slot, Please select another slot"]});
+
         const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
         const currDate  = moment().format('YYYY-MM-DD');
 
@@ -630,8 +634,9 @@ const reachedLocation = async (req, resp) => {
     }
 };
 const chargingStart = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude, pod_id='' } = mergeParam(req);
-    
+    const { booking_id, rsa_id, latitude, longitude, pod_id='', guideline='' } = mergeParam(req);
+    if (!req.files || !req.files['image']) return resp.status(405).json({ message: ["Vehicle Image is required"], status: 0, code: 405, error: true });
+
     const checkOrder = await queryDB(`
         SELECT rider_id, 
             (SELECT fcm_token FROM riders WHERE rider_id = portable_charger_booking_assign.rider_id limit 1) AS fcm_token
@@ -641,6 +646,8 @@ const chargingStart = async (req, resp) => {
             order_id = ? AND rsa_id = ? AND status = 1
         LIMIT 1
     `,[booking_id, rsa_id]);
+    
+    const images = req.files['image'] ? req.files['image'].map(file => file.filename).join('*') : '';
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -654,8 +661,8 @@ const chargingStart = async (req, resp) => {
         const sumOfLevel     = podBatteryData.sum ?  podBatteryData.sum : '';
         
         const insert = await db.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data) VALUES (?, ?, "CS", ?, ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData]
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data, image, guideline) VALUES (?, ?, "CS", ?, ?, ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData, images, guideline]
         );
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 

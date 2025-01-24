@@ -55,6 +55,10 @@ export const requestService = asyncHandler(async (req, resp) => {
     
     const conn = await startTransaction();
     try{
+        const fSlotDateTime = moment(slot_date_time, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
+        const currDateTime = moment().utcOffset(4).format('YYYY-MM-DD HH:mm:ss');
+        if (fSlotDateTime < currDateTime) return resp.json({status: 0, code: 422, message: ["Invalid slot, Please select another slot"]});
+        
         const rider = await queryDB(`SELECT fcm_token, rider_name, rider_email,
             (SELECT MAX(id) FROM charging_service) AS last_index,
             (SELECT booking_limit FROM pick_drop_slot AS pds WHERE pds.slot_id=?) AS booking_limit,
