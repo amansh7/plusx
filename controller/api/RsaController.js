@@ -236,6 +236,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
            CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
            ${formatDateTimeInQuery(['pb.created_at'])}, 
            (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
+           (SELECT guideline FROM portable_charger_history pch WHERE pch.rider_id = pb.rider_id AND pch.order_status = 'CS' LIMIT 1) AS guideline,
            DATE_FORMAT(portable_charger_booking_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
