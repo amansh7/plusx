@@ -19,7 +19,7 @@ var transporter = nodemailer.createTransport({
 
 export const login = async(req, resp) => {
     const { email, password } = req.body;
-    const [users] = (await db.execute(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])} FROM users WHERE email=?`, [email]));
+    const [users] = (await db.execute(`SELECT id, name, email, phone, image, department_id, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, password FROM users WHERE email=?`, [email]));
     if(users.length === 0){ return resp.status(200).json({message: "Invalid email "}); }
     const user = users[0];
     const isMatch = await bcrypt.compare(password, user.password);
