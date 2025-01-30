@@ -4,7 +4,7 @@ import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
 import { getDashboardData, riderList, riderDetails,deleteRider, notificationList } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, assignBooking, chargerDetails, 
-    invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail, adminCancelPCBooking
+    invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail, adminCancelPCBooking, customerChargerBookingList
 } from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
 import { 
@@ -17,7 +17,7 @@ import {
     storeList, storeData, storeAdd, storeView, storeUpdate, storeDelete,serviceList, serviceCreate, serviceUpdate, serviceDelete, brandList, brandCreate, brandUpdate, brandDelete,
     deleteStoreGallery
 } from "../controller/admin/ShopController.js";
-import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange, driverBookingList, allRsaList } from "../controller/admin/RsaController.js";
+import { rsaList, rsaData, rsaAdd, rsaUpdate, rsaDelete, rsaStatusChange, driverBookingList, allRsaList, driverLocationList } from "../controller/admin/RsaController.js";
 import { clubList, clubData, clubCreate, clubUpdate, clubDelete, clubDeleteImg } from "../controller/admin/RiderClubController.js"
 import { carsList, carDetail, carAdd, carEdit, carDelete, carGalleryDelete } from "../controller/admin/ElectriCarLeasingController.js";
 import { bikeDetail, bikesList, bikeAdd, bikeEdit, bikeDelete, bikeGalleryDelete } from "../controller/admin/ElectricBikeRentalController.js";
@@ -26,7 +26,7 @@ import {
 } from '../controller/admin/EvRoadAssistanceController.js'
 import { interestList } from "../controller/admin/RegisterInterestController.js";
 import { couponData, couponDetail, couponList, couponAdd, couponEdit, couponDelete } from "../controller/admin/CouponController.js";
-import { offerDetail, offerList, offerAdd, offerEdit, offerDelete } from "../controller/admin/OfferController.js";
+import { offerDetail, offerList, offerAdd, offerEdit, offerDelete, offerClickhistory } from "../controller/admin/OfferController.js";
 import {guideList, addGuide, guideDetail, editGuide, deleteGuide, deleteEvGuideGallery} from "../controller/admin/EvGuideController.js";
 import { 
     evInsuranceList, evInsuranceDetail, evPreSaleList, evPreSaleDetail, evPreSaleTimeSlot, evPreSaleTimeSlotAdd, evPreSaleTimeSlotEdit, evPreSaleTimeSlotDelete, 
@@ -76,6 +76,7 @@ const adminRoutes = [
     { method: 'post',   path: '/charger-add-time-slot',           handler: addSlot },
     { method: 'post',   path: '/charger-edit-time-slot',          handler: editSlot },
     { method: 'post',   path: '/charger-delete-time-slot',        handler: deleteSlot },
+    { method: 'post',   path: '/customer-charger-booking-list',   handler: customerChargerBookingList },
 
     /* Pick & Drop */
     { method: 'post',   path: '/pick-and-drop-booking-list',     handler: bookingList },
@@ -95,8 +96,8 @@ const adminRoutes = [
     { method: 'post',   path: '/public-charger-station-data',    handler: stationData },
     { method: 'post',   path: '/public-charger-add-station',     handler: addPublicCharger },
     { method: 'post',   path: '/public-charger-edit-station',    handler: editPublicCharger },
-    { method: 'post', path: '/public-chargers-delete',         handler: deletePublicCharger },
-    { method: 'post', path: '/chargers-gallery-del',           handler: deletePublicChargerGallery },
+    { method: 'post',   path: '/public-chargers-delete',         handler: deletePublicCharger },
+    { method: 'post',   path: '/chargers-gallery-del',           handler: deletePublicChargerGallery },
 
     /* Charger Installation */
     { method: 'post', path: '/charger-installation-list',    handler: chargerInstallationList },
@@ -129,6 +130,7 @@ const adminRoutes = [
     { method: 'post',  path: '/rsa-status-change', handler: rsaStatusChange },
     { method: 'post',  path: '/rsa-booking-list',  handler: driverBookingList },
     { method: 'post',  path: '/all-rsa-list',      handler: allRsaList },
+    { method: 'post',  path: '/rsa-location-list', handler: driverLocationList },
 
     /* Rider Clubs */
     { method: 'post',   path: '/club-list',       handler: clubList },
@@ -179,8 +181,9 @@ const adminRoutes = [
     { method: 'post',   path: '/add-offer',    handler: offerAdd },
     { method: 'post',   path: '/edit-offer',   handler: offerEdit },
     { method: 'post',   path: '/delete-offer', handler: offerDelete },
+    { method: 'post',   path: '/offer-click-history', handler: offerClickhistory },
 
-    /* Subscription */
+    /* Subscription */  
     { method: 'post',  path: '/subscription-list',    handler: subscriptionList },
     { method: 'post',  path: '/subscription-detail', handler: subscriptionDetail },
     
@@ -247,7 +250,6 @@ const adminRoutes = [
     { method: 'post',  path: '/pod-assign-area-list',     handler: podAreaAssignList},
     { method: 'post',  path: '/pod-output-history',      handler: podAreaInputList},
     { method: 'post',  path: '/pod-booking-history',     handler: podAreaBookingList},
-    // 
     
 ]; 
 

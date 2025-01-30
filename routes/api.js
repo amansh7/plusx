@@ -7,7 +7,7 @@ import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddlewa
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
 import { shopList, shopDetail } from '../controller/api/ShopController.js';
 import { offerList, offerDetail } from '../controller/api/OfferController.js';
-import { redeemCoupon, createIntent, createPortableChargerSubscription, createAutoDebit, addCardToCustomer, customerCardsList, removeCard, autoPay } from '../controller/PaymentController.js';
+import { redeemCoupon, createIntent, createPortableChargerSubscription, createAutoDebit, addCardToCustomer, customerCardsList, removeCard, autoPay, findCustomerByEmail } from '../controller/PaymentController.js';
 import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
@@ -39,7 +39,20 @@ import {
     getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking, cancelValetBooking
 } from '../controller/api/ChargingServiceController.js';
 
+
+import rateLimit from 'express-rate-limit';
 const router = Router();
+
+const limiter = rateLimit({
+    windowMs     : 70 * 1000,  //15 * 
+    max          : 2,
+    keyGenerator : (req) => req.body.device_id || req.ip, //req.headers['device_id'] || req.ip,
+    handler      : (req, res, next, options) => {
+        console.log(req.body.device_id || req.ip);
+        console.error('Rate limit exceeded:', req.body.device_id || req.ip);
+        return res.json({ status : 0, code : options.statusCode, message : [`You have already requested the OTP twice. Please wait for 10 minutes before trying again.`,  ]});
+    },
+});
 
 /* -- Api Auth Middleware -- */
 const authzRoutes = [
@@ -69,10 +82,13 @@ const authzRoutes = [
     { method: 'post', path: '/vehicle-model-list',         handler: vehicleModelList },
 ];
 authzRoutes.forEach(({ method, path, handler }) => {
-    const middlewares = [apiAuthorization];
+    const middlewares = [apiAuthorization];  // rateLimit
     if(path === '/registration'){
         const noUpload = multer();
         middlewares.push(noUpload.none()); 
+    }
+    if(path === '/create-otp'){
+        middlewares.push(limiter); 
     }
     router[method](path, ...middlewares, handler);
 });
@@ -268,15 +284,17 @@ authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
     if(path === '/rsa-profile-change'){   
         middlewares.push(handleFileUpload('rsa_images', ['profile-image'], 1));
     }
-
     middlewares.push(apiAuthorization);
     middlewares.push(apiRsaAuthentication);
 
     router[method](path, ...middlewares, handler);
 });
 
-
 router.post('/validate-coupon', redeemCoupon);
 router.post('/auto-pay', autoPay);
+router.post('/add-card', addCardToCustomer);
+router.post('/remove-card', removeCard);
+router.post('/list-card', customerCardsList);
+router.post('/get-stripe-cust', findCustomerByEmail);
 
 export default router;

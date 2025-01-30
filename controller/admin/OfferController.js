@@ -8,8 +8,8 @@ import { deleteFile, asyncHandler, formatDateTimeInQuery, formatDateInQuery } fr
 export const offerList = asyncHandler(async (req, resp) => {
     const { start_date, end_date, search_text = '', page_no } = req.body;
 
-    const whereFields = []
-    const whereValues = []
+    const whereFields    = []
+    const whereValues    = []
     const whereOperators = []
 
     if (start_date && end_date) {
@@ -111,3 +111,107 @@ export const offerDelete = asyncHandler(async (req, resp) => {
     return resp.json({ status: 1, code: 200, message: "Offer deleted successfully!" });
 });
 
+export const offerClickhistoryOld = asyncHandler(async (req, resp) => {
+    const { start_date, end_date, page_no } = req.body;
+
+    const whereFields    = []
+    const whereValues    = []
+    const whereOperators = []
+
+    if (start_date && end_date) {
+                
+        const startToday = new Date(start_date);
+        const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+            .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                    
+        const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+        const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+        const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+        
+        const endToday = new Date(end_date);
+        const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+            .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+        const end = formattedEndDate+' 19:59:59';
+
+        whereFields.push('created_at', 'created_at');
+        whereValues.push(start, end);
+        whereOperators.push('>=', '<=');
+    }
+
+    const result = await getPaginatedData({
+        tableName: 'offer',
+        columns: `offer_id, offer_name, ${formatDateInQuery(['offer_exp_date'])}, offer_image, status`,
+        liveSearchFields: ['offer_id', 'offer_name' ],
+        liveSearchTexts: [search_text, search_text],
+        sortColumn: 'id',
+        sortOrder: 'DESC',
+        page_no,
+        limit: 10,
+        whereField: whereFields,
+        whereValue: whereValues,
+        whereOperator: whereOperators
+    });
+
+    return resp.json({
+        status: 1,
+        code: 200,
+        message: "Offer Click history fetch successfully!",
+        data: result.data,
+        total_page: result.totalPage,
+        total: result.total,
+    });    
+});
+export const offerClickhistory = async (req, resp) => {
+    try {
+        const { offerId, page_no, start_date, end_date  } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            offerId  : ["required"],
+            page_no : ["required"]
+        });
+        if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
+
+        const limit = 10;
+        const start = parseInt((page_no * limit) - limit, 10);
+        
+        let whereQry      = '';
+        if (start_date && end_date) {  //2025-01-13 20:00:01 2025-01-14 19:59:59
+
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                       
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
+            
+            whereQry = ` and created_at >= "${start}" AND created_at <= "${end}" `;
+        } else {
+            whereQry = ` group by Date(created_at) ` ;
+        }
+        const query = `SELECT SQL_CALC_FOUND_ROWS offer_id, count(rider_id) as click_count, (select rider_name from riders where riders.rider_id = offer_history.rider_id) as rider_name, ${formatDateInQuery([('created_at')])} FROM offer_history WHERE offer_id ="${offerId}" ${whereQry}  order by created_at DESC LIMIT ${start}, ${parseInt(limit, 10)}`;
+
+        console.log(query)
+        const [rows] = await db.execute(query, []);
+        
+        const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
+        const totalPage = Math.max(Math.ceil(total / limit), 1);
+    
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Offer Click history fetch successfully!"],
+            data       : rows,
+            total_page : totalPage,
+            total      : total,
+        });
+    } catch (error) {
+        console.error('Error fetching charger Offer history:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger booking lists' });
+    }
+};
