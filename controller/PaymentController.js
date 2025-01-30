@@ -95,8 +95,8 @@ export const createAutoDebit = async (customerId, paymentMethodId, totalAmount) 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: totalAmount < 200 ? 200 : Math.floor(totalAmount),
             currency: 'aed',
-            customer: customer_id,
-            payment_method: payment_method_id,
+            customer: customerId,
+            payment_method: paymentMethodId,
             off_session: true,
             confirm: true,
         });
