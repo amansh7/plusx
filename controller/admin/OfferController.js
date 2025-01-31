@@ -174,7 +174,7 @@ export const offerClickhistory = async (req, resp) => {
         const limit = 10;
         const start = parseInt((page_no * limit) - limit, 10);
         
-        let whereQry      = '';
+        let whereQry = '';
         if (start_date && end_date) {  //2025-01-13 20:00:01 2025-01-14 19:59:59
 
             const startToday = new Date(start_date);
@@ -191,12 +191,16 @@ export const offerClickhistory = async (req, resp) => {
             const end = formattedEndDate+' 19:59:59';
             
             whereQry = ` and created_at >= "${start}" AND created_at <= "${end}" `;
-        } else {
-            whereQry = ` group by Date(created_at) ` ;
+        }  else {
+            const sevenDaysAgo = moment().subtract(7, 'days').format('YYYY-MM-DD')+' 20:00:01'; 
+            const today        = moment().format('YYYY-MM-DD')+' 19:59:59';
+            // console.log(sevenDaysAgo, today);
+            whereQry = ` and created_at >= "${sevenDaysAgo}" AND created_at <= "${today}" `;
         }
-        const query = `SELECT SQL_CALC_FOUND_ROWS offer_id, count(rider_id) as click_count, (select rider_name from riders where riders.rider_id = offer_history.rider_id) as rider_name, ${formatDateInQuery([('created_at')])} FROM offer_history WHERE offer_id ="${offerId}" ${whereQry}  order by created_at DESC LIMIT ${start}, ${parseInt(limit, 10)}`;
+        // offer_id, (select rider_name from riders where riders.rider_id = offer_history.rider_id) as rider_name, 
+        const query = `SELECT SQL_CALC_FOUND_ROWS count(rider_id) as click_count, ${formatDateInQuery([('created_at')])} FROM offer_history WHERE offer_id ="${offerId}" ${whereQry} group by Date(created_at) order by created_at DESC LIMIT ${start}, ${parseInt(limit, 10)}`;
 
-        console.log(query)
+        // console.log(query)
         const [rows] = await db.execute(query, []);
         
         const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');

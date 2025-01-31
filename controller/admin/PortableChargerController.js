@@ -194,7 +194,7 @@ export const chargerBookingList = async (req, resp) => {
             tableName: 'portable_charger_booking',
             columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
             (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_name, 
-                ${formatDateInQuery(['slot_date'])}, slot_time, ${formatDateTimeInQuery(['created_at'])}`,
+                ${formatDateInQuery(['slot_date'])}, concat(slot_date, " ", slot_time) as slot_time, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'created_at',
             sortOrder: 'DESC',
             page_no,
@@ -301,7 +301,7 @@ export const chargerBookingDetails = async (req, resp) => {
         } // invoice_url
         const [bookingHistory] = await db.execute(`
             SELECT 
-                order_status, cancel_by, cancel_reason as reason, rsa_id, ${formatDateTimeInQuery(['created_at'])}, image,   
+                order_status, cancel_by, cancel_reason as reason, rsa_id, ${formatDateTimeInQuery(['created_at'])}, image, remarks,   
                 (select rsa.rsa_name from rsa where rsa.rsa_id = portable_charger_history.rsa_id) as rsa_name
             FROM 
                 portable_charger_history 
@@ -1048,7 +1048,7 @@ export const customerChargerBookingList = async (req, resp) => {
             tableName: 'portable_charger_booking',
             columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
             (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_name, 
-                ${formatDateInQuery(['slot_date'])}, slot_time, ${formatDateTimeInQuery(['created_at'])}`,
+                ${formatDateInQuery(['slot_date'])}, concat(slot_date, " ", slot_time) as slot_time, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn : 'slot_date',
             sortOrder  : 'DESC',
             page_no,
