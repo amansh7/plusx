@@ -431,7 +431,7 @@ export const rsaBookingStage = asyncHandler(async (req, resp) => {
 });
 
 export const bookingAction = asyncHandler(async (req, resp) => {  
-    const {rsa_id, booking_id, reason, latitude, longitude, booking_status, pod_id } = req.body;
+    const {rsa_id, booking_id, reason, latitude, longitude, booking_status, pod_id} = req.body;
     let validationRules = {
         rsa_id         : ["required"], 
         booking_id     : ["required"], 
@@ -447,13 +447,14 @@ export const bookingAction = asyncHandler(async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     switch (booking_status) {
-        case 'A': return await acceptBooking(req, resp);
+        case 'A' : return await acceptBooking(req, resp);
         case 'ER': return await driverEnroute(req, resp);
         case 'RL': return await reachedLocation(req, resp);
         case 'CS': return await chargingStart(req, resp);
         case 'CC': return await chargingComplete(req, resp);
         case 'DO': return await vehicleDrop(req, resp);
         case 'PU': return await chargerPickedUp(req, resp);
+        case 'RO': return await reachedOffice(req, resp);
         default: return resp.json({status: 0, code: 200, message: ['Invalid booking status.']});
     }
 });
@@ -634,7 +635,7 @@ const reachedLocation = async (req, resp) => {
     }
 };
 const chargingStart = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude, pod_id='', guideline='' } = mergeParam(req);
+    const { booking_id, rsa_id, latitude, longitude, pod_id='', guideline='', remark='' } = mergeParam(req);
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: ["Vehicle Image is required"], status: 0, code: 405, error: true });
 
     const checkOrder = await queryDB(`
@@ -661,8 +662,8 @@ const chargingStart = async (req, resp) => {
         const sumOfLevel     = podBatteryData.sum ?  podBatteryData.sum : '';
         
         const insert = await db.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data, image, guideline) VALUES (?, ?, "CS", ?, ?, ?, ?, ?, ?)',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData, images, guideline]
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data, image, guideline, remarks) VALUES (?, ?, "CS", ?, ?, ?, ?, ?, ?, ?)',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData, images, guideline, remark]
         );
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
@@ -831,6 +832,46 @@ const chargerPickedUp = async (req, resp) => {
         return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
     }
 };
+const reachedOffice = async (req, resp) => {
+    const { booking_id, rsa_id, latitude, longitude } = mergeParam(req);
+    
+    const checkOrder = await queryDB(`
+        SELECT rider_id, 
+            (select pod_id from portable_charger_booking as pb where pb.booking_id = portable_charger_booking_assign.order_id limit 1) as pod_id
+        FROM 
+            portable_charger_booking_assign
+        WHERE 
+            order_id = ? AND rsa_id = ? AND status = 1
+        LIMIT 1
+    `,[booking_id, rsa_id]);
+
+    if (!checkOrder) {
+        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
+    }
+    const ordHistoryCount = await queryDB(
+        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "RO" AND booking_id = ?', [rsa_id, booking_id]
+    );
+    const conn = await startTransaction();
+    if (ordHistoryCount.count === 0) {
+        const insert = await conn.execute(
+            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "RO", ?, ?, ? )',
+            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude]
+        );
+        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
+
+        await updateRecord('portable_charger_booking', {status: 'RO', rsa_id}, ['booking_id'], [booking_id], conn );
+        await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
+        await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+
+        if(checkOrder.pod_id) {
+            await updateRecord('pod_devices', { latitude, longitude}, ['pod_id'], [checkOrder.pod_id] );
+        }
+        await commitTransaction(conn);
+        return resp.json({ message: ['POD reached the office successfully!'], status: 1, code: 200 });
+    } else {
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
+    }
+};
 
 /* User Cancel Booking */
 export const userCancelPCBooking = asyncHandler(async (req, resp) => {
@@ -951,6 +992,7 @@ export const storePodChargerHistory = asyncHandler(async (req, resp) => {
 
 });
 
+/* POD Battery */
 const getPodBatteryData = async (pod_id) => {
     try {
         // const { pod_id, } = req.body;
@@ -986,43 +1028,4 @@ const getPodBatteryData = async (pod_id) => {
 
 }
 
-const reachedOffice = async (req, resp) => {
-    const { booking_id, rsa_id, latitude, longitude, } = mergeParam(req);
-    
-    const checkOrder = await queryDB(`
-        SELECT rider_id, 
-            (select pod_id from portable_charger_booking as pb where pb.booking_id = portable_charger_booking_assign.order_id limit 1) as pod_id
-        FROM 
-            portable_charger_booking_assign
-        WHERE 
-            order_id = ? AND rsa_id = ? AND status = 1
-        LIMIT 1
-    `,[booking_id, rsa_id]);
 
-    if (!checkOrder) {
-        return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
-    }
-    const ordHistoryCount = await queryDB(
-        'SELECT COUNT(*) as count FROM portable_charger_history WHERE rsa_id = ? AND order_status = "RO" AND booking_id = ?', [rsa_id, booking_id]
-    );
-    const conn = await startTransaction();
-    if (ordHistoryCount.count === 0) {
-        const insert = await conn.execute(
-            'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude) VALUES (?, ?, "RO", ?, ?, ? )',
-            [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude ]
-        );
-        if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
-
-        await updateRecord('portable_charger_booking', {status: 'RO', rsa_id}, ['booking_id'], [booking_id], conn );
-        await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
-        await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
-
-        if(checkOrder.pod_id) {
-            await updateRecord('pod_devices', { latitude, longitude}, ['pod_id'], [checkOrder.pod_id] );
-        }
-        await commitTransaction(conn);
-        return resp.json({ message: ['POD reached the office successfully!'], status: 1, code: 200 });
-    } else {
-        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200 });
-    }
-};
