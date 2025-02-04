@@ -102,7 +102,7 @@ export const rsaForgotPassword = asyncHandler(async (req, resp) => {
 
 export const rsaLogout = asyncHandler(async (req, resp) => {
     const {rsa_id} = mergeParam(req);
-    if (!rsa_id) return resp.json({ status: 0, code: 422, message: "Rsa Id is required" });
+    if (!rsa_id) return resp.json({ status: 0, code: 422, message: ["Rsa Id is required"] });
     
     const rsa = queryDB(`SELECT EXISTS (SELECT 1 FROM rsa WHERE rsa_id = ?) AS rsa_exists`, [rsa_id]);
     if(!rsa) return resp.json({status:0, code:400, message: 'Rider ID Invalid!'});
@@ -198,6 +198,11 @@ export const rsaHome = asyncHandler(async (req, resp) => {
             status, booking_type, running_order,
             (SELECT COUNT(*) FROM charging_service_assign WHERE rsa_id = ? AND status = 0) AS valet_count,
             (SELECT COUNT(*) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 0) AS pod_count,
+            (
+                (SELECT COUNT(*) FROM portable_charger_booking_assign WHERE rsa_id = ? AND status = 1) 
+                +
+                (SELECT COUNT(*) FROM charging_service_assign WHERE rsa_id = ? AND status = 1) 
+            ) AS running_order_count,
             (SELECT COUNT(*) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
             (SELECT COUNT(*) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
             (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
@@ -206,7 +211,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
             (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status = "C") AS valet_cancelled
         FROM rsa 
         WHERE rsa_id = ? LIMIT 1
-    `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
+    `, [rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id, rsa_id]);
 
     if (rsaData.length === 0) return resp.json({ message: "RSA data not found", status: 0 });
 
@@ -216,7 +221,8 @@ export const rsaHome = asyncHandler(async (req, resp) => {
            cs.request_id, cs.pickup_address, cs.pickup_latitude, cs.pickup_longitude,
            cs.order_status, cs.parking_number, cs.parking_floor,
            CONCAT(cs.name, ",", cs.country_code, "-", cs.contact_no) AS riderDetails,
-           ${formatDateTimeInQuery(['cs.created_at', 'charging_service_assign.slot_date_time'])}
+           DATE_FORMAT(charging_service_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time,
+           ${formatDateTimeInQuery(['cs.created_at'])}
         FROM charging_service_assign
         LEFT JOIN charging_service AS cs ON cs.request_id = charging_service_assign.order_id
         WHERE charging_service_assign.rsa_id = ? AND cs.request_id IS NOT NULL
@@ -225,26 +231,30 @@ export const rsaHome = asyncHandler(async (req, resp) => {
 
     const [podAssign] = await db.execute(`
         SELECT 
-           portable_charger_booking_assign.status AS assign_status,
-           pb.booking_id, pb.address, pb.latitude, pb.longitude, pb.status,
-           CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
-           ${formatDateTimeInQuery(['pb.created_at'])}, 
-           (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
-           portable_charger_booking_assign.slot_date_time
+            portable_charger_booking_assign.status AS assign_status,
+            pb.booking_id, pb.address, pb.latitude, pb.longitude, pb.status,
+            CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
+            ${formatDateTimeInQuery(['pb.created_at'])}, 
+            (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
+            COALESCE(
+                (SELECT guideline FROM portable_charger_history pch WHERE pch.rider_id = pb.rider_id AND pch.order_status = 'CS' LIMIT 1),''
+            ) AS guideline,
+            DATE_FORMAT(portable_charger_booking_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
         WHERE portable_charger_booking_assign.rsa_id = ?
         ORDER BY portable_charger_booking_assign.slot_date_time ASC
     `,[rsa_id]);
    
-    const { status, running_order, booking_type, valet_count, pod_count, valet_rej, pod_rejected, valet_completed, pod_completed, pod_cancelled, valet_cancelled } = rsaData;
+    const { status, running_order, booking_type, valet_count, pod_count, running_order_count, valet_rej, pod_rejected, valet_completed, pod_completed, pod_cancelled, valet_cancelled } = rsaData;
     const rsaStatus = (status === 1) ? 'Login' : (status === 2 || running_order > 0) ? 'Available' : 'Logout';
-
+    
     const result = {
         rsa_status: rsaStatus,
         service_type: booking_type,
         valet_count,
         pod_count,
+        running_order_count,
         valet_rejected_count: valet_rej,
         pod_rejected_count: pod_rejected,
         valet_completed_count: valet_completed,
@@ -291,11 +301,11 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
             FROM 
                 portable_charger_booking AS pcb
             LEFT JOIN 
-                portable_charger_history AS pch ON pcb.booking_id = pch.booking_id
+                portable_charger_history AS pch ON pcb.booking_id = pch.booking_id AND pch.order_status = 'PU'
             LEFT JOIN
                 riders_vehicles AS rv ON pcb.vehicle_id = rv.vehicle_id
             WHERE 
-                pcb.rsa_id = ? AND pcb.status = 'PU'
+                pcb.rsa_id = ? AND pcb.status = 'RO'
             GROUP BY 
                 pcb.booking_id
             ORDER BY 

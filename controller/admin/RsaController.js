@@ -298,6 +298,7 @@ export const rsaStatusChange = asyncHandler(async (req, resp) => {
         message: update.affectedRows > 0 ? "RSA status changed successfully." : "Failed to update, Please Try Again!", 
     });
 });
+
 export const driverLocationList = async (req, resp) => {
     try {
         const { rsa_id, page_no, start_date, end_date  } = req.body;
@@ -326,11 +327,11 @@ export const driverLocationList = async (req, resp) => {
             const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
                 .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
             const end = formattedEndDate+' 19:59:59';
-            // console.log(start, end)
+            
             // const start = moment(start_date, "YYYY-MM-DD").startOf('day').format("YYYY-MM-DD");
             // const end   = moment(end_date, "YYYY-MM-DD").endOf('day').format("YYYY-MM-DD");
             
-            whereQry = ` and created_at >= "${start}" AND created_at <= "${end}" `;
+             whereQry = ` and created_at >= "${start}" AND created_at <= "${end}" `;
         } else {
             whereQry = ` group by DATE(created_at) ` ;
         }

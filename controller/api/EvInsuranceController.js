@@ -39,9 +39,9 @@ export const addInsurance = asyncHandler(async (req, resp) => {
         });
 
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });   
-        if (insurance_expired === 'Yes' && !type_of_insurance) resp.json({ status: 0, code: 422, message: 'Type of insurance is required'});
-        if (insurance_expired === 'Yes' && !insurance_expiry) resp.json({ status: 0, code: 422, message: 'Insurance expiry is required'});
-        if (bank_loan === 'Yes' && !bank_name) return resp.json({ status: 0, code: 422, message: 'Bank name is required'});
+        if (insurance_expired === 'Yes' && !type_of_insurance) resp.json({ status: 0, code: 422, message: ['Type of insurance is required']});
+        if (insurance_expired === 'Yes' && !insurance_expiry) resp.json({ status: 0, code: 422, message: ['Insurance expiry is required']});
+        if (bank_loan === 'Yes' && !bank_name) return resp.json({ status: 0, code: 422, message: ['Bank name is required']});
         
         let fileNames = {vehicle_registration_img: '',driving_licence: '',car_images: '',car_type_image: '',scretch_image: '',emirates_id: ''};
         if (insurance_expired === 'Yes') {

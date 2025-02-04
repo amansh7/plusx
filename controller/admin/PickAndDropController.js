@@ -17,7 +17,7 @@ export const bookingList = async (req, resp) => {
 
         const params = {
             tableName: 'charging_service',
-            columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, price, ${formatDateTimeInQuery(['created_at'])}`,
+            columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, ROUND(price/100, 2) AS price, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'created_at',
             sortOrder: 'DESC',
             page_no,
@@ -87,7 +87,7 @@ export const bookingDetails = async (req, resp) => {
             });
         }
         const result = await db.execute(`SELECT 
-                cs.request_id, cs.name, cs.country_code, cs.contact_no, cs.order_status, cs.pickup_address, cs.price, 
+                cs.request_id, cs.name, cs.country_code, cs.contact_no, cs.order_status, cs.pickup_address, ROUND(cs.price/100, 2) AS price, 
                 cs.parking_number, cs.parking_floor, cs.pickup_latitude, cs.pickup_longitude, 
                 (select concat(rsa_name, ",", country_code, "-", mobile) from rsa where rsa.rsa_id = cs.rsa_id) as rsa_data,
                 (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = cs.vehicle_id) as vehicle_data,

@@ -64,7 +64,7 @@ export const pickAndDropInvoice = asyncHandler(async (req, resp) => {
 
 export const portableChargerInvoice = asyncHandler(async (req, resp) => {
     const {rider_id, request_id, payment_intent_id } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"], payment_intent_id: ["required"] }); // 
+    const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], request_id: ["required"]}); //  , payment_intent_id: ["required"] 
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const invoiceId = request_id.replace('PCB', 'INVPC');

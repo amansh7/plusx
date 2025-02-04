@@ -55,32 +55,23 @@ export const login = asyncHandler(async (req, resp) => {
 });
 
 export const register = asyncHandler(async (req, resp) => {
-    const { password, country_code, rider_name, rider_email, rider_mobile, country, emirates, vehicle_type, date_of_birth, fcm_token,
-        area, added_from ,vehicle_make='', vehicle_model='', year_manufacture='', vehicle_code='', vehicle_number='', owner_type='', leased_from='', vehicle_specification='',
-        regional_specification='' 
+    const { password, country_code, rider_name, rider_email, rider_mobile, emirates, date_of_birth, fcm_token, added_from,
+        vehicle_type='', area='', country='', vehicle_make='', vehicle_model='', year_manufacture='', vehicle_code='', vehicle_number='', 
+        owner_type='', leased_from='', vehicle_specification='', regional_specification='' 
     } = mergeParam(req);
     
     let validationRules = {
         password: ["required", "password"], 
-        country_code: ["required"],
-        rider_name: ["required"],
         rider_email: ["required", "email"],
-        rider_mobile: ["required"],
-        country: ["required"],
+        rider_name: ["required"],
         emirates: ["required"],
-        date_of_birth: ["required"], 
-        vehicle_type: ["required"],
         fcm_token: ["required"],
+        country_code: ["required"],
+        rider_mobile: ["required"],
+        // country: ["required"],
+        // date_of_birth: ["required"], 
+        // vehicle_type: ["required"],
     };
-    if (vehicle_type && vehicle_type != "None") {  // None
-        validationRules = {
-            ...validationRules,
-            vehicle_make: ["required"],
-            vehicle_model: ["required"],
-            year_manufacture: ["required"],
-            owner_type: ["required"],
-        };
-    }
 
     const { isValid, errors } = validateFields(mergeParam(req), validationRules);
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
@@ -108,30 +99,31 @@ export const register = asyncHandler(async (req, resp) => {
     
     const hashedPswd = await bcrypt.hash(password, 10);
     const accessToken = crypto.randomBytes(12).toString('hex');
+    const fDateOfBirth = date_of_birth ? moment(date_of_birth, 'DD-MM-YYYY').format('YYYY-MM-DD') : '';
     const rider = await insertRecord('riders', [
         'rider_name', 'rider_mobile', 'rider_email', 'password', 'country_code', 'country', 'emirates', 'area', 'vehicle_type', 'access_token', 'status', 'fcm_token', 
         'date_of_birth', 'added_from' 
     ],[
-        rider_name, rider_mobile, rider_email, hashedPswd, country_code, country, emirates, area || '', vehicle_type, accessToken, 0, fcm_token,
-        moment('18-10-2006', 'DD-MM-YYYY').format('YYYY-MM-DD'), added_from || 'Android'
+        rider_name, rider_mobile, rider_email, hashedPswd, country_code, country, emirates, area, vehicle_type, accessToken, 0, fcm_token, 
+        fDateOfBirth, added_from || 'Android'
     ]);
     
     if(!rider) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true});
 
     const riderId = 'ER' + String(rider.insertId).padStart(4, '0');
-    const vehicleId = 'RDV' + generateUniqueId({length:13});
     await db.execute('UPDATE riders SET rider_id = ? WHERE id = ?', [riderId, rider.insertId]);
-
-    if (vehicle_type && vehicle_type != "None") { 
-        const vehicle = await insertRecord('riders_vehicles', [
-            'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 
-            'vehicle_specification', 'regional_specification', 'emirates'
-        ],[
-            vehicleId, riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, 
-            vehicle_specification, regional_specification, emirates
-        ]); 
-        if(vehicle.affectedRows == 0) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
-    }
+    
+    // const vehicleId = 'RDV' + generateUniqueId({length:13});
+    // if (vehicle_type && vehicle_type != "None") { 
+    //     const vehicle = await insertRecord('riders_vehicles', [
+    //         'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 
+    //         'vehicle_specification', 'regional_specification', 'emirates'
+    //     ],[
+    //         vehicleId, riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, 
+    //         vehicle_specification, regional_specification, emirates
+    //     ]); 
+    //     if(vehicle.affectedRows == 0) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
+    // }
     
     const result = {
         image_url: `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
@@ -150,7 +142,7 @@ export const register = asyncHandler(async (req, resp) => {
 
 export const forgotPassword = asyncHandler(async (req, resp) => {
     const { email } = mergeParam(req);
-    if (!email) return resp.status(400).json({ status: 0, code: 405, error: true, message: 'Email is required' });
+    if (!email) return resp.status(400).json({ status: 0, code: 405, error: true, message: ['Email is required'] });
     const [[rider]] = await db.execute('SELECT rider_name FROM riders WHERE rider_email=?', [email]);
     
     if(!rider){
@@ -272,7 +264,7 @@ export const verifyOTP = asyncHandler(async (req, resp) => {
 
 export const logout = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
-    if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+    if (!rider_id) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"] });
     
     const rider = queryDB(`SELECT EXISTS (SELECT 1 FROM riders WHERE rider_id = ?) AS rider_exists`, [rider_id]);
     if(!rider) return resp.json({status:0, code:400, message: 'Rider ID Invalid!'});
@@ -316,7 +308,7 @@ export const updatePassword = asyncHandler(async (req, resp) => {
 /* Rider Info */
 export const home = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
-    if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+    if (!rider_id) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"] });
     
     const riderQuery = `SELECT rider_id, rider_name, 
         (SELECT COUNT(*) FROM notifications AS n WHERE n.panel_to = 'Rider' AND n.receive_id = rider_id AND status = '0') AS notification_count
@@ -371,7 +363,7 @@ export const home = asyncHandler(async (req, resp) => {
 
 export const getRiderData = asyncHandler(async(req, resp) => {
     const {rider_id} = mergeParam(req);
-    if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+    if (!rider_id) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"] });
     
     const rider = await queryDB(`SELECT *, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['date_of_birth'])} FROM riders WHERE rider_id=?`, [rider_id]);
     rider.image_url = `${req.protocol}://${req.get('host')}/uploads/rider_profile/`;
@@ -426,7 +418,7 @@ export const updateProfile = asyncHandler(async (req, resp) => {
 
 export const deleteImg = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
-    if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+    if (!rider_id) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"] });
     
     const rider = await queryDB(`SELECT profile_img FROM riders WHERE rider_id = ?`, [rider_id]);
     if(!rider) return resp.json({status:0, code:400, message: 'Rider ID Invalid!'});
@@ -449,7 +441,7 @@ export const deleteImg = asyncHandler(async (req, resp) => {
 export const deleteAccount = asyncHandler(async (req, resp) => {
     const {rider_id} = mergeParam(req);
     const riderId = rider_id;
-    if (!riderId) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+    if (!riderId) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"] });
 
     const connection = await db.getConnection();
 
@@ -637,7 +629,7 @@ export const deleteRiderAddress = asyncHandler(async (req, resp) => {
 export const riderVehicleList = asyncHandler(async (req, resp) => {
     try{
         const { rider_id, vehicle_type, owner_type } = mergeParam(req);
-        if (!rider_id) return resp.json({ status: 0, code: 422, message: "Rider Id is required" });
+        if (!rider_id) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"]});
         
         let query = ` SELECT vehicle_id, vehicle_type, vehicle_number, vehicle_code, year_manufacture, owner, vehicle_model, vehicle_make, leased_from, owner_type, 
             vehicle_specification, regional_specification, emirates FROM riders_vehicles WHERE rider_id = ?

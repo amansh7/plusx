@@ -6,8 +6,8 @@ import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js'
 import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
 import { shopList, shopDetail } from '../controller/api/ShopController.js';
-import { offerList, offerDetail } from '../controller/api/OfferController.js';
-import { redeemCoupon, createIntent, createPortableChargerSubscription, createAutoDebit, addCardToCustomer, customerCardsList, removeCard, autoPay, findCustomerByEmail } from '../controller/PaymentController.js';
+import { offerList, offerDetail, offerHistory } from '../controller/api/OfferController.js';
+import { redeemCoupon, createIntent, createPortableChargerSubscription, createAutoDebit, addCardToCustomer, customerCardsList, removeCard, autoPay } from '../controller/PaymentController.js';
 import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
@@ -194,6 +194,7 @@ const authzAndAuthRoutes = [
     /* Offer Routes */
     { method: 'get', path: '/offer-list',   handler: offerList },
     { method: 'get', path: '/offer-detail', handler: offerDetail },
+    { method: 'post', path: '/create-offer-history', handler: offerHistory },
 
     /* Service Shop */
     { method: 'get', path: '/service-shop-list',    handler: shopList },

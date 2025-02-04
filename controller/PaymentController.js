@@ -22,25 +22,37 @@ export const createIntent = async (req, resp) => {
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     try{
-        const user = await findCustomerByEmail(rider_email);
-        let customerId;
+        // const user = await findCustomerByEmail(rider_email);
+        // let customerId;
+        // if(user.success){
+        //     customerId = user.customer_id;
+        // }else{
+        //     const customer = await stripe.customers.create({
+        //         name: rider_name,
+        //         address: {
+        //             line1: "476 Yudyog Vihar Phase - V",
+        //             postal_code: "122016",
+        //             city: "Gurugram",
+        //             state: "Haryana",
+        //             country: "IND",
+        //         },
+        //         email: rider_email,
+        //     });
+        //     customerId = customer.id;
+        // }
         
-        if(user.success){
-            customerId = user.customer_id;
-        }else{
-            const customer = await stripe.customers.create({
-                name: rider_name,
-                address: {
-                    line1: "476 Yudyog Vihar Phase - V",
-                    postal_code: "122016",
-                    city: "Gurugram",
-                    state: "Haryana",
-                    country: "IND",
-                },
-                email: rider_email,
-            });
-            customerId = customer.id;
-        }
+        const customer = await stripe.customers.create({
+            name: rider_name,
+            address: {
+                line1: "476 Yudyog Vihar Phase - V",
+                postal_code: "122016",
+                city: "Gurugram",
+                state: "Haryana",
+                country: "IND",
+            },
+            email: rider_email,
+        });
+        let customerId = customer.id;
         
         const ephemeralKey = await stripe.ephemeralKeys.create(
             { customer: customerId },
@@ -95,8 +107,8 @@ export const createAutoDebit = async (customerId, paymentMethodId, totalAmount) 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: totalAmount < 200 ? 200 : Math.floor(totalAmount),
             currency: 'aed',
-            customer: customer_id,
-            payment_method: payment_method_id,
+            customer: customerId,
+            payment_method: paymentMethodId,
             off_session: true,
             confirm: true,
         });
@@ -207,7 +219,7 @@ export const customerCardsList = async (req, resp) => {
 export const removeCard = async (req, resp) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const { payment_method_id } = req.body;
-    if (!payment_method_id) return resp.status(400).json({ status: 0, code: 422, message: 'Payment Method ID is required.'});
+    if (!payment_method_id) return resp.status(400).json({ status: 0, code: 422, message: ['Payment Method ID is required.']});
     
     try {
         const detachedPaymentMethod = await stripe.paymentMethods.detach(payment_method_id);
@@ -215,7 +227,7 @@ export const removeCard = async (req, resp) => {
         return resp.json({
             status: 1,
             code: 200,
-            message: 'Payment Method removed successfully.',
+            message: ['Payment Method removed successfully.'],
             paymentMethodId: detachedPaymentMethod.id,
         });
     } catch (error) {
@@ -224,7 +236,7 @@ export const removeCard = async (req, resp) => {
         return resp.status(500).json({
             status: 0,
             code: 422,
-            message: 'Error removing payment method.',
+            message: ['Error removing payment method.'],
             error: error.message,
         });
     }
@@ -401,50 +413,24 @@ export const createPortableChargerSubscription = async (req, resp) => {
 };
 
 /* Helper function to retrieve Stripe customer ID using the provided email */
-export const findCustomerByEmail = async (req, resp) => {
-
-    const pod_id = 'EVP-1124001' ;
-    const [chargerDetails] = await db.execute(`
-        SELECT 
-            battery_id, capacity, rssi, cells, temp1, temp2, temp3, current, voltage, percentage, charge_cycle, latitude, longitude, cells 
-        FROM 
-            pod_device_battery 
-        WHERE 
-            pod_id = ?`, 
-        [pod_id]
-    );
-    const sum = chargerDetails.map( obj  => (obj.percentage || 0).toFixed(2) ) ;
-    // 70
-
-    const updt = await updateRecord('portable_charger_history', {pod_data: JSON.stringify(chargerDetails)  }, ['id'], [70] );
-
-    // const insert = await db.execute(
-    //     'INSERT INTO portable_charger_history (booking_id, rider_id, order_status, rsa_id, latitude, longitude, pod_data) VALUES (?, ?, "CC", ?, ?, ?, ?)',
-    //     [booking_id, checkOrder.rider_id, rsa_id, latitude, longitude, podData]
-    // );
-    return resp.send({
-        sum  : sum.join(','),
-        updt,
-        data : JSON.stringify(chargerDetails),
-    });
+export const findCustomerByEmail = async (email) => {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    if (!email) return { status: 0, message: ['Email is required.']};
     
-    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    // if (!email) return resp.status(400).json({ status: 0, message: 'Email is required.'});
-    
-    // try {
-    //     const customers = await stripe.customers.list({ email });
-    //     if (customers.data.length > 0) {
-    //         return {
-    //             success      : true,
-    //             customer_id  : customers.data[0].id, 
-    //             name         : customers.data[0].name
-    //         };
-    //     } else {
-    //         return {success: false, message: 'No customer found with this email'};
-    //     }
-    // } catch (error) {
-    //     return {success: false, message: error.message};
-    // }
+    try {
+        const customers = await stripe.customers.list({ email });
+        if (customers.data.length > 0) {
+            return {
+                success      : true,
+                customer_id  : customers.data[0].id,
+                name         : customers.data[0].name
+            };
+        } else {
+            return {success: false, message: 'No customer found with this email'};
+        }
+    } catch (error) {
+        return {success: false, message: error.message};
+    }
 };
 
 /* Helper to retrive total amount from PCB or CS */
