@@ -231,13 +231,15 @@ export const rsaHome = asyncHandler(async (req, resp) => {
 
     const [podAssign] = await db.execute(`
         SELECT 
-           portable_charger_booking_assign.status AS assign_status,
-           pb.booking_id, pb.address, pb.latitude, pb.longitude, pb.status,
-           CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
-           ${formatDateTimeInQuery(['pb.created_at'])}, 
-           (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
-           (SELECT guideline FROM portable_charger_history pch WHERE pch.rider_id = pb.rider_id AND pch.order_status = 'CS' LIMIT 1) AS guideline,
-           DATE_FORMAT(portable_charger_booking_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time
+            portable_charger_booking_assign.status AS assign_status,
+            pb.booking_id, pb.address, pb.latitude, pb.longitude, pb.status,
+            CONCAT(pb.user_name, ",", pb.country_code, "-", pb.contact_no) AS riderDetails,
+            ${formatDateTimeInQuery(['pb.created_at'])}, 
+            (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = pb.vehicle_id) AS vehicle_data,
+            COALESCE(
+                (SELECT guideline FROM portable_charger_history pch WHERE pch.rider_id = pb.rider_id AND pch.order_status = 'CS' LIMIT 1),''
+            ) AS guideline,
+            DATE_FORMAT(portable_charger_booking_assign.slot_date_time, '%Y-%m-%d %H:%i:%s') AS slot_date_time
         FROM portable_charger_booking_assign
         LEFT JOIN portable_charger_booking AS pb ON pb.booking_id = portable_charger_booking_assign.order_id
         WHERE portable_charger_booking_assign.rsa_id = ?
@@ -299,11 +301,11 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
             FROM 
                 portable_charger_booking AS pcb
             LEFT JOIN 
-                portable_charger_history AS pch ON pcb.booking_id = pch.booking_id
+                portable_charger_history AS pch ON pcb.booking_id = pch.booking_id AND pch.order_status = 'PU'
             LEFT JOIN
                 riders_vehicles AS rv ON pcb.vehicle_id = rv.vehicle_id
             WHERE 
-                pcb.rsa_id = ? AND pcb.status = 'PU'
+                pcb.rsa_id = ? AND pcb.status = 'RO'
             GROUP BY 
                 pcb.booking_id
             ORDER BY 

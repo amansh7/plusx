@@ -540,6 +540,7 @@ const acceptBooking = async (req, resp) => {
         await createNotification(title, message, 'Portable Charging', 'Rider', 'RSA', rsa_id, checkOrder.rider_id, href);
         await pushNotification(checkOrder.fcm_token, title, message, 'RDRFCM', href);
 
+        await db.execute('UPDATE portable_charger_booking_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [booking_id, rsa_id]);
         const insert = await insertRecord('portable_charger_history', [
             'booking_id', 'rider_id', 'order_status', 'rsa_id', 'latitude', 'longitude'
         ],[
@@ -547,8 +548,7 @@ const acceptBooking = async (req, resp) => {
         ]);
         if(insert.affectedRows == 0) return resp.json({ message: ['Oops! Something went wrong! Please Try Again'], status: 0, code: 200 });
 
-        await db.execute('UPDATE rsa SET running_order = running_order + 1 WHERE rsa_id = ?', [rsa_id]);
-        await db.execute('UPDATE portable_charger_booking_assign SET status = 1 WHERE order_id = ? AND rsa_id = ?', [booking_id, rsa_id]);
+        // await db.execute('UPDATE rsa SET running_order = running_order + 1 WHERE rsa_id = ?', [rsa_id]);
 
         return resp.json({ message: ['POD Booking accepted successfully!'], status: 1, code: 200 });
     } else {
