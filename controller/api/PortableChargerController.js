@@ -264,8 +264,8 @@ export const chargerBookingList = asyncHandler(async (req, resp) => {
 
     const limit           = 10;
     const start           = ( page_no * limit ) - limit;
-    const statusCondition = (history && history == 1) ? `status IN (?, ?)` : `status NOT IN (?, ?)`;
-    const statusParams    = ['PU', 'C'];
+    const statusCondition = (history && history == 1) ? `status IN (?, ?, ?)` : `status NOT IN (?, ?, ?)`;
+    const statusParams    = ['PU', 'C', 'RO'];
 
     const totalQuery = `SELECT COUNT(*) AS total FROM portable_charger_booking WHERE rider_id = ? AND ${statusCondition}`;
     const [totalRows] = await db.execute(totalQuery, [rider_id, ...statusParams]);
@@ -294,13 +294,23 @@ export const chargerBookingDetail = asyncHandler(async (req, resp) => {
     const { isValid, errors } = validateFields(mergeParam(req), {rider_id: ["required"], booking_id: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const booking = await queryDB(`SELECT portable_charger_booking.*, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id limit 1) as vehicle_data, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
+    const booking = await queryDB(`SELECT portable_charger_booking.*, ROUND(portable_charger_booking.service_price / 100, 2) AS service_price, (select concat(vehicle_make, "-", vehicle_model) from riders_vehicles as rv where rv.vehicle_id = portable_charger_booking.vehicle_id limit 1) as vehicle_data, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, ${formatDateInQuery(['slot_date'])} FROM portable_charger_booking WHERE rider_id = ? AND booking_id = ? LIMIT 1`, [rider_id, booking_id]);
 
-    if (booking && booking.status == 'PU') {
+    if (booking && ( booking.status == 'PU' || booking.status == 'RO' ) ) {
         const invoice_id = booking.booking_id.replace('PCB', 'INVPC');
         booking.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
     }
-    const [history] = await db.execute(`SELECT *, ROUND(portable_charger_booking.service_price / 100, 2) AS service_price FROM portable_charger_booking WHERE booking_id = ?`, [booking_id]);
+    // const [history] = await db.execute(`SELECT * FROM portable_charger_history WHERE booking_id = ?`, [booking_id]);
+    const [history] = await db.execute(`
+        SELECT 
+            order_status, cancel_by, cancel_reason as reason, rsa_id, ${formatDateTimeInQuery(['created_at'])}, image, remarks,   
+            (select rsa.rsa_name from rsa where rsa.rsa_id = portable_charger_history.rsa_id) as rsa_name
+        FROM 
+            portable_charger_history 
+        WHERE 
+            booking_id = ?`, 
+        [booking_id]
+    );
     return resp.json({
         message         : ["Charging Installation Service fetched successfully!"],
         data            : booking,
@@ -796,9 +806,9 @@ const chargerPickedUp = async (req, resp) => {
                 currency    : 'AED',
                 kw_dewa_amt : 0, //bookingData.data.kw_dewa_amt,
                 kw_cpo_amt  : 0, //bookingData.data.kw_cpo_amt,
-                delv_charge : 0, //bookingData.data.delv_charge,
-                t_vat_amt   : 0, //bookingData.data.t_vat_amt,
-                total_amt   : 0 //bookingData.data.kw_dewa_amt + bookingData.data.kw_cpo_amt + bookingData.data.delv_charge + bookingData.data.t_vat_amt
+                delv_charge : bookingData.data.delv_charge,
+                t_vat_amt   : Math.floor((bookingData.data.delv_charge) * 5) / 100, //bookingData.data.t_vat_amt,
+                total_amt   : bookingData.data.kw_dewa_amt + bookingData.data.kw_cpo_amt + bookingData.data.delv_charge + bookingData.data.t_vat_amt
             };
             const invoiceData  = { data, numberToWords, formatNumber  };
             const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
@@ -862,7 +872,7 @@ const reachedOffice = async (req, resp) => {
 
         await updateRecord('portable_charger_booking', {status: 'RO', rsa_id}, ['booking_id'], [booking_id], conn );
         await conn.execute(`DELETE FROM portable_charger_booking_assign WHERE rsa_id = ? and order_id = ?`, [rsa_id, booking_id]);
-        await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
+        // await conn.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [rsa_id]);
 
         if(checkOrder.pod_id) {
             await updateRecord('pod_devices', { latitude, longitude}, ['pod_id'], [checkOrder.pod_id] );
@@ -926,7 +936,7 @@ export const userCancelPCBooking = asyncHandler(async (req, resp) => {
 
     if(checkOrder.rsa_id) {
         await db.execute(`DELETE FROM portable_charger_booking_assign WHERE order_id=? AND rider_id=?`, [booking_id, rider_id]);
-        await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
+        // await db.execute('UPDATE rsa SET running_order = running_order - 1 WHERE rsa_id = ?', [checkOrder.rsa_id]);
     }
 
     /* const html = `<html>
@@ -1028,5 +1038,3 @@ const getPodBatteryData = async (pod_id) => {
 
 
 }
-
-

@@ -296,6 +296,6 @@ router.post('/auto-pay', autoPay);
 router.post('/add-card', addCardToCustomer);
 router.post('/remove-card', removeCard);
 router.post('/list-card', customerCardsList);
-router.post('/get-stripe-cust', findCustomerByEmail);
+// router.post('/get-stripe-cust', findCustomerByEmail);
 
 export default router;

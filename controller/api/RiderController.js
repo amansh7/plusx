@@ -342,7 +342,7 @@ export const home = asyncHandler(async (req, resp) => {
     
     const podBookingData = await queryDB(
         `SELECT booking_id AS request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = portable_charger_booking.rsa_id) AS rsaDetails, created_at 
-        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status NOT IN ('CNF', 'A', 'PU', 'C') ORDER BY id DESC LIMIT 1
+        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status NOT IN ('CNF', 'A', 'PU', 'C', 'RO') ORDER BY id DESC LIMIT 1
     `, [rider_id]);
 
     if (podBookingData) podBookingData.eta_time = '11 Min.';
@@ -354,7 +354,7 @@ export const home = asyncHandler(async (req, resp) => {
         pick_drop_order           : pickDropData || null,
         pod_booking               : podBookingData || null,
         roadside_assistance_price : 15,
-        portable_price            : 90,
+        portable_price            : 30,
         pick_drop_price           : 49,
         status                    : 1,
         code                      : 200

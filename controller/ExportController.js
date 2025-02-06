@@ -6,7 +6,7 @@ import { formatDateInQuery, mergeParam, formatDateTimeInQuery } from "../utils.j
 export const donwloadPodBookingList = async (req, resp) => {
     try{
         const { status, start_date, end_date, search_text='', scheduled_start_date, scheduled_end_date } = mergeParam(req);
-        
+        // address
         let query = `
             SELECT
                 ${formatDateInQuery(['created_at'])},
@@ -17,7 +17,7 @@ export const donwloadPodBookingList = async (req, resp) => {
                 user_name,
                 (select rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id) AS email,
                 CONCAT(country_code,'-',contact_no) AS mobile,
-                address,
+                address, concat('https://www.google.com/maps?q=','',latitude,',',longitude) as map_address, 
                 (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) AS rsa_name,
                 (select concat(country_code,'-',mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) AS rsa_phone,
                 CASE
@@ -29,6 +29,7 @@ export const donwloadPodBookingList = async (req, resp) => {
                     WHEN status = 'PU'  THEN 'Picked Up'
                     WHEN status = 'C'   THEN 'Cancel'
                     WHEN status = 'ER'  THEN 'Enroute'
+                    WHEN status = 'RO'  THEN 'POD Reached at Office'
                 END AS status
             FROM
                 portable_charger_booking  
@@ -81,10 +82,11 @@ export const donwloadPodBookingList = async (req, resp) => {
             { header: 'Driver Name',            key: 'rsa_name'           },
             { header: 'Driver Contact No',      key: 'rsa_phone'          },
             { header: 'Status',                 key: 'status'             },
+            { header: 'Map Link',               key: 'map_address'        },
         ];
-    
+        worksheet.getColumn(1).numFmt = 'dd-mmm-yyyy';
         rows.forEach((item) => {
-            worksheet.addRow(item);
+            worksheet.addRow(item); 
         });
         resp.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         resp.setHeader('Content-Disposition', 'attachment; filename=Portable-Charger-Booking-List.xlsx');
