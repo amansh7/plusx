@@ -206,7 +206,7 @@ export const rsaHome = asyncHandler(async (req, resp) => {
             (SELECT COUNT(*) FROM charging_service_rejected WHERE rsa_id = ?) AS valet_rej,
             (SELECT COUNT(*) FROM portable_charger_booking_rejected WHERE rsa_id = ?) AS pod_rejected,
             (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status IN ("WC", "C")) AS valet_completed,
-            (SELECT COUNT(*) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C")) AS pod_completed,
+            (SELECT COUNT(*) FROM portable_charger_booking WHERE rsa_id = ? AND status IN ("PU", "C", "RO")) AS pod_completed,
             (SELECT COUNT(*) FROM portable_charger_booking WHERE rsa_id = ? AND status = "C") AS pod_cancelled,
             (SELECT COUNT(*) FROM charging_service WHERE rsa_id = ? AND order_status = "C") AS valet_cancelled
         FROM rsa 

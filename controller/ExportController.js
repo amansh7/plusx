@@ -12,7 +12,7 @@ export const donwloadPodBookingList = async (req, resp) => {
                 ${formatDateInQuery(['created_at'])},
                 booking_id,
                 service_type,
-                service_price,
+                ROUND(service_price/100, 2) AS service_price,
                 CONCAT(slot_date,' ',slot_time) AS schedule_date_time,
                 user_name,
                 (select rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id) AS email,
@@ -20,6 +20,7 @@ export const donwloadPodBookingList = async (req, resp) => {
                 address, concat('https://www.google.com/maps?q=','',latitude,',',longitude) as map_address, 
                 (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) AS rsa_name,
                 (select concat(country_code,'-',mobile) from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) AS rsa_phone,
+                (SELECT CONCAT(vehicle_make, "-", vehicle_model) FROM riders_vehicles WHERE vehicle_id = portable_charger_booking.vehicle_id) AS vehicle_data,
                 CASE
                     WHEN status = 'CNF' THEN 'Booking Confirmed'
                     WHEN status = 'A'   THEN 'Assigned'
@@ -83,8 +84,9 @@ export const donwloadPodBookingList = async (req, resp) => {
             { header: 'Driver Contact No',      key: 'rsa_phone'          },
             { header: 'Status',                 key: 'status'             },
             { header: 'Map Link',               key: 'map_address'        },
+            { header: 'Vehicle Name',           key: 'vehicle_data'       },
         ];
-        worksheet.getColumn(1).numFmt = 'dd-mmm-yyyy';
+        worksheet.getColumn(1).numFmt = 'dd-mmm-yyyy';  // 
         rows.forEach((item) => {
             worksheet.addRow(item); 
         });

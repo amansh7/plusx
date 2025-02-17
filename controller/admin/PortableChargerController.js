@@ -195,8 +195,8 @@ export const chargerBookingList = async (req, resp) => {
             columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
             (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_name, 
                 ${formatDateInQuery(['slot_date'])}, concat(slot_date, " ", slot_time) as slot_time, ${formatDateTimeInQuery(['created_at'])}`,
-            sortColumn: 'created_at',
-            sortOrder: 'DESC',
+            sortColumn: 'slot_date DESC, slot_time ASC',
+            sortOrder: '',
             page_no,
             limit: 10,
             liveSearchFields : ['booking_id', 'user_name', 'service_name'],
@@ -527,7 +527,8 @@ export const invoiceDetails = async (req, resp) => {
         SELECT 
             invoice_id, invoice_date, currency, 
             pcb.user_name, pcb.booking_id, 
-            pcb.start_charging_level, pcb.end_charging_level
+            pcb.start_charging_level, pcb.end_charging_level, 
+            (SELECT coupan_percentage FROM coupon_usage WHERE booking_id = pci.request_id) AS discount
         FROM 
             portable_charger_invoice AS pci 
         LEFT JOIN 
@@ -537,18 +538,29 @@ export const invoiceDetails = async (req, resp) => {
 
     data.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
 
-    const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
-        data[key] ? data[key].split(',').map(Number) : []
-    );
-    const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
+    // const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
+    //     data[key] ? data[key].split(',').map(Number) : []
+    // );
+    // const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
     
-    data.kw           = chargingLevelSum * 0.25;
-    data.kw_dewa_amt  = data.kw * 0.44;
-    data.kw_cpo_amt   = data.kw * 0.26;
-    data.delv_charge  = 30 //when start accepting payment
-    data.t_vat_amt    = Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
-    data.price    = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
+    data.kw           = 0; //chargingLevelSum * 0.25;
+    data.kw_dewa_amt  = 0; //data.kw * 0.44;
+    data.kw_cpo_amt   = 0; //data.kw * 0.26;
+    data.delv_charge  = 30; //when start accepting payment
+    data.t_vat_amt    = Math.floor(( data.delv_charge ) * 5) / 100; //Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
+    data.price     = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
+    data.dis_price = 0;
+    
+    if(data.discount > 0){
+        const dis_price = ( (data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge ) * data.discount ) /100
+        const total_amt = (data.price - dis_price) ? (data.price - dis_price) : 0;
 
+        data.dis_price  = dis_price ;
+        data.t_vat_amt  = Math.floor(( total_amt ) * 5) / 100; 
+        data.price      = total_amt + ( Math.floor(( total_amt ) * 5) / 100 );
+    } else {
+        data.price      = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
+    }
     return resp.json({
         message : ["Portable Charger Invoice Details fetched successfully!"],
         data    : data,
@@ -573,7 +585,7 @@ export const slotList = async (req, resp) => {
             tableName  : 'portable_charger_slot',
             columns    : `slot_id, slot_date, start_time, end_time, booking_limit, status, 
 
-                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C")) AS slot_booking_count
+                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot_time=portable_charger_slot.start_time AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C", "RO")) AS slot_booking_count
             `,
             sortColumn : 'slot_date DESC, start_time ASC',
             sortOrder  : '',
@@ -711,7 +723,7 @@ export const editSlot = asyncHandler(async (req, resp) => {
     }
 
     let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD");
-    let errMsg = [];
+    let errMsg    = [];
 
     //  Fetch existing slots for the given date
     const [existingSlots] = await db.execute("SELECT slot_id FROM portable_charger_slot WHERE slot_date = ?",[fSlotDate]);

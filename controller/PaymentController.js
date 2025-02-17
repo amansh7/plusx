@@ -441,7 +441,8 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
         const data = await queryDB(`
             SELECT 
                 start_charging_level, end_charging_level, user_name AS rider_name,
-                (select r.rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id limit 1) AS rider_email
+                (select r.rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id limit 1) AS rider_email,
+                (SELECT coupan_percentage FROM coupon_usage WHERE booking_id = portable_charger_booking.booking_id) AS discount
             FROM
                 portable_charger_booking
             WHERE 
@@ -459,7 +460,7 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
             const endLevel = endChargingLevels[index];
             return sum + Math.max(startLevel - endLevel, 0);
         }, 0);
-        console.log('chargingLevelSum', chargingLevelSum);
+        // console.log('chargingLevelSum', chargingLevelSum);
         data.kw           = chargingLevelSum * 0.25;
         data.kw_dewa_amt  = data.kw * 0.44;
         data.kw_cpo_amt   = data.kw * 0.26;

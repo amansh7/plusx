@@ -132,6 +132,14 @@
                                         <td style="font-size: 14px;"></td>
                                         <td style="text-align: center; font-size: 14px;"><%= data.currency %> <%= data.t_vat_amt.toFixed(2) %></td>
                                     </tr>
+                                    <% if (data.dis_price) { %>
+                                    <tr style="border-bottom: 1px solid #5e676f;">
+                                        <td style="font-size: 14px;">Coupon</td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="font-size: 14px;"></td>
+                                        <td style="text-align: center; font-size: 14px;"><%= data.currency %> <%= data.dis_price.toFixed(2) %></td>
+                                    </tr>
+                                    <% } %>
                                 </tbody>
                             </table>
                         </td>

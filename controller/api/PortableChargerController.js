@@ -87,30 +87,30 @@ export const getPcSlotList = asyncHandler(async (req, resp) => {
     query += ` FROM portable_charger_slot WHERE status = ? AND slot_date = ? ORDER BY start_time ASC`;
     // console.log(query)
     const [slot] = await db.execute(query, [1, fSlotDate]);
-    const {is_booking} = await queryDB(`SELECT EXISTS (SELECT 1 FROM portable_charger_booking WHERE slot_date=? AND status NOT IN ("C") AND rider_id=? ) AS is_booking`, [fSlotDate, rider_id]);
+    // const {is_booking} = await queryDB(`SELECT EXISTS (SELECT 1 FROM portable_charger_booking WHERE slot_date=? AND status NOT IN ("C") AND rider_id=? ) AS is_booking`, [fSlotDate, rider_id]);
 
     if(moment(fSlotDate).day() === 0){
         slot.forEach((val) => {
-            val.booking_limit = 0;
+            val.booking_limit      = 0;
             val.slot_booking_count = 0;
         })
     }
-
     return resp.json({ 
         message: "Slot List fetch successfully!",  
         data: slot, 
-        is_booking, 
+        is_booking : 0, 
         status: 1, 
         code: 200, 
-        alert: "To ensure a smooth experience and efficient service, users can make only one booking per day. This helps maintain availability for all. Thank you for your understanding.",
-        alert2: "The slots for the selected date are fully booked. Please select another date to book the POD for your EV."
+        // alert: "To ensure a smooth experience and efficient service, users can make only one booking per day. This helps maintain availability for all. Thank you for your understanding.",
+        alert2: "The slots for the selected date are fully booked. Please select another date to book the POD for your EV.",
+        alert: ""
     });
 });
 
 export const chargerBooking = asyncHandler(async (req, resp) => {
     const { 
         rider_id, charger_id, vehicle_id, service_name, service_type, service_feature, user_name, country_code, contact_no, address, latitude, longitude, 
-        slot_date, slot_time, slot_id, service_price='', coupan_code, user_id
+        slot_date, slot_time, slot_id, service_price='', coupon_code, user_id
     } = mergeParam(req);
 
     const { isValid, errors } = validateFields(mergeParam(req), {
@@ -140,20 +140,24 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
         const fSlotDate = moment(slot_date, 'YYYY-MM-DD').format('YYYY-MM-DD');
         const currDate  = moment().format('YYYY-MM-DD');
 
+        // , (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot_date=? AND status NOT IN ("C") AND rider_id=?) as today_count
+
         const rider = await queryDB(` SELECT fcm_token, rider_name, rider_email,
-                (SELECT MAX(id) FROM portable_charger_booking) AS last_index,
-                (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
-                (SELECT booking_limit FROM portable_charger_slot AS pcs WHERE pcs.slot_id = ?) AS booking_limit,
-                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot=? and pod.slot_date=? and status NOT IN ("PU", "C") ) as slot_booking_count,
-                (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot_date=? AND status NOT IN ("C") AND rider_id=?) as today_count
-            FROM riders AS r
+            (SELECT MAX(id) FROM portable_charger_booking) AS last_index,
+            (SELECT COUNT(id) FROM portable_charger AS pc WHERE pc.charger_id = ?) AS charg_count,
+            (SELECT booking_limit FROM portable_charger_slot AS pcs WHERE pcs.slot_date = ? and pcs.start_time = ?) AS booking_limit,
+            (SELECT COUNT(id) FROM portable_charger_booking as pod where pod.slot_time=? and pod.slot_date=? and status NOT IN ("PU", "C", "RO") ) as slot_booking_count
+        FROM riders AS r
             WHERE r.rider_id = ?
-        `, [charger_id, slot_id, slot_id, fSlotDate, fSlotDate, rider_id, rider_id], conn);
+        `, [charger_id, 
+            fSlotDate, slot_time, 
+            slot_time, fSlotDate, 
+            rider_id], conn);
     
-        const { charg_count, booking_limit, slot_booking_count, today_count } = rider;
+        const { charg_count, booking_limit, slot_booking_count} = rider;  //, today_count 
     
         if (charg_count === 0) return resp.json({ message: "Charger Id invalid!", status: 0, code: 405, error: true });
-        if ( today_count > 0 ) return resp.json({ message: "Note: Only one EV charging booking is allowed per day. Plan your charging accordingly!", status: 0, code: 405, error: true });
+        // if ( today_count > 0 ) return resp.json({ message: "Note: Only one EV charging booking is allowed per day. Plan your charging accordingly!", status: 0, code: 405, error: true });
         if ( slot_booking_count >= booking_limit ) return resp.json({ message: "Booking Slot Full!, please select another slot", status: 0, code: 405, error: true });
     
         if (service_type.toLowerCase() === "get monthly subscription") {
@@ -180,8 +184,11 @@ export const chargerBooking = asyncHandler(async (req, resp) => {
     
         if(insert.affectedRows == 0) return resp.json({status:0, code:200, message: ["Oops! Something went wrong. Please try again."]});
     
-        if(coupan_code){
-            await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id'], [coupan_code, user_id, bookingId], conn);
+        if(coupon_code){
+            const coupon = await queryDB(`SELECT coupan_percentage FROM coupon WHERE coupan_code = ? LIMIT 1 `, [ coupon_code ]); 
+
+            let coupan_percentage = coupon.coupan_percentage ;
+            await insertRecord('coupon_usage', ['coupan_code', 'user_id', 'booking_id', 'coupan_percentage'], [coupon_code, rider_id, bookingId, coupan_percentage], conn);
         }
         // await conn.execute('UPDATE portable_charger_slot SET booking_limit = booking_limit - 1 WHERE slot_id = ?', [slot_id]);
         
@@ -647,6 +654,7 @@ const reachedLocation = async (req, resp) => {
 };
 const chargingStart = async (req, resp) => {
     const { booking_id, rsa_id, latitude, longitude, pod_id='', guideline='', remark='' } = mergeParam(req);
+
     if (!req.files || !req.files['image']) return resp.status(405).json({ message: ["Vehicle Image is required"], status: 0, code: 405, error: true });
 
     const checkOrder = await queryDB(`
@@ -659,7 +667,7 @@ const chargingStart = async (req, resp) => {
         LIMIT 1
     `,[booking_id, rsa_id]);
     
-    const images = req.files['image'] ? req.files['image'].map(file => file.filename).join('*') : '';
+    const images = ''; //req.files['image'] ? req.files['image'].map(file => file.filename).join('*') : '';
 
     if (!checkOrder) {
         return resp.json({ message: [`Sorry no booking found with this booking id ${booking_id}`], status: 0, code: 404 });
@@ -808,8 +816,19 @@ const chargerPickedUp = async (req, resp) => {
                 kw_cpo_amt  : 0, //bookingData.data.kw_cpo_amt,
                 delv_charge : bookingData.data.delv_charge,
                 t_vat_amt   : Math.floor((bookingData.data.delv_charge) * 5) / 100, //bookingData.data.t_vat_amt,
-                total_amt   : bookingData.data.kw_dewa_amt + bookingData.data.kw_cpo_amt + bookingData.data.delv_charge + bookingData.data.t_vat_amt
+                total_amt   : bookingData.data.kw_dewa_amt + bookingData.data.kw_cpo_amt + bookingData.data.delv_charge,
+                dis_price   : 0
             };
+            if( bookingData.data.discount > 0 ) {
+                const dis_price = ( data.delv_charge  * bookingData.data.discount ) /100;
+                const total_amt  = (data.total_amt - dis_price) ? (data.total_amt - dis_price) : 0;
+                
+                data.dis_price  = dis_price ;
+                data.t_vat_amt  = Math.floor(( total_amt ) * 5) / 100;
+                data.total_amt  = total_amt + ( Math.floor(( total_amt ) * 5) / 100 );
+            } else {
+                data.total_amt  = bookingData.data.kw_dewa_amt + bookingData.data.kw_cpo_amt + bookingData.data.delv_charge + bookingData.data.t_vat_amt;
+            }
             const invoiceData  = { data, numberToWords, formatNumber  };
             const templatePath = path.join(__dirname, '../../views/mail/portable-charger-invoice.ejs');
             const filename     = `${invoiceId}-invoice.pdf`;

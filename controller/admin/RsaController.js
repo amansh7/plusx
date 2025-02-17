@@ -101,18 +101,21 @@ export const driverBookingList = async (req, resp) => {
         });
         if (!isValid) return resp.json({ status : 0, code : 422, message : errors });
 
-        const tableName   = (driverType === 'Valet Charging') ? 'charging_service' : 'portable_charger_booking';
+        const tableName     = (driverType === 'Valet Charging') ? 'charging_service' : 'portable_charger_booking';
         const liveSearchFields = ['booking_id', 'user_name' ];
-        var selectColumns = `booking_id, user_name, country_code, contact_no, status,  ${formatDateInQuery(['slot_date'])}, ${formatDateInQuery(['created_at'])}`;
+        var sortColumn         = 'slot_date DESC, slot_time ASC';
+
+        var selectColumns = `booking_id, user_name, country_code, contact_no, status, ${formatDateInQuery(['slot_date'])}, concat(slot_date, " ", slot_time) as slot_time, ${formatDateInQuery(['created_at'])}`;
 
         if (driverType === 'Valet Charging') {
+            sortColumn    = 'slot_date DESC ';
             selectColumns = `request_id as booking_id, name as user_name, order_status as status, ${formatDateInQuery(['slot_date_time'])} as slot_date, ${formatDateInQuery(['created_at'])}`
         }
         const params = {
             tableName        : tableName,
             columns          : selectColumns,
-            sortColumn       : 'created_at',
-            sortOrder        : 'DESC',
+            sortColumn       : sortColumn,
+            sortOrder        : '',
             page_no,
             limit            : 10,
             liveSearchFields : liveSearchFields,
