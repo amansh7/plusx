@@ -1,47 +1,6 @@
 import { getPaginatedData, queryDB } from '../../dbUtils.js';
 import { asyncHandler, formatDateTimeInQuery } from '../../utils.js';
 
-// export const sellVehicleList = asyncHandler(async (req, resp) => {
-//     const { search_text, page_no } = req.body;
-
-//     const result = await getPaginatedData({
-//         tableName: 'vehicle_sell',
-//         columns: `
-//             sell_id, 
-//             region, 
-//             milage, 
-//             price, 
-//             body_type, 
-//             engine_capacity, 
-//             car_images, 
-//             vehicle_id,
-//             (select concat(vehicle_model, "-", vehicle_make) 
-//              from riders_vehicles as rv 
-//              where rv.vehicle_id = vehicle_sell.vehicle_id) as vehicle_data,
-//             (select concat(rider_name, ",", country_code, "-", rider_mobile) 
-//              from riders as r 
-//              where r.rider_id = vehicle_sell.rider_id) as rider_data
-//         `,
-//         liveSearchFields: ['body_type','rider_name' ],
-//         liveSearchTexts: [search_text, search_text],
-//         sortColumn: 'id',
-//         sortOrder: 'DESC',
-//         page_no,
-//         limit: 10,
-//     });
-
-//     return resp.json({
-//         message: ["Car Sell list fetched successfully!"],
-//         data: result.data,
-//         total: result.total,
-//         total_page: result.totalPage,
-//         status: 1,
-//         code: 200,
-//         image_path: `${req.protocol}://${req.get('host')}/uploads/vehicle-image/`
-//     });
-// });
-
-
 export const sellVehicleList = asyncHandler(async (req, resp) => {
     const { search_text, page_no } = req.body;
 
@@ -61,7 +20,6 @@ export const sellVehicleList = asyncHandler(async (req, resp) => {
         page_no,
         limit: 10,
     });
-
     return resp.json({
         message: ["Car Sell list fetched successfully!"],
         data: result.data,
@@ -94,7 +52,6 @@ export const sellVehicleDetail = asyncHandler(async (req, resp) => {
         LIMIT 1
     `, [sell_id]);
     
-    
     return resp.json({
         status: 1,
         code: 200,
@@ -102,5 +59,4 @@ export const sellVehicleDetail = asyncHandler(async (req, resp) => {
         data: data,
         base_url: `${req.protocol}://${req.get('host')}/uploads/vehicle-images/`,
     });
-
 });

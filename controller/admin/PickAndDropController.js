@@ -26,9 +26,9 @@ export const bookingList = async (req, resp) => {
             // searchTexts: [request_id, name, contact_no, order_status],
             liveSearchFields: ['request_id', 'name'],
             liveSearchTexts: [search_text, search_text],
-            whereField: [],
-            whereValue: [],
-            whereOperator: []
+            whereField    : ['order_status'],
+            whereValue    : ['PNR'],
+            whereOperator : ["!="]
         };
 
         if (start_date && end_date) {
@@ -37,7 +37,7 @@ export const bookingList = async (req, resp) => {
             const startToday = new Date(start_date);
             const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
                 .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
-                       
+                        
             const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
             const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
             const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
@@ -98,7 +98,7 @@ export const bookingDetails = async (req, resp) => {
             WHERE 
                 cs.request_id = ?`, 
             [request_id]
-        );  // 'cs.slot_date_time', 
+        );
         if (result.length === 0) {
             return resp.status(404).json({
                 status  : 0,
@@ -148,7 +148,7 @@ export const pdInvoiceList = async (req, resp) => {
             const startToday = new Date(start_date);
             const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
                 .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
-                       
+                        
             const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
             const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
             const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
@@ -233,11 +233,11 @@ export const pdSlotList = async (req, resp) => {
         const { isValid, errors } = validateFields(req.body, { page_no: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-        let slot_date = moment().format("YYYY-MM-DD");  // timing
+        // let slot_date = moment().format("YYYY-MM-DD"); 
         const params = {
-            tableName: 'pick_drop_slot',
+            tableName: 'pick_drop_slot',  //cs.slot = pick_drop_slot.slot_id AND 
             columns: `slot_id, start_time, end_time, booking_limit, status, ${formatDateTimeInQuery(['created_at'])},${formatDateInQuery(['slot_date'])}, 
-                (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slot_date}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
+                (SELECT COUNT(id) FROM charging_service AS cs WHERE DATE(cs.slot_date_time) = pick_drop_slot.slot_date AND TIME(slot_date_time) = pick_drop_slot.start_time AND order_status NOT IN ("WC", "C", "PNR") ) AS slot_booking_count
             `,
             sortColumn : 'slot_date DESC, start_time ASC',
             sortOrder  : '',
@@ -279,23 +279,21 @@ export const pdSlotDetails = async (req, resp) => {
         const { isValid, errors } = validateFields(req.body, { slot_date: ["required"] });
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         
-        let slotDate = moment().format("YYYY-MM-DD");
         const [slotDetails] = await db.execute(`
             SELECT 
                 id, slot_id, start_time, end_time, booking_limit, status, ${formatDateInQuery(['slot_date'])},
-                (SELECT COUNT(id) FROM charging_service AS cs WHERE cs.slot=pick_drop_slot.slot_id AND DATE(cs.slot_date_time)='${slotDate}' AND order_status NOT IN ("PU", "C") ) AS slot_booking_count
+                (SELECT COUNT(id) FROM charging_service AS cs WHERE DATE(cs.slot_date_time) = pick_drop_slot.slot_date AND TIME(slot_date_time) = pick_drop_slot.start_time AND order_status NOT IN ("WC", "C", "PNR") ) AS slot_booking_count
             FROM 
                 pick_drop_slot 
             WHERE 
                 slot_date = ?`, 
             [slot_date]
         );
-
         return resp.json({
-            status: 1,
-            code: 200,
-            message: ["Portable And Drop Slot Details fetched successfully!"],
-            data: slotDetails,
+            status  : 1,
+            code    : 200,
+            message : ["Portable And Drop Slot Details fetched successfully!"],
+            data    : slotDetails,
             
         });
     } catch (error) {
@@ -603,3 +601,56 @@ export const adminCancelCSBooking = asyncHandler(async (req, resp) => {
     return resp.json({ message: ['Booking has been cancelled successfully!'], status: 1, code: 200 });
 });
 
+export const failedBookingList = async (req, resp) => {
+    try {
+        const { page_no, start_date, end_date, search_text  } = req.body;
+        const { isValid, errors } = validateFields(req.body, {page_no: ["required"]});
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const params = {
+            tableName: 'charging_service',
+            columns: `request_id, rider_id, rsa_id, name, country_code, contact_no, order_status, ROUND(price/100, 2) AS price, ${formatDateTimeInQuery(['created_at'])}`,
+            sortColumn: 'created_at',
+            sortOrder: 'DESC',
+            page_no,
+            limit: 10,
+            liveSearchFields : ['request_id', 'name'],
+            liveSearchTexts  : [search_text, search_text],
+            whereField       : ['order_status'],
+            whereValue       : ['PNR'],
+            whereOperator    : ["="]
+        };
+
+        if (start_date && end_date) {
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                        
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
+
+            params.whereField = ['created_at', 'created_at'];
+            params.whereValue = [start, end];
+            params.whereOperator = ['>=', '<='];
+        }
+        const result = await getPaginatedData(params);
+
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Failed Pick & Drop Booking List fetch successfully!"],
+            data       : result.data,
+            total_page : result.totalPage,
+            total      : result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching p & d booking list:', error);
+        resp.status(500).json({ message: 'Error fetching p & d booking list' });
+    }
+};

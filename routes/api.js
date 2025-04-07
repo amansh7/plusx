@@ -3,42 +3,43 @@ import { handleFileUpload } from "../fileUpload.js";
 import multer from "multer";
 import { apiAuthorization } from '../middleware/apiAuthorizationMiddleware.js';
 import { apiAuthentication } from '../middleware/apiAuthenticationMiddleware.js';
-import { apiRsaAuthentication } from '../middleware/apiRsaAuthenticationMiddleware.js';
+
 import { clubList, clubDetail } from '../controller/api/ClubController.js';
 import { shopList, shopDetail } from '../controller/api/ShopController.js';
 import { offerList, offerDetail, offerHistory } from '../controller/api/OfferController.js';
-import { redeemCoupon, createIntent, createPortableChargerSubscription, createAutoDebit, addCardToCustomer, customerCardsList, removeCard, autoPay } from '../controller/PaymentController.js';
+import { redeemCoupon, createIntent, createPortableChargerSubscription, addCardToCustomer, customerCardsList, removeCard, autoPay, getPaymentSession  } from '../controller/PaymentController.js';
 import { carList, carDetail } from '../controller/api/ElectricCarRentalController.js';
 import { bikeList, bikeDetail } from '../controller/api/ElectricBikeRentalController.js';
 import { stationList, stationDetail, nearestChargerList } from '../controller/api/ChargingStationController.js';
 import { serviceRequest, requestList, requestDetails } from '../controller/api/ChargingInstallationServiceController.js';
 import { rsaInvoice, pickAndDropInvoice, portableChargerInvoice, preSaleTestingInvoice, chargerInstallationInvoice } from '../controller/InvoiceController.js';
-import { rsaLogin, rsaUpdatePassword, rsaForgotPassword, rsaLogout, rsaLogutAll, rsaUpdateProfile, rsaStatusChange, rsaHome, rsaBookingHistory, rsaUpdateLatLong } from '../controller/api/RsaController.js';
+
 import { addInsurance, insuranceList, insuranceDetails, evPreSaleBooking, evPreSaleList, evPreSaleDetails, preSaleSlotList } from '../controller/api/EvInsuranceController.js';
 import { 
     login, register, forgotPassword, createOTP, verifyOTP, home, getRiderData, updateProfile, deleteImg, logout, updatePassword, locationList, locationAdd, notificationList, 
-    addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount, addRiderVehicle ,editRiderVehicle, riderVehicleList, deleteRiderVehicle
+    addRiderAddress, riderAddressList, deleteRiderAddress, deleteAccount, addRiderVehicle ,editRiderVehicle, riderVehicleList, deleteRiderVehicle, editRiderAddress, defaultAddress, defaultVehicle
 } from "../controller/api/RiderController.js";
 import {
-    addRoadAssistance, roadAssistanceList, roadAssistanceDetail, roadAssistanceInvoiceList, roadAssistanceInvoiceDetail, getRsaOrderStage, orderAction
+    addRoadAssistance, roadAssistanceList, roadAssistanceDetail, roadAssistanceInvoiceList, roadAssistanceInvoiceDetail 
 } from '../controller/api/RoadAssistanceController.js';
 import { 
     addDiscussionBoard, getDiscussionBoardList, getDiscussionBoardDetail, addComment, replyComment, boardLike, boardView, boardShare, votePoll, reportOnBoard, 
     boardNotInterested, boardDelete, editBoard, editPoll, deleteComment, deleteReplyComment, commentLike, replyCommentLike
 } from '../controller/api/DiscussionBoardController.js';
-import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList, sellVehicleDetail, updateSellVehicle, 
-    deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList,
-    updateSellVehicleImg
+
+
+import {vehicleList, vehicleDetail, interestedPeople, areaList, sellVehicle, allSellVehicleList, sellVehicleList,
+    sellVehicleDetail, updateSellVehicle, deleteSellVehicle, soldSellVehicle, reminder_sell_vehicle_list, vehicleModelList, vehicleBrandList, updateSellVehicleImg
 } from '../controller/api/VehicleController.js';
 import { 
-    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, rsaBookingStage, bookingAction, rejectBooking, getPcSlotList, getPcSubscriptionList, userCancelPCBooking,
-    getActivePodList,
-    storePodChargerHistory
+    chargerList, chargerBooking, chargerBookingList,chargerBookingDetail, invoiceList, getPcSlotList, getPcSubscriptionList, userCancelPCBooking,
+    getActivePodList
 } from '../controller/api/PortableChargerController.js';
 import { 
-    getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, handleBookingAction, getRsaBookingStage, handleRejectBooking, cancelValetBooking
+    getChargingServiceSlotList, requestService, listServices, getServiceOrderDetail, getInvoiceList, getInvoiceDetail, cancelValetBooking
 } from '../controller/api/ChargingServiceController.js';
 
+import { getPaymentSessionData } from '../controller/TestController.js';
 
 import rateLimit from 'express-rate-limit';
 const router = Router();
@@ -62,11 +63,6 @@ const authzRoutes = [
     {method: 'post', path: '/rider-forgot_password', handler: forgotPassword},
     {method: 'post', path: '/create-otp',            handler: createOTP},
     {method: 'post', path: '/verify-otp',            handler: verifyOTP},
-    
-    /* RSA */
-    {method: 'post', path: '/rsa-login',           handler: rsaLogin},
-    {method: 'get', path: '/rsa-logout-all',       handler: rsaLogutAll},
-    {method: 'post', path: '/rsa-forgot-password', handler: rsaForgotPassword},
     
     /* Dynamic List */
     {method: 'get', path: '/location-list', handler: locationList},
@@ -105,13 +101,16 @@ const authzAndAuthRoutes = [
     { method: 'get',  path: '/rider-notification-list',    handler: notificationList },
     { method: 'post', path: '/rider-address-add',          handler: addRiderAddress },
     { method: 'get',  path: '/rider-address-list',         handler: riderAddressList },
+    { method: 'post', path: '/rider-address-edit',          handler: editRiderAddress },
     { method: 'get',  path: '/rider-address-delete',       handler: deleteRiderAddress },
     { method: 'post', path: '/rider-vehicle-add',          handler: addRiderVehicle },
     { method: 'post', path: '/rider-vehicle-edit',         handler: editRiderVehicle },
     { method: 'get',  path: '/rider-vehicle-list',         handler: riderVehicleList },
     { method: 'get',  path: '/rider-vehicle-delete',       handler: deleteRiderVehicle },
+    { method: 'post', path: '/rider-address-default',      handler: defaultAddress },
+    { method: 'post', path: '/rider-vehicle-default',      handler: defaultVehicle },
 
-    /* Charging Station */
+    /* Public Charging Station */
     { method: 'get', path: '/charging-station-list',         handler: stationList },
     { method: 'get', path: '/nearest-charging-station-list', handler: nearestChargerList },
     { method: 'get', path: '/charging-station-detail',       handler: stationDetail },
@@ -215,7 +214,8 @@ const authzAndAuthRoutes = [
     { method: 'post', path: '/remove-card',                          handler: removeCard },
     { method: 'post', path: '/list-card',                            handler: customerCardsList },
     { method: 'post', path: '/create-portable-charger-subscription', handler: createPortableChargerSubscription },
-    
+    { method: 'post', path: '/get-payment-session',                  handler: getPaymentSession },
+
     /* Invoice */
     // { method: 'post', path: '/create-rsa-invoice',                  handler: rsaInvoice },
     { method: 'post', path: '/create-pick-drop-invoice',            handler: pickAndDropInvoice },
@@ -247,55 +247,11 @@ authzAndAuthRoutes.forEach(({ method, path, handler }) => {
     router[method](path, ...middlewares, handler);
 });
 
-/* -- Api Auth & Api RSA Authz Middleware -- */
-const authzRsaAndAuthRoutes = [
-    /* RSA */
-    { method: 'get',   path: '/rsa-home',            handler: rsaHome },
-    { method: 'get',   path: '/rsa-logout',          handler: rsaLogout },
-    { method: 'post',  path: '/rsa-profile-change',  handler: rsaUpdateProfile },
-    { method: 'post',  path: '/rsa-status-change',   handler: rsaStatusChange },
-    { method: 'get',   path: '/rsa-change-password', handler: rsaUpdatePassword },
-    { method: 'get',   path: '/rsa-booking-history', handler: rsaBookingHistory },
-    { method: 'post',  path: '/rsa-update-lat-long', handler: rsaUpdateLatLong },
-
-    /* Road Assitance with RSA */
-    { method: 'get', path: '/rsa-order-stage',  handler: getRsaOrderStage },
-    { method: 'get', path: '/order-action',     handler: orderAction },
-    
-    /* Charging Service */
-    { method: 'post', path: '/charger-service-action', handler: handleBookingAction },
-    { method: 'get',  path: '/charger-service-stage',  handler: getRsaBookingStage },
-    { method: 'post', path: '/charger-service-reject', handler: handleRejectBooking },
-    
-    /* POD with RSA */
-    { method: 'get',  path: '/portable-charger-stage',    handler: rsaBookingStage },
-    { method: 'post', path: '/portable-charger-action',   handler: bookingAction },
-    { method: 'post', path: '/portable-charger-reject',   handler: rejectBooking },
-    { method: 'post', path: '/store-pod-charger-history', handler: storePodChargerHistory },
-];
-authzRsaAndAuthRoutes.forEach(({ method, path, handler }) => {
-
-    const middlewares = [];   
-
-    if (path === '/portable-charger-action') {
-        middlewares.push(handleFileUpload('portable-charger', ['image'], 1));
-    } else if (path === '/charger-service-action') {
-        middlewares.push(handleFileUpload('pick-drop-images', ['image'], 1));
-    }
-    if(path === '/rsa-profile-change'){   
-        middlewares.push(handleFileUpload('rsa_images', ['profile-image'], 1));
-    }
-    middlewares.push(apiAuthorization);
-    middlewares.push(apiRsaAuthentication);
-
-    router[method](path, ...middlewares, handler);
-});
-
 router.post('/validate-coupon', redeemCoupon);
 router.post('/auto-pay', autoPay);
-router.post('/add-card', addCardToCustomer);
-router.post('/remove-card', removeCard);
-router.post('/list-card', customerCardsList);
-// router.post('/get-stripe-cust', findCustomerByEmail);
+// router.post('/add-card', addCardToCustomer);
+// router.post('/remove-card', removeCard);
+// router.post('/list-card', customerCardsList);
 
+// router.get('/get-payment-session-data', getPaymentSessionData); 
 export default router;

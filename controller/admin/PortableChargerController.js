@@ -8,8 +8,6 @@ import generateUniqueId from 'generate-unique-id';
 import emailQueue from '../../emailQueue.js';
 dotenv.config();
 
-
-
 export const chargerList = async (req, resp) => {
     try {
         const {rider_id, page_no, search_text = '' } = req.body;
@@ -192,7 +190,7 @@ export const chargerBookingList = async (req, resp) => {
 
         const params = {
             tableName: 'portable_charger_booking',
-            columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
+            columns: `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, address_alert,
             (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_name, 
                 ${formatDateInQuery(['slot_date'])}, concat(slot_date, " ", slot_time) as slot_time, ${formatDateTimeInQuery(['created_at'])}`,
             sortColumn: 'slot_date DESC, slot_time ASC',
@@ -201,9 +199,9 @@ export const chargerBookingList = async (req, resp) => {
             limit: 10,
             liveSearchFields : ['booking_id', 'user_name', 'service_name'],
             liveSearchTexts  : [search_text, search_text, search_text],
-            whereField       : [],
-            whereValue       : [],
-            whereOperator    : []
+            whereField       : ['status'],
+            whereValue       : ['PNR'],
+            whereOperator    : ["!="]
             // searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
             // searchTexts: [booking_id, name, contact, status]
             // whereField: ['status'],
@@ -218,7 +216,7 @@ export const chargerBookingList = async (req, resp) => {
             const startToday = new Date(start_date);
             const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
                 .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
-                       
+                        
             const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
             const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
             const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
@@ -233,7 +231,7 @@ export const chargerBookingList = async (req, resp) => {
             params.whereOperator.push('>=', '<=');
         }
         if (scheduleFilters.start_date && scheduleFilters.end_date) {
-          
+            
             const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
             const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             
@@ -299,6 +297,16 @@ export const chargerBookingDetails = async (req, resp) => {
                 message: 'Booking not found.',
             });
         } // invoice_url
+        // const [bookingHistory] = await db.execute(`
+        //     SELECT 
+        //         order_status, cancel_by, cancel_reason as reason, rsa_id, ${formatDateTimeInQuery(['created_at'])}, image,   
+        //         (select rsa.rsa_name from rsa where rsa.rsa_id = portable_charger_history.rsa_id) as rsa_name
+        //     FROM 
+        //         portable_charger_history 
+        //     WHERE 
+        //         booking_id = ?`, 
+        //     [booking_id]
+        // );
         const [bookingHistory] = await db.execute(`
             SELECT 
                 order_status, cancel_by, cancel_reason as reason, rsa_id, ${formatDateTimeInQuery(['created_at'])}, image, remarks,   
@@ -334,116 +342,6 @@ export const chargerBookingDetails = async (req, resp) => {
         });
     }
 };
-export const chargerBookingDetailsOld = async (req, resp) => {
-    try {
-        const { booking_id } = req.body;
-
-        if (!booking_id) {
-            return resp.status(400).json({
-                status: 0,
-                code: 400,
-                message: 'Booking ID is required.',
-            });
-        }
-
-        const [bookingResult] = await db.execute(`
-            SELECT 
-                booking_id, rider_id, rsa_id, charger_id, vehicle_id, 
-                service_name, service_price, service_type, service_feature, user_name, 
-                contact_no, address,  slot_date, slot_time, status, ${formatDateTimeInQuery(['created_at'])} 
-            FROM 
-                portable_charger_booking 
-            WHERE 
-                booking_id = ?`, 
-            [booking_id]
-        );
-
-        if (bookingResult.length === 0) {
-            return resp.status(404).json({
-                status: 0,
-                code: 404,
-                message: 'Booking not found.',
-            });
-        }
-
-        const bookingDetails = bookingResult[0];
-        if (bookingDetails.status == 'PU') {
-            const invoice_id = bookingDetails.booking_id.replace('PCB', 'INVPC');
-            bookingDetails.invoice_url = `${req.protocol}://${req.get('host')}/public/portable-charger-invoice/${invoice_id}-invoice.pdf`;
-        }
-
-        const [history] = await db.execute(`SELECT * FROM portable_charger_history WHERE booking_id = ?`, [booking_id]);
-
-        const [vehicleResult] = await db.execute(`
-            SELECT 
-                vehicle_id, vehicle_type, vehicle_model
-            FROM 
-                riders_vehicles 
-            WHERE 
-                vehicle_id = ?`, 
-            [bookingDetails.vehicle_id]
-        );
-        const bookingHistory = history
-
-        const vehicleDetails = vehicleResult[0]
-
-        const [riderResult] = await db.execute(`
-            SELECT 
-                rider_id, rider_name, rider_email, rider_mobile, 
-                country_code, date_of_birth 
-            FROM 
-                riders 
-            WHERE 
-                rider_id = ?`, 
-            [bookingDetails.rider_id]
-        );
-
-        if (riderResult.length === 0) {
-            return resp.status(404).json({
-                status: 0,
-                code: 404,
-                message: 'Rider not found.',
-            });
-        }
-
-        const riderDetails = riderResult[0];
-
-        const [driverResult] = await db.execute(`
-            SELECT 
-                rsa_id, rsa_name, email, country_code, 
-                mobile, booking_type 
-            FROM 
-                rsa 
-            WHERE 
-                rsa_id = ?`, 
-            [bookingDetails.rsa_id]
-        );
-        const driverDetails = driverResult[0];
-
-
-        return resp.json({
-            status: 1,
-            code: 200,
-            message: ["Booking details fetched successfully!"],
-            data: {
-                booking: bookingDetails,
-                bookingHistory: bookingHistory,
-                rider: riderDetails,
-                driver: driverDetails,
-                vehicle: vehicleDetails
-            }, 
-        });
-    } catch (error) {
-        console.error('Error fetching booking details:', error);
-        return resp.status(500).json({ 
-            status: 0, 
-            code: 500, 
-            message: 'Error fetching booking details' 
-        });
-    }
-};
-
-
 
 /* Invoice */
 export const invoiceList = async (req, resp) => {
@@ -514,7 +412,6 @@ export const invoiceList = async (req, resp) => {
         return resp.status(500).json({ status: 0, message: 'Error fetching invoice lists' });
     }
 };
-
 export const invoiceDetails = async (req, resp) => {
     const { invoice_id } = req.body;
     const { isValid, errors } = validateFields(req.body, { invoice_id: ["required"] });
@@ -538,26 +435,25 @@ export const invoiceDetails = async (req, resp) => {
 
     data.invoice_url = `${req.protocol}://${req.get('host')}/uploads/portable-charger-invoice/${invoice_id}-invoice.pdf`;
 
-    // const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
-    //     data[key] ? data[key].split(',').map(Number) : []
-    // );
-    // const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
+    const chargingLevels = ['start_charging_level', 'end_charging_level'].map(key => 
+        data[key] ? data[key].split(',').map(Number) : []
+    );
+    const chargingLevelSum = chargingLevels[0].reduce((sum, startLevel, index) => sum + (startLevel - chargingLevels[1][index]), 0);
     
-    data.kw           = 0; //chargingLevelSum * 0.25;
-    data.kw_dewa_amt  = 0; //data.kw * 0.44;
-    data.kw_cpo_amt   = 0; //data.kw * 0.26;
-    data.delv_charge  = 30; //when start accepting payment
-    data.t_vat_amt    = Math.floor(( data.delv_charge ) * 5) / 100; //Math.floor(((data.kw_dewa_amt / 100 * 5) + (data.kw_cpo_amt / 100 * 5) + (data.delv_charge / 100 * 5)) * 100) / 100;
-    data.price     = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
-    data.dis_price = 0;
-    
+    data.kw           = chargingLevelSum * 0.25;
+    data.kw_dewa_amt  = data.kw * 0.44;
+    data.kw_cpo_amt   = data.kw * 0.26;
+    data.delv_charge  = (30 - (data.kw_dewa_amt + data.kw_cpo_amt) ); //when start accepting payment
+    data.t_vat_amt    = ( (data.kw_dewa_amt + data.kw_cpo_amt  + data.delv_charge )  * 5) / 100 ;
+    data.price        = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge;
+    data.dis_price    = 0;
     if(data.discount > 0){
-        const dis_price = ( (data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge ) * data.discount ) /100
+        const dis_price = ( data.price * data.discount ) /100
         const total_amt = (data.price - dis_price) ? (data.price - dis_price) : 0;
 
         data.dis_price  = dis_price ;
         data.t_vat_amt  = Math.floor(( total_amt ) * 5) / 100; 
-        data.price      = total_amt + ( Math.floor(( total_amt ) * 5) / 100 );
+        data.price      = total_amt + data.t_vat_amt;
     } else {
         data.price      = data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge + data.t_vat_amt;
     }
@@ -581,11 +477,11 @@ export const slotList = async (req, resp) => {
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
         let slot_date = moment().format("YYYY-MM-DD"); // ${formatDateInQuery([('slot_date')])} timing
 
+        // // (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C", "RO")) AS slot_booking_count,
         const params = {
             tableName  : 'portable_charger_slot',
             columns    : `slot_id, slot_date, start_time, end_time, booking_limit, status, 
-
-                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot_time=portable_charger_slot.start_time AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C", "RO")) AS slot_booking_count
+                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot_time = portable_charger_slot.start_time AND pod.slot_date = portable_charger_slot.slot_date AND status NOT IN ("PU", "C", "RO", "PNR")) AS slot_booking_count
             `,
             sortColumn : 'slot_date DESC, start_time ASC',
             sortOrder  : '',
@@ -644,7 +540,7 @@ export const slotDetails = async (req, resp) => {
         const [slotDetails] = await db.execute(`
             SELECT 
                 id, slot_id,  start_time, end_time, booking_limit, status, 
-                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot=portable_charger_slot.slot_id AND pod.slot_date=portable_charger_slot.slot_date AND status NOT IN ("PU", "C")) AS slot_booking_count,
+                (SELECT COUNT(id) FROM portable_charger_booking AS pod WHERE pod.slot_time = portable_charger_slot.start_time AND pod.slot_date = portable_charger_slot.slot_date AND status NOT IN ("PU", "C", "RO", "PNR")) AS slot_booking_count,
                 ${formatDateInQuery(['slot_date'])}
             FROM 
                 portable_charger_slot 
@@ -723,7 +619,7 @@ export const editSlot = asyncHandler(async (req, resp) => {
     }
 
     let fSlotDate = moment(slot_date, "DD-MM-YYYY").format("YYYY-MM-DD");
-    let errMsg    = [];
+    let errMsg = [];
 
     //  Fetch existing slots for the given date
     const [existingSlots] = await db.execute("SELECT slot_id FROM portable_charger_slot WHERE slot_date = ?",[fSlotDate]);
@@ -965,7 +861,6 @@ export const subscriptionDetail = asyncHandler(async (req, resp) => {
     return resp.status(200).json({status: 1, code: 200, data: subscription, message: "Subscription Detail fetch successfully!"});
 });
 
-
 /* Admin Cancel Booking */
 export const adminCancelPCBooking = asyncHandler(async (req, resp) => {
     const { rider_id, booking_id, reason } = req.body;
@@ -1067,14 +962,84 @@ export const customerChargerBookingList = async (req, resp) => {
             limit: 10,
             liveSearchFields : ['booking_id', 'user_name', 'service_name'],
             liveSearchTexts  : [search_text, search_text, search_text],
+            whereField      : ['rider_id', 'status'],
+            whereValue      : [customerId, 'PNR'],
+            whereOperator   : ['=', "!="]
+        };
+        if (start_date && end_date) {
+            
+            const startToday = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                        
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start        = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
+
+            params.whereField.push('created_at', 'created_at');
+            params.whereValue.push(start, end);
+            params.whereOperator.push('>=', '<=');
+        }
+        if (scheduleFilters.start_date && scheduleFilters.end_date) {
+            
+            const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
+            const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            
+            params.whereField.push('slot_date', 'slot_date');
+            params.whereValue.push(schStart, schEnd);
+            params.whereOperator.push('>=', '<=');
+        }
+        if(status) {
+            params.whereField.push('status');
+            params.whereValue.push(status);
+            params.whereOperator.push('=');
+        }
+        const result = await getPaginatedData(params);
+
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Customer POD Booking List fetched successfully!"],
+            data       : result.data,
+            total_page : result.totalPage,
+            total      : result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching charger booking list:', error);
+        return resp.status(500).json({ status: 0, message: 'Error fetching charger booking lists' });
+    }
+};
+export const failedChargerBookingList = async (req, resp) => {
+    try {
+        const { page_no, start_date, end_date, search_text = '', scheduleFilters } = req.body;
+
+        const { isValid, errors } = validateFields(req.body, {
+            page_no : ["required"]
+        });
+        if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+        const params = {
+            tableName : 'portable_charger_booking',
+            columns   : `booking_id, rider_id, rsa_id, charger_id, vehicle_id, service_name, service_price, service_type, user_name, country_code, contact_no, status, 
+            (select rsa_name from rsa where rsa.rsa_id = portable_charger_booking.rsa_id) as rsa_name, 
+                ${formatDateInQuery(['slot_date'])}, concat(slot_date, " ", slot_time) as slot_time, ${formatDateTimeInQuery(['created_at'])}`,
+            sortColumn : 'slot_date',
+            sortOrder  : 'DESC',
+            page_no,
+            limit: 10,
+            liveSearchFields : ['booking_id', 'user_name', 'service_name'],
+            liveSearchTexts  : [search_text, search_text, search_text],
             whereField       : [],
             whereValue       : [],
-            whereOperator    : [],
-            // searchFields: ['booking_id', 'user_name', 'contact_no', 'status'],
-            // searchTexts: [booking_id, name, contact, status]
-            whereField      : ['rider_id'],
-            whereValue      : [customerId],
-            whereOperator   : ['=']
+            whereOperator    : [],          
+            whereField       : ['status'],
+            whereValue       : ['PNR'],
+            whereOperator    : ['=']
         };
         if (start_date && end_date) {
             
@@ -1098,23 +1063,18 @@ export const customerChargerBookingList = async (req, resp) => {
         if (scheduleFilters.start_date && scheduleFilters.end_date) {
           
             const schStart = moment(scheduleFilters.start_date).format("YYYY-MM-DD");
-            const schEnd = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
+            const schEnd   = moment(scheduleFilters.end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
             
             params.whereField.push('slot_date', 'slot_date');
             params.whereValue.push(schStart, schEnd);
             params.whereOperator.push('>=', '<=');
-        }
-        if(status) {
-            params.whereField.push('status');
-            params.whereValue.push(status);
-            params.whereOperator.push('=');
         }
         const result = await getPaginatedData(params);
 
         return resp.json({
             status     : 1,
             code       : 200,
-            message    : ["Customer POD Booking List fetched successfully!"],
+            message    : ["Failed POD Booking List fetched successfully!"],
             data       : result.data,
             total_page : result.totalPage,
             total      : result.total,

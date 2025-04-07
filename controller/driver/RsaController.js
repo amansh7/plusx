@@ -301,7 +301,7 @@ export const rsaBookingHistory = asyncHandler(async (req, resp) => {
             FROM 
                 portable_charger_booking AS pcb
             LEFT JOIN 
-                portable_charger_history AS pch ON pcb.booking_id = pch.booking_id AND pch.order_status = 'PU'
+                portable_charger_history AS pch ON pcb.booking_id = pch.booking_id AND pch.order_status = pcb.status
             LEFT JOIN
                 riders_vehicles AS rv ON pcb.vehicle_id = rv.vehicle_id
             WHERE 

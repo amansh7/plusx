@@ -443,18 +443,17 @@ export const vehicleModelList = asyncHandler(async (req, resp) => {
     if(vehicle_type === 'Car'){
         const [rows] = await db.execute('SELECT model FROM vehicle_brand_list WHERE status = ? AND make = ?', [1, make_name]);
         modelData = rows.map(row => row.model);
-    }else{
+    } else {
         const [rows] = await db.execute('SELECT model FROM vehicle_bike_brand_list WHERE status = ? AND make = ?', [1, make_name]);
         modelData = rows.map(row => row.model);
     }
-
     if (make_name !== 'Other') modelData.push('Other');
 
     return resp.json({
-        message: ["Model List fetch successfully!"],
-        area_data: modelData,
-        status: 1,
-        code: 200,
+        message   : ["Model List fetch successfully!"],
+        area_data : modelData,
+        status    : 1,
+        code      : 200,
     });
 });
 
@@ -468,11 +467,10 @@ export const vehicleBrandList = asyncHandler(async (req, resp) => {
     if(vehicle_type === 'Car'){
         const [rows] = await db.execute('SELECT make FROM vehicle_brand_list WHERE status = ? GROUP BY make',[1]);
         modelData = rows.map(row => row.make);
-    }else{
+    } else {
         const [rows] = await db.execute('SELECT make FROM vehicle_bike_brand_list WHERE status = ? GROUP BY make',[1]);
         modelData = rows.map(row => row.make);
     }
-
     return resp.json({
         message: ["Make List fetch successfully!"],
         area_data: modelData,

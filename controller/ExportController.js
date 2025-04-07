@@ -6,7 +6,6 @@ import { formatDateInQuery, mergeParam, formatDateTimeInQuery } from "../utils.j
 export const donwloadPodBookingList = async (req, resp) => {
     try{
         const { status, start_date, end_date, search_text='', scheduled_start_date, scheduled_end_date } = mergeParam(req);
-        // address
         let query = `
             SELECT
                 ${formatDateInQuery(['created_at'])},
@@ -34,7 +33,6 @@ export const donwloadPodBookingList = async (req, resp) => {
                 END AS status
             FROM
                 portable_charger_booking  
-
         `; 
         let params = [];
 
@@ -61,32 +59,34 @@ export const donwloadPodBookingList = async (req, resp) => {
             if (params.length === 0) query += ` WHERE status = ?`;
             else query += ` AND status = ?`; 
             params.push(status);
+        } else {
+            if (params.length === 0) query += ` WHERE status != ?`;
+            else query += ` AND status != ?`; 
+            params.push('PNR');
         }
-        
         query += ' ORDER BY id DESC ';
         
-        const [rows] = await db.execute(query, params);
-        // return resp.json(rows);
-        const workbook = new ExcelJS.Workbook();
+        const [rows]    = await db.execute(query, params);
+        const workbook  = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Sheet 1');
     
         worksheet.columns = [
-            { header: 'Booking Date',           key: 'created_at'         },
-            { header: 'Booking Id',             key: 'booking_id'         },
-            { header: 'Service Type',           key: 'service_type'       },
-            { header: 'Service Price',          key: 'service_price'      },
-            { header: 'Schedule Date',          key: 'schedule_date_time' },
-            { header: 'Customer Name',          key: 'user_name'          },
-            { header: 'Customer Email',         key: 'email'              },
-            { header: 'Customer Contact No',    key: 'mobile'             },
-            { header: 'Address',                key: 'address'            },
-            { header: 'Driver Name',            key: 'rsa_name'           },
-            { header: 'Driver Contact No',      key: 'rsa_phone'          },
-            { header: 'Status',                 key: 'status'             },
-            { header: 'Map Link',               key: 'map_address'        },
-            { header: 'Vehicle Name',           key: 'vehicle_data'       },
+            { header : 'Booking Date',           key : 'created_at'         },
+            { header : 'Booking Id',             key : 'booking_id'         },
+            { header : 'Service Type',           key : 'service_type'       },
+            { header : 'Service Price',          key : 'service_price'      },
+            { header : 'Schedule Date',          key : 'schedule_date_time' },
+            { header : 'Customer Name',          key : 'user_name'          },
+            { header : 'Customer Email',         key : 'email'              },
+            { header : 'Customer Contact No',    key : 'mobile'             },
+            { header : 'Address',                key : 'address'            },
+            { header : 'Driver Name',            key : 'rsa_name'           },
+            { header : 'Driver Contact No',      key : 'rsa_phone'          },
+            { header : 'Status',                 key : 'status'             },
+            { header : 'Map Link',               key  : 'map_address'        },
+            { header : 'Vehicle Name',           key: 'vehicle_data'       },
         ];
-        worksheet.getColumn(1).numFmt = 'dd-mmm-yyyy';  // 
+        worksheet.getColumn(1).numFmt = 'dd-mmm-yyyy';
         rows.forEach((item) => {
             worksheet.addRow(item); 
         });
@@ -96,12 +96,11 @@ export const donwloadPodBookingList = async (req, resp) => {
         await workbook.xlsx.write(resp);
         resp.end();
 
-    }catch(err){
+    } catch(err) {
         console.log('err exporting : ', err);
         return resp.status(500).json({ status: 0, message: 'Error exporting charger booking lists' });
     }
-    
-}; 
+};
 export const donwloadUserList = async (req, resp) => {
     try{
         const { addedFrom, emirates, start_date, end_date, search_text =''} = mergeParam(req);

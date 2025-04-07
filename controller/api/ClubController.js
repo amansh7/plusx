@@ -45,9 +45,9 @@ export const clubList = asyncHandler(async (req, resp) => {
     query += ` ORDER BY club_name ASC LIMIT ${parseInt(start)}, ${parseInt(limit)}`;
     
     const [clubData] = await db.execute(query, queryParams);
-    console.log('query', query);
-    console.log('queryParams', queryParams);
-    console.log('clubData', clubData);
+    // console.log('query', query);
+    // console.log('queryParams', queryParams);
+    // console.log('clubData', clubData);
     return resp.json({
         message: ["Club List fetched successfully!"],
         data: clubData,

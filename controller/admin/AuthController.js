@@ -8,43 +8,52 @@ import { formatDateTimeInQuery, generateRandomPassword } from '../../utils.js';
 dotenv.config();
 
 var transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
-  auth: {
-    user: process.env.MAIL_USERNAME,
-    pass: process.env.MAIL_PASSWORD
-  }
+    host : process.env.MAIL_HOST,
+    port : process.env.MAIL_PORT,
+    auth : {
+        user : process.env.MAIL_USERNAME,
+        pass : process.env.MAIL_PASSWORD
+    }
 });
-
-
 export const login = async(req, resp) => {
     const { email, password } = req.body;
-    const [users] = (await db.execute(`SELECT id, name, email, phone, image, department_id, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, password FROM users WHERE email=?`, [email]));
-    if(users.length === 0){ 
-        return resp.status(200).json({message: "Invalid email "}); 
-    }
-    const user    = users[0];
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-        return resp.status(200).json({ message: 'Invalid password' });
-    }
-    await db.execute('UPDATE users SET status = 1 WHERE email = ?', [email]);
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    
-    resp.cookie('authToken', token, { 
-        httpOnly : true,   
-        //secure : false,
-        secure   : process.env.NODE_ENV === 'production', 
-        sameSite : 'None',
-        maxAge   : 3600000 
-    });
-    resp.status(200).json({
-        message     : "Login successfull",
-        code        : 200, 
-        userDetails : users[0], 
+    try {
+        const [users] = await db.execute(`SELECT id, name, email, phone, image, department_id, ${formatDateTimeInQuery(['created_at', 'updated_at'])}, password FROM users WHERE email=?`, [email]);
+        if(users.length === 0){ 
+            return resp.status(200).json({message: "Invalid email "}); 
+        }
+        const user    = users[0];
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return resp.status(200).json({ message: 'Invalid password' });
+        }
+        await db.execute('UPDATE users SET status = 1 WHERE email = ?', [email]);
+        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      
+        resp.cookie('authToken', token, { 
+            httpOnly : true,   
+            //secure : false,
+            secure   : process.env.NODE_ENV === 'production', 
+            sameSite : 'None',
+            maxAge   : 3600000 
+        });
+        resp.status(200).json({
+            message     : "Login successfull",
+            code        : 200, 
+            userDetails : users[0], 
+            base_url    : `${req.protocol}://${req.get('host')}/uploads/profile-image/`,
+            Token       : process.env.CUSTOM_TOKEN
+        }) 
+    } catch (error) {
+      console.error("Database query error:", error);
+      resp.status(500).json({
+        message     : error,
+        code        : 500, 
+        userDetails : {}, 
         base_url    : `${req.protocol}://${req.get('host')}/uploads/profile-image/`,
-        Token       : process.env.CUSTOM_TOKEN
-    })
+        Token       : ''
+    }) 
+    }
 };
 
 export const logout = async (req, resp) => {

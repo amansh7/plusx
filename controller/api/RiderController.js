@@ -9,7 +9,7 @@ import emailQueue from "../../emailQueue.js";
 import validateFields from "../../validation.js";
 import generateUniqueId from 'generate-unique-id';
 import { insertRecord, queryDB, updateRecord } from '../../dbUtils.js';
-import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery, asyncHandler, deleteFile } from '../../utils.js';
+import { mergeParam, generateRandomPassword, checkNumber, generateOTP, storeOTP, getOTP, delOTP, sendOtp, formatDateTimeInQuery, formatDateInQuery, asyncHandler, deleteFile } from '../../utils.js';
 dotenv.config();
 
 /* Rider Auth */
@@ -55,24 +55,16 @@ export const login = asyncHandler(async (req, resp) => {
 });
 
 export const register = asyncHandler(async (req, resp) => {
-    const { password, country_code, rider_name, rider_email, rider_mobile, emirates, date_of_birth, fcm_token, added_from,
-        vehicle_type='', area='', country='', vehicle_make='', vehicle_model='', year_manufacture='', vehicle_code='', vehicle_number='', 
-        owner_type='', leased_from='', vehicle_specification='', regional_specification='' 
-    } = mergeParam(req);
+    const { first_name, last_name, rider_email, country_code, rider_mobile, emirates, added_from } = mergeParam(req);
     
     let validationRules = {
-        password: ["required", "password"], 
-        rider_email: ["required", "email"],
-        rider_name: ["required"],
-        emirates: ["required"],
-        fcm_token: ["required"],
-        country_code: ["required"],
-        rider_mobile: ["required"],
-        // country: ["required"],
-        // date_of_birth: ["required"], 
-        // vehicle_type: ["required"],
+        first_name   : ["required"],
+        last_name    : ["required"],
+        rider_email  : ["required", "email"],
+        country_code : ["required"],
+        rider_mobile : ["required"],
+        emirates     : ["required"],
     };
-
     const { isValid, errors } = validateFields(mergeParam(req), validationRules);
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
@@ -81,63 +73,41 @@ export const register = asyncHandler(async (req, resp) => {
 
     const mobile = country_code + '' + rider_mobile;
     const [[isExist]] = await db.execute(`
-        SELECT 
-            (SELECT COUNT(*) FROM riders AS r WHERE r.rider_mobile = ?) AS check_mob,
+        SELECT rider_mobile, 
             (SELECT COUNT(*) FROM riders AS r WHERE r.rider_email = ?) AS check_email,
-            (SELECT COUNT(*) FROM rsa WHERE rsa.mobile = ?) AS rsa_mob
+            (SELECT COUNT(*) FROM riders AS r1 WHERE r1.rider_mobile = ?) AS check_mob,
+            (SELECT COUNT(*) FROM rsa WHERE rsa.mobile = ? ) AS rsa_mob
         FROM 
-            rider_rsa_otp
-        WHERE 
-            rider_mobile = ?
+            riders
         LIMIT 1
-    `, [rider_mobile, rider_email, rider_mobile, mobile]);
-    
+    `, [ rider_email, rider_mobile, mobile ]);
     const err = [];
-    if(Array.isArray(isExist) && isExist.check_mob >0) err.push('Email alreday exits.');
-    if(Array.isArray(isExist) && isExist.check_mob >0) err.push('Mobile number is already registered.');
+    if(isExist.check_mob > 0 || isExist.rsa_mob > 0 ) err.push('Mobile number is already registered.');
+    if(isExist.check_email > 0 ) err.push('Email already exist.');
     if(err.length > 0) return resp.json({ status:0, code:422, message: err });
     
-    const hashedPswd = await bcrypt.hash(password, 10);
-    const accessToken = crypto.randomBytes(12).toString('hex');
-    const fDateOfBirth = date_of_birth ? moment(date_of_birth, 'DD-MM-YYYY').format('YYYY-MM-DD') : '';
     const rider = await insertRecord('riders', [
-        'rider_name', 'rider_mobile', 'rider_email', 'password', 'country_code', 'country', 'emirates', 'area', 'vehicle_type', 'access_token', 'status', 'fcm_token', 
-        'date_of_birth', 'added_from' 
-    ],[
-        rider_name, rider_mobile, rider_email, hashedPswd, country_code, country, emirates, area, vehicle_type, accessToken, 0, fcm_token, 
-        fDateOfBirth, added_from || 'Android'
-    ]);
+        'rider_name', 'last_name', 'rider_email', 'country_code', 'rider_mobile', 'emirates', 'status', 'added_from' 
+    ],[ first_name, last_name, rider_email, country_code, rider_mobile, emirates,  0, added_from || 'Android' ]);
     
-    if(!rider) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true});
+    if(!rider) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
 
     const riderId = 'ER' + String(rider.insertId).padStart(4, '0');
     await db.execute('UPDATE riders SET rider_id = ? WHERE id = ?', [riderId, rider.insertId]);
     
-    // const vehicleId = 'RDV' + generateUniqueId({length:13});
-    // if (vehicle_type && vehicle_type != "None") { 
-    //     const vehicle = await insertRecord('riders_vehicles', [
-    //         'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 
-    //         'vehicle_specification', 'regional_specification', 'emirates'
-    //     ],[
-    //         vehicleId, riderId, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, 
-    //         vehicle_specification, regional_specification, emirates
-    //     ]); 
-    //     if(vehicle.affectedRows == 0) return resp.json({status:0, code:405, message: ["Failed to register. Please Try Again"], error: true}); 
-    // }
-    
     const result = {
-        image_url: `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
-        rider_id: riderId,
-        rider_name: rider_name,
-        rider_email: rider_email,
-        profile_img: null,
-        country_code: country_code,
-        rider_mobile: rider_mobile,
-        country: country,
-        emirates: emirates,
-        access_token: accessToken,
+        image_url    : `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
+        rider_id     : riderId,
+        rider_name   : first_name,
+        last_name    : last_name,
+        rider_email  : rider_email,
+        profile_img  : null,
+        country_code : country_code,
+        rider_mobile : rider_mobile,
+        emirates     : emirates,
+        // access_token : accessToken,
     };
-    return resp.json({status:1, code:200, message: ["Rider registered successfully"], result: result});
+    return resp.json({ status:1, code:200, message: ["Rider registered successfully"], result: result});
 });
 
 export const forgotPassword = asyncHandler(async (req, resp) => {
@@ -175,24 +145,19 @@ export const forgotPassword = asyncHandler(async (req, resp) => {
 });
 
 export const createOTP = asyncHandler(async (req, resp) => {
-    const { mobile, user_type, country_code } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), {mobile: ["required"], user_type: ["required"], country_code: ["required"], });
+    const { mobile, country_code } = mergeParam(req);
+    const { isValid, errors } = validateFields(mergeParam(req), {mobile: ["required"], country_code: ["required"]});
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
     const res = checkNumber(country_code, mobile);
     if(res.status == 0) return resp.json({ status:0, code:422, message: res.msg });
     
-    let checkCountQuery;
-    if(user_type === 'RSA'){
-        checkCountQuery = 'SELECT COUNT(id) AS count FROM rsa WHERE mobile = ?';
-    }else{
-        checkCountQuery = 'SELECT COUNT(id) AS count FROM riders WHERE rider_mobile = ? AND country_code = ?';
-    }
+    let checkCountQuery = 'SELECT COUNT(id) AS count FROM riders WHERE rider_mobile =? AND country_code =?';
     
-    const [rows] = await db.execute(checkCountQuery, user_type === 'RSA' ? [mobile] : [mobile, country_code]);
+    const [rows]     = await db.execute(checkCountQuery, [mobile, country_code]);
     const checkCount = rows[0].count;
     
-    if (checkCount > 0) return resp.json({ status: 0, code: 422, message: ['The provided mobile number is already registered. Please log in to continue.'] });
+    if (checkCount == 0) return resp.json({ status: 0, code: 422, message: ['The provided mobile number is not registered.'] });
     
     const fullMobile = `${country_code}${mobile}`;
     let otp          = generateOTP(4);
@@ -215,50 +180,47 @@ export const createOTP = asyncHandler(async (req, resp) => {
 });
 
 export const verifyOTP = asyncHandler(async (req, resp) => {
-    const { mobile, user_type, country_code, otp } = mergeParam(req);
-    const { isValid, errors } = validateFields(mergeParam(req), { mobile: ["required"], user_type: ["required"], country_code: ["required"], otp: ["required"] });
+    const { mobile, country_code, fcm_token, otp } = mergeParam(req);
+    
+    const { isValid, errors } = validateFields(mergeParam(req), { 
+        mobile       : ["required"], 
+        country_code : ["required"], 
+        fcm_token    : ["required"], 
+        otp          : ["required"] 
+    });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const fullMobile = `${country_code}${mobile}`;
-    const cachedOtp  = getOTP(fullMobile);
-    let result, isLogin, loginStatus, respResult = {};
+    const riderData = await queryDB(`SELECT rider_id, rider_name, last_name, rider_email, profile_img, country, emirates, status FROM riders WHERE rider_mobile =? AND country_code =? LIMIT 1`, [mobile, country_code]);
 
-    if(user_type === 'Rider'){
-        result = await queryDB(`SELECT COUNT(*) AS rider_mob, r.status AS rider_status FROM riders r WHERE r.rider_mobile = ? AND r.country_code = ? LIMIT 1 `, [mobile, country_code]);
-        isLogin     = result.rider_mob
-        loginStatus = result.rider_status
-    }
-    if (!cachedOtp || cachedOtp !== otp) return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
-    // if (otp != '0587') return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
-    
-    if(!isLogin) return resp.json({status: 1, code: 200, message: ['OTP verified succeessfully!'], is_login: 0});
-    
-    if(loginStatus == 2 && user_type != 'RSA'){
+    if(!riderData) return resp.json({ 
+        status  : 0, code: 422, 
+        message : ["The mobile number is not registered with us. Kindly sign up."] 
+    });
+    if(riderData.status == 2){
         return resp.json({status: 1, code: 422, message: ["You can not login as your status is inactive. Kindly contact to customer care"]});
     }
+    const fullMobile = `${country_code}${mobile}`;
+    const cachedOtp  = getOTP(fullMobile);
     
-    if(user_type === 'Rider'){
-        const token = crypto.randomBytes(12).toString('hex');
-        const update = await updateRecord('riders', { access_token: token }, ['rider_mobile', 'country_code'], [mobile, country_code]);
-        const riderData = await queryDB(`SELECT rider_id, rider_name, rider_email, profile_img, country_code, country, emirates, rider_mobile, date_of_birth 
-            FROM riders WHERE rider_mobile = ? AND country_code = ?
-        `, [mobile, country_code]);
+    if (!cachedOtp || cachedOtp !== otp) return resp.json({ status: 0, code: 422, message: ["OTP invalid!"] });
 
-        respResult = {
-            image_url: `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
-            rider_id: riderData.rider_id,
-            rider_name: riderData.rider_name,
-            rider_email: riderData.rider_email,
-            profile_img: riderData.profile_img ? `${req.protocol}://${req.get('host')}/uploads/rider_profile/${riderData.profile_img}` : '',
-            rider_mobile: riderData.rider_mobile,
-            country_code: riderData.country_code,
-            country: riderData.country,
-            emirates: riderData.emirates,
-            date_of_birth: riderData.date_of_birth,
-            access_token: token
-        };
-    }
+    const token  = crypto.randomBytes(12).toString('hex');
+    await updateRecord('riders', { access_token: token, status : 1, fcm_token : fcm_token }, ['rider_mobile', 'country_code'], [mobile, country_code]);
 
+    let profileImg = riderData.profile_img ? `${req.protocol}://${req.get('host')}/uploads/rider_profile/${riderData.profile_img}` : '';
+    delOTP(fullMobile);
+    let respResult = {
+        image_url     : `${req.protocol}://${req.get('host')}/uploads/rider_profile/`,
+        rider_id      : riderData.rider_id,
+        rider_name    : riderData.rider_name,
+        last_name     : riderData.last_name,
+        rider_email   : riderData.rider_email,
+        profile_img   : profileImg,
+        rider_mobile  : mobile,
+        country_code  : country_code,        
+        emirates      : riderData.emirates,
+        access_token  : token
+    };
     return resp.json({message: [ "Login successful!" ], status: 1, code: 200, is_login: 1, result: respResult});
 });
 
@@ -319,13 +281,11 @@ export const home = asyncHandler(async (req, resp) => {
     if (!riderData) {
         return resp.status(404).json({ message: "Rider not found", status: 0 });
     }
-
     const result = {
-        rider_id: riderData.rider_id,
-        rider_name: riderData.rider_name,
-        notification_count: riderData.notification_count
+        rider_id           : riderData.rider_id,
+        rider_name         : riderData.rider_name,
+        notification_count : riderData.notification_count
     };
-    
     const orderData = await queryDB(
         `SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = road_assistance.rsa_id) AS rsaDetails, created_at 
         FROM road_assistance WHERE rider_id = ? AND order_status NOT IN ('C', 'WC', 'ES') ORDER BY id DESC LIMIT 1
@@ -335,14 +295,14 @@ export const home = asyncHandler(async (req, resp) => {
     
     const pickDropData = await queryDB(
         `SELECT request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = charging_service.rsa_id) AS rsaDetails, created_at 
-        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status NOT IN ('CNF', 'A', 'WC', 'C') ORDER BY id DESC LIMIT 1
+        FROM charging_service WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND order_status NOT IN ('CNF', 'A', 'WC', 'C', 'PNR') ORDER BY id DESC LIMIT 1
     `, [rider_id]);
     
     if (pickDropData) pickDropData.eta_time = '11 Min.';
     
     const podBookingData = await queryDB(
         `SELECT booking_id AS request_id, (SELECT CONCAT(rsa_name, ',', country_code, ' ', mobile) FROM rsa WHERE rsa_id = portable_charger_booking.rsa_id) AS rsaDetails, created_at 
-        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status NOT IN ('CNF', 'A', 'PU', 'C', 'RO') ORDER BY id DESC LIMIT 1
+        FROM portable_charger_booking WHERE rider_id = ? AND created_at >= NOW() - INTERVAL 30 MINUTE AND status NOT IN ('PNR', 'CNF', 'A', 'PU', 'C', 'RO') ORDER BY id DESC LIMIT 1
     `, [rider_id]);
 
     if (podBookingData) podBookingData.eta_time = '11 Min.';
@@ -380,25 +340,29 @@ export const getRiderData = asyncHandler(async(req, resp) => {
 });
 
 export const updateProfile = asyncHandler(async (req, resp) => {
-    try{
+    try {
         let profile_image = '';
 
         if(req.files && req.files['profile_image']){
-            const files = req.files;
+            const files   = req.files;
             profile_image = files ? files['profile_image'][0].filename : '';
         }
-        
-        const { rider_id, rider_name ,rider_email , country, date_of_birth, emirates, leased_from=''} = mergeParam(req);
+        const { rider_id, first_name, last_name, rider_email, country_code, rider_mobile, emirates} = mergeParam(req);
         const riderId = rider_id;
         const { isValid, errors } = validateFields(mergeParam(req), {
-            rider_id: ["required"], rider_name: ["required"], rider_email: ["required"], country: ["required"], date_of_birth: ["required"], emirates: ["required"]
+            rider_id     : ["required"], 
+            first_name   : ["required"], 
+            last_name    : ["required"], 
+            rider_email  : ["required"], 
+            country_code : ["required"], 
+            rider_mobile : ["required"], 
+            emirates     : ["required"]
         });
-        
         if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
     
-        const rider = await queryDB(`SELECT profile_img, leased_from FROM riders WHERE rider_id=?`, [riderId]);
+        const rider = await queryDB(`SELECT profile_img FROM riders WHERE rider_id=?`, [riderId]);
 
-        if (req.file){
+        if (req.file) {
             const oldImagePath = path.join('uploads', 'rider_profile', rider.profile_img || '');
             fs.unlink(oldImagePath, (err) => {
                 if (err) {
@@ -406,11 +370,19 @@ export const updateProfile = asyncHandler(async (req, resp) => {
                 }
             });
         }
-        const updates = {rider_name, rider_email, country, emirates, leased_from, profile_img: profile_image, date_of_birth: moment(date_of_birth, "DD-MM-YYYY").format("YYYY-MM-DD")};        
+        const updates = {
+            rider_name : first_name, 
+            last_name, 
+            rider_email, 
+            country_code, 
+            rider_mobile, 
+            emirates, 
+            profile_img : profile_image
+        };
         await updateRecord('riders', updates, ['rider_id'], [riderId]);
         
         return resp.json({status: 1, code: 200, message: ["Rider profile updated successfully"]});
-    }catch(err){
+    } catch(err) {
         // console.log(err);
         return resp.status(500).json({status: 0, code: 500, message:[ "Oops! There is something went wrong! Please Try Again" ]});
     }
@@ -444,56 +416,58 @@ export const deleteAccount = asyncHandler(async (req, resp) => {
     if (!riderId) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"] });
 
     const connection = await db.getConnection();
-
-    try{
+    try {
         await connection.beginTransaction();
         
-        const rider = await queryDB('SELECT profile_img FROM riders WHERE rider_id = ?', [riderId]);
+        const rider = await queryDB('SELECT profile_img, rider_name, last_name, rider_email, country_code, rider_mobile, emirates, area, country, date_of_birth, added_from FROM riders WHERE rider_id = ?', [riderId]);
         if(!rider) return resp.json({status:0, message: 'Rider not found.'});
-        if(rider.profile_img) deleteFile('rider_profile', rider.profile_img);
+        // if(rider.profile_img) deleteFile('rider_profile', rider.profile_img);
 
+        // 'DELETE FROM notifications                         WHERE receive_id = ?',
+        // 'DELETE FROM road_assistance                       WHERE rider_id   = ?',
+        // 'DELETE FROM order_assign                          WHERE rider_id   = ?',
+        // 'DELETE FROM order_history                         WHERE rider_id   = ?',
+        // 'DELETE FROM charging_installation_service         WHERE rider_id   = ?',
+        // 'DELETE FROM charging_installation_service_history WHERE rider_id   = ?',
+        // 'DELETE FROM charging_service                      WHERE rider_id   = ?',
+        // 'DELETE FROM charging_service_history              WHERE rider_id   = ?',
+        // 'DELETE FROM portable_charger_booking              WHERE rider_id   = ?',
+        // 'DELETE FROM portable_charger_booking_assign       WHERE rider_id   = ?',
+        // 'DELETE FROM portable_charger_booking_rejected     WHERE rider_id   = ?',
+        // 'DELETE FROM portable_charger_history              WHERE rider_id   = ?',
+        // 'DELETE FROM discussion_board                      WHERE rider_id   = ?',
+        // 'DELETE FROM board_comment                         WHERE rider_id   = ?',
+        // 'DELETE FROM board_comment_reply                   WHERE rider_id   = ?',
+        // 'DELETE FROM board_likes                           WHERE rider_id   = ?',
+        // 'DELETE FROM board_poll                            WHERE rider_id   = ?',
+        // 'DELETE FROM board_poll_vote                       WHERE rider_id   = ?',
+        // 'DELETE FROM board_share                           WHERE sender_id  = ?',
+        // 'DELETE FROM board_views                           WHERE rider_id   = ?',    
         const deleteQueries = [
-            'DELETE FROM notifications                         WHERE receive_id = ?',
-            'DELETE FROM road_assistance                       WHERE rider_id   = ?',
-            'DELETE FROM order_assign                          WHERE rider_id   = ?',
-            'DELETE FROM order_history                         WHERE rider_id   = ?',
-            'DELETE FROM charging_installation_service         WHERE rider_id   = ?',
-            'DELETE FROM charging_installation_service_history WHERE rider_id   = ?',
-            'DELETE FROM charging_service                      WHERE rider_id   = ?',
-            'DELETE FROM charging_service_history              WHERE rider_id   = ?',
-            'DELETE FROM portable_charger_booking              WHERE rider_id   = ?',
-            'DELETE FROM portable_charger_booking_assign       WHERE rider_id   = ?',
-            'DELETE FROM portable_charger_booking_rejected     WHERE rider_id   = ?',
-            'DELETE FROM portable_charger_history              WHERE rider_id   = ?',
-            'DELETE FROM discussion_board                      WHERE rider_id   = ?',
-            'DELETE FROM board_comment                         WHERE rider_id   = ?',
-            'DELETE FROM board_comment_reply                   WHERE rider_id   = ?',
-            'DELETE FROM board_likes                           WHERE rider_id   = ?',
-            'DELETE FROM board_poll                            WHERE rider_id   = ?',
-            'DELETE FROM board_poll_vote                       WHERE rider_id   = ?',
-            'DELETE FROM board_share                           WHERE sender_id  = ?',
-            'DELETE FROM board_views                           WHERE rider_id   = ?',
             'DELETE FROM riders                                WHERE rider_id   = ?'
         ];
-
         for (const query of deleteQueries) {
             await connection.execute(query, [rider_id]);
         }
-        
+        await insertRecord('deleted_riders', [
+            'rider_id', 'rider_name', 'last_name', 'rider_email', 'country_code', 'rider_mobile', 'emirates', 'area', 'country', 'profile_img', 'date_of_birth', 'added_from' 
+        ],[
+            riderId, rider.rider_name, rider.last_name, rider.rider_email, rider.country_code, rider.rider_mobile,  rider.emirates, rider.area, rider.country, rider.profile_img, rider.date_of_birth, rider.added_from 
+        ]);
         await connection.commit();
 
-        return resp.json({status: 1, code: 200, error: false, message: 'Rider Account deleted successfully!'});
-    }catch(err){
+        return resp.json({status: 1, code: 200, error: false, message: ['Rider Account deleted successfully!']});
+    } catch(err) {
         await connection.rollback();
         console.error('Error deleting rider account:', err.message);
-        return resp.json({status: 1, code: 200, error: true, message: 'Something went wrong. Please try again!'});
-    }finally{
+        return resp.json({status: 1, code: 200, error: true, message: ['Something went wrong. Please try again!']});
+    } finally {
         connection.release();
     }
 });
 
 export const locationList = asyncHandler(async (req, resp) => {
-    const [list] = await db.execute(`SELECT location_id, location_name, latitude, longitude FROM locations ORDER BY location_name ASC`);
+    const [list] = await db.execute(`SELECT location_id, location_name, latitude, longitude, plat_code as emirates_code FROM locations ORDER BY location_name ASC`);
     return resp.json({status: 1, code: 200, message: '', data: list});
 });
 
@@ -569,7 +543,7 @@ export const riderAddressList = asyncHandler(async (req, resp) => {
 
         query += ` ORDER BY id DESC`;
         const [result] = await db.execute(query, queryParams);
-        return resp.json({message: [], status: 1, code: 200, data: result});
+        return resp.json({message: ['We apologize! Our services are currently unavailable in JLT'], status: 1, code: 200, data: result});
     }catch(err){
         console.error('Error fetching rider addresses:', err);
         return resp.json({message: 'Error occurred while fetching rider addresses', status: 0, code: 500});
@@ -577,29 +551,64 @@ export const riderAddressList = asyncHandler(async (req, resp) => {
 });
 
 export const addRiderAddress = asyncHandler(async (req, resp) => {
-    const { rider_id, emirates, area, building_name, unit_no, latitude, longitude, booking_for, nick_name='', street_name='', landmark=''} = mergeParam(req);
+
+    const { rider_id, building_name, flat_no, street_name='', landmark='', emirates, nick_name, latitude, longitude, booking_for, area } = mergeParam(req);
+    // console.log(req.area:);
     const { isValid, errors } = validateFields(mergeParam(req), {
-        rider_id: ["required"], emirates: ["required"], area: ["required"], building_name: ["required"], unit_no: ["required"], latitude: ["required"], 
-        longitude: ["required"], booking_for: ["required"],
+        rider_id      : ["required"], 
+        building_name : ["required"], 
+        flat_no       : ["required"], 
+        // street_name   : ["required"],
+        // landmark      : ["required"], 
+        emirates      : ["required"],
+        nick_name     : ["required"],  
+        latitude      : ["required"], 
+        longitude     : ["required"], 
+        booking_for   : ["required"],
+        area          : ["required"],
     });
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    const last = await queryDB(`SELECT id FROM rider_address ORDER BY id DESC LIMIT 1`);
-    const start = last ? last.id : 0;
-    const nextId = start + 1;
+    const last      = await queryDB(`SELECT id FROM rider_address ORDER BY id DESC LIMIT 1`);
+    const start     = last ? last.id : 0;
+    const nextId    = start + 1;
     const addressId = 'ADDR' + String(nextId).padStart(4, '0');
 
     const insert = await insertRecord('rider_address', [
-        'address_id', 'rider_id', 'nick_name', 'emirate', 'area', 'building_name', 'unit_no', 'street_name', 'landmark', 'latitude', 'longitude', 'booking_for'
+        'address_id', 'rider_id', 'building_name', 'unit_no', 'street_name', 'landmark', 'emirate', 'nick_name',  'latitude', 'longitude', 'booking_for','area' 
     ],[
-        addressId, rider_id, nick_name, emirates, area, building_name, unit_no, street_name, landmark, latitude, longitude, booking_for
+        addressId, rider_id, building_name, flat_no, street_name, landmark, emirates, nick_name, latitude, longitude, booking_for, area
     ]);
-
     return resp.json({
         message: insert.affectedRows > 0 ? ['Address added successfully!'] : ['Oops! Something went wrong. Please try again.'],
         status: insert.affectedRows > 0 ? 1 : 0
     });
+    
+});
+export const editRiderAddress = asyncHandler(async (req, resp) => {
+
+    const { rider_id, address_id, building_name, flat_no, street_name='', landmark='', emirates, nick_name, latitude, longitude, booking_for='' } = mergeParam(req);
+
+    const { isValid, errors } = validateFields(mergeParam(req), {
+        rider_id      : ["required"], 
+        address_id    : ["required"], 
+        building_name : ["required"], 
+        flat_no       : ["required"], 
+        emirates      : ["required"],
+        nick_name     : ["required"],  
+        latitude      : ["required"], 
+        longitude     : ["required"], 
+    });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    const updates = {building_name, unit_no : flat_no, street_name, landmark, emirate : emirates, nick_name, latitude, longitude, booking_for };
+
+    const update = await updateRecord('rider_address', updates, ['rider_id', 'address_id'], [rider_id, address_id]);
+    return resp.json({
+        status  : update.affectedRows > 0 ? 1 : 0,
+        code    : 200,
+        message : update.affectedRows > 0 ? ['Rider Address updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
+    }); 
     
 });
 
@@ -628,48 +637,46 @@ export const deleteRiderAddress = asyncHandler(async (req, resp) => {
 /* Rider Vehicle  */
 export const riderVehicleList = asyncHandler(async (req, resp) => {
     try{
-        const { rider_id, vehicle_type, owner_type } = mergeParam(req);
+        const { rider_id, vehicle_type  } = mergeParam(req);
         if (!rider_id) return resp.json({ status: 0, code: 422, message: ["Rider Id is required"]});
         
-        let query = ` SELECT vehicle_id, vehicle_type, vehicle_number, vehicle_code, year_manufacture, owner, vehicle_model, vehicle_make, leased_from, owner_type, 
-            vehicle_specification, regional_specification, emirates FROM riders_vehicles WHERE rider_id = ?
-        `;
+        let query = ` SELECT vehicle_id, vehicle_type, vehicle_number as plate_number, vehicle_code as plate_code, vehicle_model, vehicle_make as vehicle_brand, vehicle_specification, emirates, default_vehicle FROM riders_vehicles WHERE rider_id = ? `;
         let queryParams = [rider_id];
     
         if (vehicle_type && vehicle_type.trim() !== '') {
             query += ' AND vehicle_type = ?';
             queryParams.push(vehicle_type);
         }
-    
-        if (owner_type && owner_type.trim() !== '') {
-            const ownerTypeList = owner_type.split(',');
-            query += ` AND owner_type IN (${ownerTypeList.map(() => '?').join(',')})`;
-            queryParams.push(...ownerTypeList);
-        }
-    
         const [result] = await db.execute(query, queryParams);
         return resp.json({status: 1, code: 200, message: 'List fecth', data: result});
-    }catch(err){
+    } catch(err) {
         console.error('Error fetching rider vehicles:', err);
         return resp.json({message: 'Error occurred while fetching vehicles', status: 0, code: 500});
     }
 });
 
 export const addRiderVehicle = asyncHandler(async (req, resp) => {
-    const {rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner='', regional_specification=''} = mergeParam(req);
+    // const {rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner='', regional_specification=''} 
+
+    const {rider_id, vehicle_type, vehicle_brand, vehicle_model, vehicle_specification, emirates, plate_code, plate_number } = mergeParam(req);
         
     const { isValid, errors } = validateFields(mergeParam(req), {
-        rider_id: ["required"], vehicle_type: ["required"], vehicle_make: ["required"], vehicle_model: ["required"], year_manufacture: ["required"], owner_type: ["required"], emirates: ["required"]
+        rider_id              : ["required"], 
+        vehicle_type          : ["required"], 
+        vehicle_brand         : ["required"], 
+        vehicle_model         : ["required"], 
+        vehicle_specification : ["required"], 
+        emirates              : ["required"],
+        plate_code            : ["required"], 
+        plate_number          : ["required"], 
     });
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
     
     const insert = await insertRecord('riders_vehicles', [
-        'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'year_manufacture', 'vehicle_code', 'vehicle_number', 'owner_type', 'leased_from', 'vehicle_specification', 'emirates', 'owner', 'regional_specification'
+        'vehicle_id', 'rider_id', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'vehicle_specification', 'emirates', 'vehicle_code', 'vehicle_number' 
     ],[
-        'RDV'+generateUniqueId({length:13}), rider_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, vehicle_code, vehicle_number, owner_type, leased_from, vehicle_specification, emirates, owner, regional_specification
+        'RDV'+generateUniqueId({length:13}), rider_id, vehicle_type, vehicle_brand, vehicle_model, vehicle_specification, emirates, plate_code, plate_number 
     ]);
-
     return resp.json({
         status: insert.affectedRows > 0 ? 1 : 0,
         code: 200,
@@ -678,15 +685,25 @@ export const addRiderVehicle = asyncHandler(async (req, resp) => {
 });
 
 export const editRiderVehicle = asyncHandler(async (req, resp) => {
-    const {rider_id, vehicle_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner='', regional_specification=''} = mergeParam(req);
-        
+    // const {rider_id, vehicle_id, vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code='', vehicle_number='', leased_from='', vehicle_specification='', owner='', regional_specification=''} = mergeParam(req);
+
+    const {rider_id, vehicle_id, vehicle_type, vehicle_brand, vehicle_model, vehicle_specification, emirates, plate_code, plate_number } = mergeParam(req);
+
     const { isValid, errors } = validateFields(mergeParam(req), {
-        rider_id: ["required"], vehicle_id: ["required"], vehicle_type: ["required"], vehicle_make: ["required"], vehicle_model: ["required"], year_manufacture: ["required"], owner_type: ["required"], emirates: ["required"]
+        rider_id              : ["required"], 
+        vehicle_id            : ["required"], 
+        vehicle_type          : ["required"], 
+        vehicle_brand         : ["required"], 
+        vehicle_model         : ["required"], 
+        vehicle_specification : ["required"], 
+        emirates              : ["required"],
+        plate_code            : ["required"], 
+        plate_number          : ["required"], 
     });
-    
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
     
-    const updates = {vehicle_type, vehicle_make, vehicle_model, year_manufacture, owner_type, emirates, vehicle_code, vehicle_number, leased_from, vehicle_specification, owner, regional_specification};
+    const updates = {vehicle_type, vehicle_make : vehicle_brand, vehicle_model, vehicle_specification, emirates, vehicle_code : plate_code, vehicle_number : plate_number };
+
     const update = await updateRecord('riders_vehicles', updates, ['rider_id', 'vehicle_id'], [rider_id, vehicle_id]);
 
     return resp.json({
@@ -712,4 +729,49 @@ export const deleteRiderVehicle = asyncHandler(async (req, resp) => {
         status: del.affectedRows > 0 ? 1 : 0,
         code: 200
     });
+});
+
+export const defaultAddress = asyncHandler(async (req, resp) => {
+
+    const { rider_id, address_id, default_address } = mergeParam(req);
+
+    const { isValid, errors } = validateFields(mergeParam(req), {
+        rider_id        : ["required"], 
+        address_id      : ["required"], 
+        default_address : ["required"], 
+    });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+
+    await updateRecord('rider_address', {default_add : 0}, ['rider_id' ], [rider_id ]);
+
+    const updates = { default_add : 1 };
+    const update  = await updateRecord('rider_address', updates, ['rider_id', 'address_id'], [rider_id, address_id]);
+    return resp.json({
+        status  : update.affectedRows > 0 ? 1 : 0,
+        code    : 200,
+        message : update.affectedRows > 0 ? ['Default Address set successfully!'] : ['Oops! Something went wrong. Please try again.'],
+    }); 
+    
+}); //
+export const defaultVehicle = asyncHandler(async (req, resp) => {
+    
+    const {rider_id, vehicle_id, default_vehicle } = mergeParam(req);
+
+    const { isValid, errors } = validateFields(mergeParam(req), {
+        rider_id        : ["required"], 
+        vehicle_id      : ["required"], 
+        default_vehicle : ["required"], 
+    });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors }); 
+    
+    await updateRecord('riders_vehicles', {default_vehicle : 0 }, ['rider_id' ], [rider_id ]);
+
+    const updates = {default_vehicle : 1 };
+    const update  = await updateRecord('riders_vehicles', updates, ['rider_id', 'vehicle_id'], [rider_id, vehicle_id]);
+
+    return resp.json({
+        status: update.affectedRows > 0 ? 1 : 0,
+        code: 200,
+        message: update.affectedRows > 0 ? ['Rider vehicle updated successfully!'] : ['Oops! Something went wrong. Please try again.'],
+    }); 
 });

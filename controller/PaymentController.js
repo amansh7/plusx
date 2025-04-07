@@ -1,101 +1,94 @@
 import db from "../config/db.js";
 import validateFields from "../validation.js";
-// import { queryDB } from '../dbUtils.js';
 import { mergeParam, formatNumber } from '../utils.js';
 import moment from "moment";
 import Stripe from "stripe";
 import dotenv from 'dotenv';
 import generateUniqueId from "generate-unique-id";
-import { queryDB,  insertRecord, updateRecord } from '../dbUtils.js';
+import { queryDB,  insertRecord } from '../dbUtils.js';
 dotenv.config();
 
-
 export const createIntent = async (req, resp) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const {rider_name, rider_email,amount, currency } = mergeParam(req);
+    
+    const {rider_name, rider_email, amount, currency, booking_id, building_name, street_name='', unit_no, area, emirate } = mergeParam(req);
     const { isValid, errors } = validateFields(mergeParam(req), {
-        rider_name: ["required"], 
-        rider_email: ["required"],
-        amount: ["required"],
-        currency: ["required"],
+        rider_name  : ["required"], 
+        rider_email : ["required"],
+        amount      : ["required"],
+        currency    : ["required"],
+
+        // 12 March ko add hua hai
+        booking_id    : ["required"],
+        building_name : ["required"],
+        unit_no       : ["required"],
+        area          : ["required"],
+        emirate       : ["required"],
     });
     if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
 
-    try{
-        // const user = await findCustomerByEmail(rider_email);
-        // let customerId;
-        // if(user.success){
-        //     customerId = user.customer_id;
-        // }else{
-        //     const customer = await stripe.customers.create({
-        //         name: rider_name,
-        //         address: {
-        //             line1: "476 Yudyog Vihar Phase - V",
-        //             postal_code: "122016",
-        //             city: "Gurugram",
-        //             state: "Haryana",
-        //             country: "IND",
-        //         },
-        //         email: rider_email,
-        //     });
-        //     customerId = customer.id;
-        // }
-        
-        const customer = await stripe.customers.create({
-            name: rider_name,
-            address: {
-                line1: "476 Yudyog Vihar Phase - V",
-                postal_code: "122016",
-                city: "Gurugram",
-                state: "Haryana",
-                country: "IND",
-            },
-            email: rider_email,
-        });
-        let customerId = customer.id;
+    try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+        const user   = await findCustomerByEmail(rider_email);
+        let customerId;
+        if(user.success){
+            customerId = user.customer_id;
+        } else {
+            const customer = await stripe.customers.create({
+                name    : rider_name,
+                address : {
+                    line1       : `${building_name} ${street_name}`, //"D55-PBU - Dubai Production City",
+                    postal_code : unit_no,                       // D55-PBU
+                    city        : area,                     //Dubai Production City
+                    state       : emirate,                 //Dubai
+                    country     : "United Arab Emirates",
+                },
+                email       : rider_email,
+                description : `This booking Id : ${booking_id} for POD Booking.`
+            });
+            customerId = customer.id;
+        }
         
         const ephemeralKey = await stripe.ephemeralKeys.create(
-            { customer: customerId },
-            {apiVersion: '2024-04-10'}
+            { customer  : customerId },
+            {apiVersion : '2024-04-10'}
         );
 
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: amount < 200 ? 200 : Math.floor(amount),
-            currency: currency,
-            customer: customerId,
-            automatic_payment_methods: {
-                enabled: false,
+            amount                    : amount < 200 ? 200 : Math.floor(amount),
+            currency                  : currency,
+            customer                  : customerId,
+            automatic_payment_methods : {
+                enabled : false,
             },
-            payment_method_types: ["card"],
-            use_stripe_sdk: true,
-            setup_future_usage: 'off_session',
-            payment_method_options: {
-                card: {
-                    request_three_d_secure: 'any',
+            payment_method_types   : ["card"],
+            use_stripe_sdk         : true,
+            setup_future_usage     : 'off_session',
+            payment_method_options : {
+                card : {
+                    request_three_d_secure : 'any',
                 },
             },
         });
         const returnData = {
-            paymentIntentId: paymentIntent.id,
-            paymentIntentSecret: paymentIntent.client_secret,
-            ephemeralKey: ephemeralKey.secret,
-            customer: customerId,
-            publishableKey: process.env.STRIPE_PUBLISER_KEY,
+            paymentIntentId     : paymentIntent.id,
+            paymentIntentSecret : paymentIntent.client_secret,
+            ephemeralKey        : ephemeralKey.secret,
+            customer            : customerId,
+            publishableKey      : process.env.STRIPE_PUBLISER_KEY,
         };
-    
         return resp.json({
-            message: ["Payment Intent Created successfully!"],
-            data: returnData,
-            status: 1,
-            code: 200,
+            message : ["Payment Intent Created successfully!"],
+            data    : returnData,
+            status  : 1,
+            code    : 200,
         });
     } catch (err) {
         console.error('Error creating payment intent:', err);
         return resp.status(500).json({
-            message: ["Error creating payment intent"],
-            error: err.message,
-            status: 0,
-            code: 500,
+            message : ["Error creating payment intent"],
+            error   : err.message,
+            status  : 0,
+            code    : 500,
         });
     }
 };
@@ -140,33 +133,30 @@ export const addCardToCustomer = async (req, resp) => {
         
         if(user.success){
             customerId = user.customer_id;
-        }else{
+        } else {
             const customer = await stripe.customers.create({
-                name: rider_name,
-                email: rider_email,
+                name  : rider_name,
+                email : rider_email,
             });
             customerId = customer.id;
         }
-        
         const setupIntent = await stripe.setupIntents.create({
-            customer: customerId,
-            payment_method_types: ['card'],
+            customer             : customerId,
+            payment_method_types : ['card'],
         });
-
         const ephemeralKey = await stripe.ephemeralKeys.create(
-            { customer: customerId },
-            {apiVersion: '2024-04-10'}
+            { customer   : customerId },
+            { apiVersion : '2024-04-10' }
         );
-    
         resp.json({ 
-            status:1, 
-            code:200, 
-            message:['Setup intent created successfully!'],
-            setup_payment_intent_id: setupIntent.id,
-            client_secret: setupIntent.client_secret,
-            ephemeralKey: ephemeralKey.secret,
-            customer: customerId,
-            publishableKey: process.env.STRIPE_PUBLISER_KEY,
+            status                  : 1, 
+            code                    : 200, 
+            message                 : ['Setup intent created successfully!'],
+            setup_payment_intent_id : setupIntent.id,
+            client_secret           : setupIntent.client_secret,
+            ephemeralKey            : ephemeralKey.secret,
+            customer                : customerId,
+            publishableKey          : process.env.STRIPE_PUBLISER_KEY,
         });
     } catch (error) {
         console.error('Error adding card to customer:', error);
@@ -174,21 +164,20 @@ export const addCardToCustomer = async (req, resp) => {
     }
 };
 
-export const customerCardsList = async (req, resp) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+export const customerCardsList = async (req, resp) => {  //pooja@shunyaekai.tech
+    const stripe          = new Stripe(process.env.STRIPE_SECRET_KEY);
     const { rider_email } = mergeParam(req);
-    try{
+    try {
         const user = await findCustomerByEmail(rider_email);
         if(!user.success) return resp.json({status: 1, code:422, message: 'No card found, Please add a card.'});
         
-        const customerId = user.customer_id;
+        const customerId      = user.customer_id;
         const cardDetailsList = [];
         
         const customerCards = await stripe.paymentMethods.list({
-            customer: customerId,
-            type: 'card',
+            customer : customerId,
+            type     : 'card',
         });
-
         customerCards.data.forEach(method => {
             const cardDetails = {
               paymentMethodId   : method.id,
@@ -201,15 +190,14 @@ export const customerCardsList = async (req, resp) => {
           
             cardDetailsList.push(cardDetails);
         });
-    
         return resp.json({
-            status:1,
-            code:200,
-            message: ["Card list fetch successfully"],
-            total: customerCards.data.length, 
-            card_details: cardDetailsList,
+            status       : 1,
+            code         : 200,
+            message      : ["Card list fetch successfully"],
+            total        : customerCards.data.length, 
+            card_details : cardDetailsList,
         });
-    }catch(error){
+    } catch(error) {
         console.error('Error adding card to customer:', error);
         resp.json({ status:0, code:500, message: error.message });
     }
@@ -217,7 +205,7 @@ export const customerCardsList = async (req, resp) => {
 };
 
 export const removeCard = async (req, resp) => {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const stripe                = new Stripe(process.env.STRIPE_SECRET_KEY);
     const { payment_method_id } = req.body;
     if (!payment_method_id) return resp.status(400).json({ status: 0, code: 422, message: ['Payment Method ID is required.']});
     
@@ -225,19 +213,18 @@ export const removeCard = async (req, resp) => {
         const detachedPaymentMethod = await stripe.paymentMethods.detach(payment_method_id);
 
         return resp.json({
-            status: 1,
-            code: 200,
-            message: ['Payment Method removed successfully.'],
-            paymentMethodId: detachedPaymentMethod.id,
+            status          : 1,
+            code            : 200,
+            message         : ['Payment Method removed successfully.'],
+            paymentMethodId : detachedPaymentMethod.id,
         });
     } catch (error) {
         console.error('Error detaching card:', error);
-
         return resp.status(500).json({
-            status: 0,
-            code: 422,
-            message: ['Error removing payment method.'],
-            error: error.message,
+            status  : 0,
+            code    : 422,
+            message : ['Error removing payment method.'],
+            error   : error.message,
         });
     }
 };
@@ -440,11 +427,13 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
     if(booking_type === 'PCB'){
         const data = await queryDB(`
             SELECT 
-                start_charging_level, end_charging_level, user_name AS rider_name,
-                (select r.rider_email from riders AS r where r.rider_id = portable_charger_booking.rider_id limit 1) AS rider_email,
-                (SELECT coupan_percentage FROM coupon_usage WHERE booking_id = portable_charger_booking.booking_id) AS discount
+                pcb.start_charging_level, pcb.end_charging_level, pcb.user_name AS rider_name,
+                (select r.rider_email from riders AS r where r.rider_id = pcb.rider_id limit 1) AS rider_email,
+                (SELECT coupan_percentage FROM coupon_usage WHERE booking_id = pcb.booking_id) AS discount,
+                (select created_at from portable_charger_history AS bh where bh.booking_id = pcb.booking_id and order_status = 'CS' limit 1) AS charging_start,
+                (select created_at from portable_charger_history AS bh where bh.booking_id = pcb.booking_id and order_status = 'CC' limit 1) AS charging_end
             FROM
-                portable_charger_booking
+                portable_charger_booking as pcb
             WHERE 
                 booking_id = ? LIMIT 1
         `, [booking_id]);
@@ -452,21 +441,30 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
         if (!data) return { success: false, message: 'No data found for the invoice.' };
         
         const startChargingLevels = data.start_charging_level ? data.start_charging_level.split(',').map(Number) : [0];
-        const endChargingLevels = data.end_charging_level ? data.end_charging_level.split(',').map(Number) : [0];
-        
+        const endChargingLevels   = data.end_charging_level ? data.end_charging_level.split(',').map(Number) : [0];
         if (startChargingLevels.length !== endChargingLevels.length) return resp.json({ error: 'Mismatch in charging level data.' });
-
+        
         const chargingLevelSum = startChargingLevels.reduce((sum, startLevel, index) => {
             const endLevel = endChargingLevels[index];
             return sum + Math.max(startLevel - endLevel, 0);
         }, 0);
-        // console.log('chargingLevelSum', chargingLevelSum);
-        data.kw           = chargingLevelSum * 0.25;
+
+        let killoWatt  = chargingLevelSum * 0.25;
+        if( chargingLevelSum < 1 ) { 
+            const date1       = new Date(data.charging_start);
+            const date2       = new Date(data.charging_end);
+            const momentDate1 = moment(date1); 
+            const momentDate2 = moment(date2);
+            let hrsConsumed   = ( momentDate2.diff(momentDate1, 'minutes') ) / 60 ;
+                killoWatt     = hrsConsumed * 7;
+        }
+        data.kw           = killoWatt;
+        // data.kw        = chargingLevelSum * 0.25;
         data.kw_dewa_amt  = data.kw * 0.44;
         data.kw_cpo_amt   = data.kw * 0.26;
         data.delv_charge  = 30;
-        data.t_vat_amt    = Math.floor((data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge) * 5) / 100;
-        data.total_amt    = data.kw_dewa_amt + data.kw_cpo_amt + data.t_vat_amt;
+        data.t_vat_amt    = 0.00; //Math.floor((data.kw_dewa_amt + data.kw_cpo_amt + data.delv_charge) * 5) / 100;
+        data.total_amt    = 0.00; //data.kw_dewa_amt + data.kw_cpo_amt + data.t_vat_amt;
 
         total_amount = (data.total_amt) ? Math.round(data.total_amt) : 0.00;
 
@@ -490,7 +488,99 @@ export const getTotalAmountFromService = async (booking_id, booking_type) => {
 
         total_amount = (data.amount) ? data.amount : 0.00;
         return {success: true, total_amount, message: 'PickDrop Amount fetched successfully'};
-    }else{
+    } else {
         return {success: false, total_amount,  message: 'Invalid Booking Id'}; 
     }
 }
+
+
+// This function for IOS device made by Ravv 27 March 2025
+export const getPaymentSession = async (req, resp) => {
+    
+    const { rider_name, rider_email, amount, currency, booking_id, building_name, street_name='', unit_no, area, emirate } = mergeParam(req);
+
+    const { isValid, errors } = validateFields(req.body, {
+        rider_name    : ["required"], 
+        rider_email   : ["required"], 
+        amount        : ["required"],
+        currency      : ["required"],
+        booking_id    : ["required"],
+        building_name : ["required"],
+        unit_no       : ["required"],
+        area          : ["required"],
+        emirate       : ["required"],
+    });
+    if (!isValid) return resp.json({ status: 0, code: 422, message: errors });
+    try {
+        let customerId;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+        const user   = await findCustomerByEmail(rider_email);
+        console.log(user);
+        if(user.success) {
+            customerId = user.customer_id;
+
+        } else {
+            const customer = await stripe.customers.create({
+                name    : rider_name,
+                address : {
+                    line1       : `${building_name} ${street_name}`, //"D55-PBU - Dubai Production City",
+                    postal_code : unit_no,                       // D55-PBU
+                    city        : area,                     //Dubai Production City
+                    state       : emirate,                 //Dubai
+                    country     : "United Arab Emirates",
+                },
+                email       : rider_email,
+                description : `This booking Id : ${booking_id} for POD Booking.`
+            });
+            customerId = customer.id;
+        }
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types : ["card"],
+            line_items : [
+                {
+                    price_data : {
+                        currency     : currency,
+                        product_data : { name : `This booking Id : ${booking_id} for POD Booking.` },
+                        unit_amount  : amount, // $50.00
+                    },
+                    quantity : 1,
+                },
+            ],
+            payment_method_options: {
+                card: {
+                  request_three_d_secure: "any", // Force OTP for every transaction
+                },
+            },
+            // customer_creation   : "always",
+            customer : customerId, // Existing customer ID
+            // payment_intent_data : {
+            //     shipping: {
+            //         name    : rider_name,
+            //         address : {
+            //             line1       : `${building_name} ${street_name}`, //"D55-PBU - Dubai Production City",
+            //             city        : area,         //"Dubai Production City",
+            //             state       : emirate,     //"Dubai",
+            //             country     : "United Arab Emirates",   // ✅ Default country set to the United States
+            //             postal_code : unit_no,   //"D55",
+            //         },
+            //     },
+            // },
+            // default_values : {
+            //     billing_address : {
+            //         country : "AE", // Default Country Set to UAE
+            //     }, 
+            // },
+            payment_intent_data : {
+                setup_future_usage : "off_session", // Forces 3D Secure authentication
+            },
+            mode        : "payment",
+            success_url : `https://plusx.shunyaekai.com/payment-success`,  
+            cancel_url  : `https://plusx.shunyaekai.com/payment-cancel`,
+        });
+        // resp.json({ url: session.url });
+        return resp.json({ message: ['Paymnet session'], status: 1, code: 200,  url: session.url, session_id: session.id });
+    } catch (error) {
+        // resp.status(500).json({ error: error.message });
+        return resp.json({ message: ['Sorry this is a duplicate entry!'], status: 0, code: 200, error : error.message });
+    }
+} 

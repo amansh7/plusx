@@ -719,7 +719,7 @@ export const podAreaBookingList = async (req, resp) => {
             liveSearchFields : [], 
             liveSearchTexts  : [],
             whereField       : ['pcb.pod_id', 'pcb.status'],  
-            whereValue       : [podId, 'PU']
+            whereValue       : [podId, 'RO']
         });
         console.log(result.data)
         return resp.json({

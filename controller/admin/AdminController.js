@@ -5,10 +5,9 @@ import {  getPaginatedData, queryDB, updateRecord } from '../../dbUtils.js';
 import { asyncHandler,mergeParam, formatDateTimeInQuery } from '../../utils.js';
 import path from 'path';
 import moment from 'moment';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+// import { fileURLToPath } from 'url';
+// import fs from 'fs';
 dotenv.config();
-
 
 export const getDashboardData = async (req, resp) => {
     try {
@@ -19,16 +18,18 @@ export const getDashboardData = async (req, resp) => {
         const givenDateTime    = formattedDate+' 00:00:01'; // Replace with your datetime string
         const modifiedDateTime = moment(givenDateTime).subtract(4, 'hours'); // Subtract 4 hours
         const currentDate      = modifiedDateTime.format('YYYY-MM-DD HH:mm:ss');
-        const [counts] = await db.execute(`
-            SELECT 
-                (SELECT COUNT(*) FROM riders WHERE created_at >= "${currentDate}") AS total_rider,
-                (SELECT COUNT(*) FROM rsa) AS total_rsa,
-                (SELECT COUNT(*) FROM portable_charger_booking WHERE created_at >= "${currentDate}") AS total_charger_booking,
-                (SELECT COUNT(*) FROM charging_service WHERE created_at >= "${currentDate}") AS total_charging_service,
-                (SELECT COUNT(*) FROM road_assistance WHERE created_at >= "${currentDate}") AS total_road_assistance,
-                (SELECT COUNT(*) FROM charging_installation_service WHERE created_at >= "${currentDate}") AS total_installation,
-                (SELECT COUNT(*) FROM ev_pre_sale_testing WHERE created_at >= "${currentDate}") AS total_pre_sale_testing,
-                (SELECT COUNT(*) FROM public_charging_station_list) AS total_station
+        
+        const [counts] = await db.execute(`SELECT 
+            (SELECT COUNT(*) FROM riders WHERE created_at >= "${currentDate}") AS total_rider,
+            (SELECT COUNT(*) FROM rsa) AS total_rsa,
+            (SELECT COUNT(*) FROM portable_charger_booking WHERE created_at >= "${currentDate}" and status != "PNR") AS total_charger_booking,
+            (SELECT COUNT(*) FROM charging_service WHERE created_at >= "${currentDate}" and order_status != "PNR") AS total_charging_service,
+            (SELECT COUNT(*) FROM road_assistance WHERE created_at >= "${currentDate}") AS total_road_assistance,
+            (SELECT COUNT(*) FROM charging_installation_service WHERE created_at >= "${currentDate}") AS total_installation,
+            (SELECT COUNT(*) FROM ev_pre_sale_testing WHERE created_at >= "${currentDate}") AS total_pre_sale_testing,
+            (SELECT COUNT(*) FROM public_charging_station_list) AS total_station,
+            (SELECT COUNT(*) FROM portable_charger_booking WHERE created_at >= "${currentDate}" and status = "PNR") AS total_charger_booking_failed,
+            (SELECT COUNT(*) FROM charging_service WHERE created_at >= "${currentDate}" and order_status = "PNR") AS total_charging_service_failed
         `);
 
         const [rsaRecords] = await db.execute(`SELECT id, rsa_id, rsa_name, email, country_code, mobile, status, latitude AS lat, longitude AS lng FROM rsa where latitude != '' and status In(1, 2)`);
@@ -55,14 +56,16 @@ export const getDashboardData = async (req, resp) => {
         }));
 
         const count_arr = [ 
-            { module: 'App Sign Up', count: counts[0].total_rider },
-            { module: 'POD Bookings', count: counts[0].total_charger_booking },
-            { module: 'Pickup & Dropoff Bookings', count: counts[0].total_charging_service },
-            { module: 'Charger Installation Bookings', count: counts[0].total_installation },
-            { module: 'EV Road Assistance', count: counts[0].total_road_assistance },
-            { module: 'Pre-Sale Testing Bookings', count: counts[0].total_pre_sale_testing },
-            { module: 'No. of Regs. Drivers', count: counts[0].total_rsa },
-            { module: 'Total Public Chargers', count: counts[0].total_station }, 
+            { module : 'App Sign Up',                            count : counts[0].total_rider },
+            { module : 'POD Bookings',                           count : counts[0].total_charger_booking },
+            { module : 'Pickup & Dropoff Bookings',              count : counts[0].total_charging_service },
+            { module : 'Charger Installation Bookings',          count : counts[0].total_installation },
+            { module : 'EV Road Assistance',                     count : counts[0].total_road_assistance },
+            { module : 'Pre-Sale Testing Bookings',              count : counts[0].total_pre_sale_testing },
+            { module : 'No. of Regs. Drivers',                   count : counts[0].total_rsa },
+            { module : 'Total Public Chargers',                  count : counts[0].total_station }, 
+            { module : 'Today POD Failed Bookings',              count : counts[0].total_charger_booking_failed }, 
+            { module : 'Today Pickup & Dropoff Failed Bookings', count : counts[0].total_charging_service_failed },
 
             // { module: 'EV Buy & Sell', count: counts[0].total_vehicle_sell },
             // { module: 'Total Electric Bikes Leasing', count: counts[0].total_bike_rental }, 
@@ -76,7 +79,7 @@ export const getDashboardData = async (req, resp) => {
             // { module: 'Total Register your Interest', count: counts[0].total_pod }
         ];
         // return resp.json({code: 200, data:count_arr});
-        return resp.json({code: 200, data:{count_arr, location, podLocation}});
+        return resp.json({code : 200, data : {count_arr, location, podLocation}});
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
         resp.status(500).json({ message: 'Error fetching dashboard data' });
@@ -97,7 +100,7 @@ export const notificationList = asyncHandler(async (req, resp) => {
         return resp.json({ 
             status : 1, 
             code       : 200, 
-            message    : "Notification Count Only", 
+            message    : ["Notification Count Only"], 
             data       : [], 
             total_page : 0, 
             totalRows  : totalRows.total
@@ -114,7 +117,7 @@ export const notificationList = asyncHandler(async (req, resp) => {
     return resp.json({ 
         status     : 1, 
         code       : 200, 
-        message    : "Notification list fetch successfully", 
+        message    : ["Notification list fetch successfully"], 
         data       : notifications, 
         total_page : total_page, 
         totalRows  : totalRows.total
@@ -179,7 +182,6 @@ export const riderList = async (req, resp) => {
         const result = await getPaginatedData(params);
         const [emiratesResult] = await db.query('SELECT DISTINCT emirates FROM riders');
         
-
         return resp.json({
             status: 1,
             code: 200,
@@ -194,7 +196,7 @@ export const riderList = async (req, resp) => {
         return resp.status(500).json({
             status: 0,
             code: 500,
-            message: 'Error fetching rider list',
+            message: ['Error fetching rider list'],
         });
     }
 };
@@ -203,153 +205,156 @@ export const riderDetails = async (req, resp) => {
     const { riderId } = req.body;
 
     if (!riderId) {
-        return resp.status(400).json({
-            status: 0,
-            code: 400,
-            message: 'Rider ID is required'
-        });
+        return resp.status(200).json({ status : 0, code : 400, message : ['Rider ID is required'] });
     }
-
     try {
-        const [rows] = await db.execute(
-            `SELECT r.*, 
-                    ra.address_id, ra.street_name, ra.emirate, ra.area, ra.building_name, ra.unit_no, ra.landmark, ra.nick_name, ra.latitude, ra.longitude, 
-                    rv.vehicle_id, rv.vehicle_type, rv.vehicle_number, rv.vehicle_code, rv.year_manufacture, rv.vehicle_model, rv.vehicle_make, rv.leased_from,
-                    rv.owner, rv.owner_type, rv.vehicle_specification, rv.emirates
-             FROM riders r
-             LEFT JOIN rider_address ra ON r.rider_id = ra.rider_id
-             LEFT JOIN riders_vehicles rv ON r.rider_id = rv.rider_id
-             WHERE r.rider_id = ?`, 
-            [riderId]
-        );
+        var [rows] = await db.execute( `SELECT * FROM riders WHERE rider_id = ?`, [riderId] );
 
         if (rows.length === 0) {
-            return resp.status(404).json({
-                status: 0,
-                code: 404,
-                message: 'Rider not found'
-            });
+            var [rows2] = await db.execute( `SELECT * FROM deleted_riders WHERE rider_id = ?`, [riderId] );
+            rows = rows2;
         }
+        if (rows.length === 0) {
+            return resp.status(200).json({ status : 0, code : 404, message : 'Rider not found' });
+        }
+        const [riderAddress] = await db.execute(
+            `SELECT 
+                address_id, street_name, emirate, area, building_name, unit_no, landmark, nick_name, latitude, longitude
+            FROM rider_address WHERE rider_id = ?`, 
+            [riderId]
+        );
+        var [riderVehicles] = await db.execute(
+            `SELECT vehicle_id, vehicle_type, vehicle_number, vehicle_code, year_manufacture, vehicle_model, vehicle_make, leased_from, owner, owner_type, vehicle_specification, emirates
+            FROM riders_vehicles
+            WHERE rider_id = ?`, 
+            [riderId]
+        );
 
         const [chargerRows] = await db.execute(
             `SELECT 
                 pcb.booking_id, pcb.rsa_id, rsa.rsa_name, pcb.charger_id, pcb.vehicle_id, pcb.service_name, pcb.service_price, pcb.service_type, pcb.service_feature, pcb.status, 
                 ${formatDateTimeInQuery(['pcb.created_at'])}
-             FROM portable_charger_booking pcb
-             JOIN rsa ON pcb.rsa_id = rsa.rsa_id
-             WHERE pcb.rider_id = ?
-             ORDER BY pcb.created_at DESC
-             LIMIT 5`, 
+            FROM portable_charger_booking pcb
+            left JOIN rsa ON pcb.rsa_id = rsa.rsa_id
+            WHERE pcb.rider_id = ?
+            ORDER BY pcb.created_at DESC
+            LIMIT 5`, 
             [riderId]
         );
-
-
+        // console.log(chargerRows)
         const [chargingServiceRows] = await db.execute(
-            `SELECT 
-                cs.request_id, 
-                cs.rsa_id, 
-                rsa.rsa_name, 
-                cs.vehicle_id, 
-                cs.price, 
-                cs.order_status, 
+            `SELECT cs.request_id, cs.rsa_id, rsa.rsa_name, cs.vehicle_id, cs.price, cs.order_status, 
                 ${formatDateTimeInQuery(['cs.created_at'])}
-             FROM charging_service cs
-             JOIN rsa ON cs.rsa_id = rsa.rsa_id
-             WHERE cs.rider_id = ?
-             ORDER BY cs.created_at DESC
-             LIMIT 5`,
+            FROM charging_service cs
+            left JOIN rsa ON cs.rsa_id = rsa.rsa_id
+            WHERE cs.rider_id = ?
+            ORDER BY cs.created_at DESC
+            LIMIT 5`,
             [riderId]
         );
-        
-
         const rider = {
-            rider_id: rows[0].rider_id,
-            rider_name: rows[0].rider_name,
-            rider_email: rows[0].rider_email,
-            rider_mobile: rows[0].rider_mobile,
-            country_code: rows[0].country_code,
-            date_of_birth: moment(rows[0].date_of_birth).format('YYYY-MM-DD'),
-            area: rows[0].area,
-            emirates: rows[0].emirates,
-            country: rows[0].country,
-            vehicle_type: rows[0].vehicle_type,
-            riderAddress: [],
-            riderVehicles: [],
-            portableChargerBookings: chargerRows.map(row => ({
-                booking_id: row.booking_id,
-                rsa_id: row.rsa_id,
-                rsa_name: row.rsa_name,
-                charger_id: row.charger_id,
-                vehicle_id: row.vehicle_id,
-                service_name: row.service_name,
-                service_type: row.service_type,
-                service_price: row.service_price,
-                service_feature: row.service_feature,
-                order_status: row.status,
-                created_at: row.created_at,
+            rider_id      : rows[0].rider_id,
+            rider_name    : rows[0].rider_name,
+            rider_email   : rows[0].rider_email,
+            rider_mobile  : rows[0].rider_mobile,
+            country_code  : rows[0].country_code,
+            date_of_birth : moment(rows[0].date_of_birth).format('YYYY-MM-DD'),
+            area          : rows[0].area,
+            emirates      : rows[0].emirates || rows[0].emirates,
+            country       : rows[0].country,
+            vehicle_type  : rows[0].vehicle_type || '',
+            // riderAddress  : [],
+            // riderVehicles : [],
+            portableChargerBookings : chargerRows.map(row => ({
+                booking_id      : row.booking_id,
+                rsa_id          : row.rsa_id,
+                rsa_name        : row.rsa_name,
+                charger_id      : row.charger_id,
+                vehicle_id      : row.vehicle_id,
+                service_name    : row.service_name,
+                service_type    : row.service_type,
+                service_price   : row.service_price,
+                service_feature : row.service_feature,
+                order_status    : row.status,
+                created_at      : row.created_at,
             })),
-            pickAndDropBookings: chargingServiceRows.map(row => ({
-                request_id: row.request_id,
-                rsa_id: row.rsa_id,
-                rsa_name: row.rsa_name,
-                vehicle_id: row.vehicle_id,
-                price: row.price,
-                order_status: row.order_status,
-                created_at: row.created_at,
+            pickAndDropBookings : chargingServiceRows.map(row => ({
+                request_id   : row.request_id,
+                rsa_id       : row.rsa_id,
+                rsa_name     : row.rsa_name,
+                vehicle_id   : row.vehicle_id,
+                price        : row.price,
+                order_status : row.order_status,
+                created_at   : row.created_at,
+            })),
+
+            riderAddress : riderAddress.map(row => ({
+                rider_address_id : row.address_id,
+                street           : row.street_name,
+                emirate          : row.emirate,
+                area             : row.area,
+                building_name    : row.building_name,
+                unit_no          : row.unit_no,
+                landmark         : row.landmark,
+                nick_name        : row.nick_name,
+                latitude         : row.latitude,
+                longitude        : row.longitude,
+            })),
+            riderVehicles : riderVehicles.map(row => ({
+                vehicle_id            : row.vehicle_id,
+                vehicle_type          : row.vehicle_type,
+                vehicle_number        : row.vehicle_number,
+                vehicle_code          : row.vehicle_code,
+                year_manufacture      : row.year_manufacture,
+                vehicle_model         : row.vehicle_model,
+                vehicle_make          : row.vehicle_make,
+                leased_from           : row.leased_from,
+                owner                 : row.owner,
+                owner_type            : row.owner_type,
+                vehicle_specification : row.vehicle_specification,
+                emirates              : row.emirates,
             })),
         };
-
-        const uniqueAddressIds = new Set();
-        const uniqueVehicleIds = new Set();
-
-        rows.forEach(row => {
-            if (row.address_id && !uniqueAddressIds.has(row.address_id)) {
-                uniqueAddressIds.add(row.address_id);
-                rider.riderAddress.push({
-                    rider_address_id: row.address_id,
-                    street: row.street_name,
-                    emirate: row.emirate,
-                    area: row.area,
-                    building_name: row.building_name,
-                    unit_no: row.unit_no,
-                    landmark: row.landmark,
-                    nick_name: row.nick_name,
-                    latitude: row.latitude,
-                    longitude: row.longitude,
-                });
-            }
-
-            if (row.vehicle_id && !uniqueVehicleIds.has(row.vehicle_id)) {
-                uniqueVehicleIds.add(row.vehicle_id);
-                rider.riderVehicles.push({
-                    vehicle_id: row.vehicle_id,
-                    vehicle_type: row.vehicle_type,
-                    vehicle_number: row.vehicle_number,
-                    vehicle_code: row.vehicle_code,
-                    year_manufacture: row.year_manufacture,
-                    vehicle_model: row.vehicle_model,
-                    vehicle_make: row.vehicle_make,
-                    leased_from: row.leased_from,
-                    owner: row.owner,
-                    owner_type: row.owner_type,
-                    vehicle_specification: row.vehicle_specification,
-                    emirates: row.emirates,
-                });
-            }
-        });
-
-        return resp.json({
-            status: 1,
-            code: 200,
-            data: rider
-        });
+        // const uniqueAddressIds = new Set();
+        // const uniqueVehicleIds = new Set();
+        // rows.forEach(row => {
+        //     if (row.address_id && !uniqueAddressIds.has(row.address_id)) {
+        //         uniqueAddressIds.add(row.address_id);
+        //         rider.riderAddress.push({
+        //             rider_address_id : row.address_id,
+        //             street           : row.street_name,
+        //             emirate          : row.emirates,
+        //             area             : row.area,
+        //             building_name    : row.building_name,
+        //             unit_no          : row.unit_no,
+        //             landmark         : row.landmark,
+        //             nick_name        : row.nick_name,
+        //             latitude         : row.latitude,
+        //             longitude        : row.longitude,
+        //         });
+        //     }
+        //     if (row.vehicle_id && !uniqueVehicleIds.has(row.vehicle_id)) {
+        //         uniqueVehicleIds.add(row.vehicle_id);
+        //         rider.riderVehicles.push({
+        //             vehicle_id            : row.vehicle_id,
+        //             vehicle_type          : row.vehicle_type,
+        //             vehicle_number        : row.vehicle_number,
+        //             vehicle_code          : row.vehicle_code,
+        //             year_manufacture      : row.year_manufacture,
+        //             vehicle_model         : row.vehicle_model,
+        //             vehicle_make          : row.vehicle_make,
+        //             leased_from           : row.leased_from,
+        //             owner                 : row.owner,
+        //             owner_type            : row.owner_type,
+        //             vehicle_specification : row.vehicle_specification,
+        //             emirates              : row.emirates,
+        //         });
+        //     }
+        // });
+        return resp.json({ status : 1, code : 200, data : rider });
     } catch (error) {
         console.error('Error fetching rider details:', error);
-        return resp.status(500).json({
-            status: 0,
-            code: 500,
-            message: 'Error fetching rider details',
-        });
+        return resp.status(500).json({ status : 0, code : 500, message : ['Error fetching rider details'], });
     }
 };
 
@@ -374,24 +379,24 @@ export const deleteRider = async (req, resp) => {
         // });
 
         const deleteQueries = [
-            'DELETE FROM notifications                         WHERE receive_id = ?',
-            'DELETE FROM road_assistance                       WHERE rider_id   = ?',
-            'DELETE FROM order_assign                          WHERE rider_id   = ?',
-            'DELETE FROM order_history                         WHERE rider_id   = ?',
-            'DELETE FROM charging_installation_service         WHERE rider_id   = ?',
-            'DELETE FROM charging_installation_service_history WHERE rider_id   = ?',
-            'DELETE FROM charging_service                      WHERE rider_id   = ?',
-            'DELETE FROM charging_service_history              WHERE rider_id   = ?',
-            'DELETE FROM portable_charger_booking              WHERE rider_id   = ?',
-            'DELETE FROM portable_charger_history              WHERE rider_id   = ?',
-            'DELETE FROM discussion_board                      WHERE rider_id   = ?',
-            'DELETE FROM board_comment                         WHERE rider_id   = ?',
-            'DELETE FROM board_comment_reply                   WHERE rider_id   = ?',
-            'DELETE FROM board_likes                           WHERE rider_id   = ?',
-            'DELETE FROM board_poll                            WHERE rider_id   = ?',
-            'DELETE FROM board_poll_vote                       WHERE rider_id   = ?',
-            'DELETE FROM board_share                           WHERE sender_id  = ?',
-            'DELETE FROM board_views                           WHERE rider_id   = ?',
+            // 'DELETE FROM notifications                         WHERE receive_id = ?',
+            // 'DELETE FROM road_assistance                       WHERE rider_id   = ?',
+            // 'DELETE FROM order_assign                          WHERE rider_id   = ?',
+            // 'DELETE FROM order_history                         WHERE rider_id   = ?',
+            // 'DELETE FROM charging_installation_service         WHERE rider_id   = ?',
+            // 'DELETE FROM charging_installation_service_history WHERE rider_id   = ?',
+            // 'DELETE FROM charging_service                      WHERE rider_id   = ?',
+            // 'DELETE FROM charging_service_history              WHERE rider_id   = ?',
+            // 'DELETE FROM portable_charger_booking              WHERE rider_id   = ?',
+            // 'DELETE FROM portable_charger_history              WHERE rider_id   = ?',
+            // 'DELETE FROM discussion_board                      WHERE rider_id   = ?',
+            // 'DELETE FROM board_comment                         WHERE rider_id   = ?',
+            // 'DELETE FROM board_comment_reply                   WHERE rider_id   = ?',
+            // 'DELETE FROM board_likes                           WHERE rider_id   = ?',
+            // 'DELETE FROM board_poll                            WHERE rider_id   = ?',
+            // 'DELETE FROM board_poll_vote                       WHERE rider_id   = ?',
+            // 'DELETE FROM board_share                           WHERE sender_id  = ?',
+            // 'DELETE FROM board_views                           WHERE rider_id   = ?',
             'DELETE FROM riders                                WHERE rider_id   = ?'
         ];
 
@@ -475,18 +480,94 @@ export const profileUpdate = asyncHandler(async (req, resp) => {
     });
 });
 
+export const locationList = asyncHandler(async (req, resp) => {
+    const [list] = await db.execute(`SELECT location_id as value, location_name as label FROM locations where status = 1 ORDER BY location_name ASC`);
+    return resp.json({status: 1, code: 200, message: '', data: list});
+});
+/* Dynamic Data */
+export const areaList = asyncHandler(async (req, resp) => {
+    const { location_id } = mergeParam(req);
+
+    let query = `SELECT id AS loc_id, location_id, area_name FROM locations_area_list WHERE location_id = ? AND status = ? ORDER BY area_name ASC`;
+
+    const [result] = await db.execute(query, [location_id, 1]);
+    return resp.json({
+        status    : 1, 
+        code      : 200,
+        message   : ["Area List fetch successfully!"],
+        area_data : result
+    });
+});
 
 
+export const deletedRiderList = async (req, resp) => {
+    let { page_no, addedFrom, emirates, start_date, end_date, search_text = '' } = req.body;
 
+    page_no = parseInt(page_no, 10);
+    if (isNaN(page_no) || page_no < 1) {
+        page_no = 1;
+    }
 
+    try {
+        const params = {
+            tableName : 'deleted_riders',
+            columns   : `rider_id, rider_name, last_name, rider_email, country_code, rider_mobile, emirates, profile_img, ${formatDateTimeInQuery(['created_at'])}`,
+            sortColumn : 'id',
+            sortOrder  : "DESC",
+            page_no    : page_no,
+            limit      : 10,
+            liveSearchFields : ['rider_name', 'last_name', 'rider_id', 'rider_email', 'rider_mobile'],
+            liveSearchTexts  : [search_text, search_text, search_text, search_text, search_text],
+            whereField    : [],
+            whereValue    : [],
+            whereOperator : []
+        };
+        if (start_date && end_date) {
+            
+            const startToday         = new Date(start_date);
+            const startFormattedDate = `${startToday.getFullYear()}-${(startToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${startToday.getDate().toString().padStart(2, '0')}`;
+                        
+            const givenStartDateTime    = startFormattedDate+' 00:00:01'; // Replace with your datetime string
+            const modifiedStartDateTime = moment(givenStartDateTime).subtract(4, 'hours'); // Subtract 4 hours
+            const start                 = modifiedStartDateTime.format('YYYY-MM-DD HH:mm:ss')
+            
+            const endToday         = new Date(end_date);
+            const formattedEndDate = `${endToday.getFullYear()}-${(endToday.getMonth() + 1).toString()
+                .padStart(2, '0')}-${endToday.getDate().toString().padStart(2, '0')}`;
+            const end = formattedEndDate+' 19:59:59';
 
-
-
-
-
-
-
-
-
-
-
+            params.whereField.push('created_at', 'created_at');
+            params.whereValue.push(start, end);
+            params.whereOperator.push('>=', '<=');
+        }
+        if(addedFrom) {
+            params.whereField.push('added_from');
+            params.whereValue.push(addedFrom);
+            params.whereOperator.push('=');
+        }
+        if(emirates) {
+            params.whereField.push('emirates');
+            params.whereValue.push(emirates);
+            params.whereOperator.push('=');
+        }
+        const result           = await getPaginatedData(params);
+        const [emiratesResult] = await db.query('SELECT DISTINCT emirates FROM riders');
+        return resp.json({
+            status     : 1,
+            code       : 200,
+            message    : ["Deleted Rider list fetched successfully!"],
+            data       : result.data,
+            emirates   : emiratesResult,
+            total_page : result.totalPage,
+            total      : result.total,
+        });
+    } catch (error) {
+        console.error('Error fetching rider list:', error);
+        return resp.status(500).json({
+            status  : 0,
+            code    : 500,
+            message : 'Error fetching rider list',
+        });
+    }
+};

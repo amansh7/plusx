@@ -2,14 +2,14 @@ import { Router } from "express";
 import { authenticate, authenticateAdmin } from "../middleware/admin/authenticationMiddleware.js";
 import { adminAuthorization } from "../middleware/admin/authorizeMiddleware.js";
 import { login, logout, forgotPassword, updatePassword } from "../controller/admin/AuthController.js";
-import { getDashboardData, riderList, riderDetails,deleteRider, notificationList } from "../controller/admin/AdminController.js";
+import { getDashboardData, riderList, riderDetails,deleteRider, notificationList, locationList, areaList, deletedRiderList } from "../controller/admin/AdminController.js";
 import { chargerList, addCharger, editCharger, deleteCharger, chargerBookingList, chargerBookingDetails, assignBooking, chargerDetails, 
-    invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail, adminCancelPCBooking, customerChargerBookingList
+    invoiceList,invoiceDetails, slotList, addSlot, editSlot, deleteSlot, slotDetails, subscriptionList, subscriptionDetail, adminCancelPCBooking, customerChargerBookingList, failedChargerBookingList
 } from "../controller/admin/PortableChargerController.js";
 import { handleFileUpload } from "../fileUpload.js";
 import { 
     bookingDetails, bookingList, pdAddSlot, pdDeleteSlot, pdEditSlot, pdInvoiceDetails, pdInvoiceList, pdSlotList, PodAssignBooking as pdAssignBooking, pdSlotDetails, 
-    adminCancelCSBooking 
+    adminCancelCSBooking, failedBookingList  
 } from "../controller/admin/PickAndDropController.js";
 import { addPublicCharger, editPublicCharger, stationDetail, stationList, deletePublicCharger, deletePublicChargerGallery, stationData } from "../controller/admin/PublicChargerController.js";
 import { chargerInstallationDetails, chargerInstallationList } from "../controller/admin/ChargerInstallationController.js";
@@ -59,6 +59,9 @@ const adminRoutes = [
     { method: 'post', path: '/rider-list',      handler: riderList },
     { method: 'post', path: '/rider-details',   handler: riderDetails },
     { method: 'post', path: '/delete-rider',    handler: deleteRider },
+    { method: 'post', path: '/location-list',   handler: locationList },
+    { method: 'post',  path: '/location-area-list', handler: areaList },
+    { method: 'post', path: '/deleted-rider-list',      handler: deletedRiderList },
 
     /* Portable Charger */ 
     { method: 'post',   path: '/charger-list',                    handler: chargerList },
@@ -77,7 +80,7 @@ const adminRoutes = [
     { method: 'post',   path: '/charger-edit-time-slot',          handler: editSlot },
     { method: 'post',   path: '/charger-delete-time-slot',        handler: deleteSlot },
     { method: 'post',   path: '/customer-charger-booking-list',   handler: customerChargerBookingList },
-
+    { method: 'post',   path: '/failed-charger-booking-list',     handler: failedChargerBookingList },
     /* Pick & Drop */
     { method: 'post',   path: '/pick-and-drop-booking-list',     handler: bookingList },
     { method: 'post',   path: '/pick-and-drop-booking-details',  handler: bookingDetails },
@@ -89,6 +92,7 @@ const adminRoutes = [
     { method: 'post',   path: '/pick-and-drop-add-slot',         handler: pdAddSlot },
     { method: 'post',   path: '/pick-and-drop-edit-slot',        handler: pdEditSlot },
     { method: 'post',   path: '/pick-and-drop-delete-slot',      handler: pdDeleteSlot },
+    { method: 'post',   path: '/failed-pick-and-drop-booking-list', handler: failedBookingList },
 
     /* Public Charger */
     { method: 'post',   path: '/public-charger-station-list',    handler: stationList },
